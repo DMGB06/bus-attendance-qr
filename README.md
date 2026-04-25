@@ -136,45 +136,99 @@ Luego, en el celular:
 1. Abrir **Expo Go**
 2. Escanear el QR que aparece en consola
 
-## 🗺️ Roadmap por versiones
+## 🗺️ Roadmap por versiones (detalle funcional)
+
+> [!TIP]
+> Esta sección define qué se implementa en cada fase y qué verá cada tipo de usuario.
+
+### 📊 Vista rápida
+
+| Versión | Objetivo                    | Qué ve el operador (app móvil)                                        | Qué ve coordinación (web)                                 | Cambios de datos                                                                      |
+| ------- | --------------------------- | --------------------------------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| V1      | MVP operativo en campo      | Login, iniciar viaje, escanear QR, lista en tiempo real, cerrar viaje | No hay panel web                                          | +`trips`, +`attendance_records`; `social_bus_escolar` sin cambios                     |
+| V2      | Consolidar operación diaria | Foto al escanear, historial corto, recogida por padre, alta temporal  | Panel básico para revisar temporales y formalizar alumnos | `social_bus_escolar`: +`photo_url`, +`bus_id`; soporte para temporales `unregistered` |
+| V3      | Escalar a múltiples buses   | App con modo offline + sincronización                                 | Panel completo (buses, operadores, reportes, seguimiento) | +`buses`, +`bus_operators`; RLS por bus/operador                                      |
+| V4      | Plataforma integral         | Experiencia extendida para familias                                   | Monitoreo avanzado y automatizaciones                     | GPS por evento, alertas automáticas, calendarios y excepciones                        |
 
 ### V1 — MVP (1 día de desarrollo)
 
-**Lo que se construye hoy**
+**Lo que se verá en esta versión**
 
-- Base de datos con **solo 2 tablas nuevas**: `trips` y `attendance_records`
-- `social_bus_escolar` **no se toca**
-- Flujo móvil de 5 pantallas para operar viaje y asistencia
+- Flujo móvil de 5 pantallas: `Login -> Iniciar viaje -> Escanear QR -> Lista del viaje -> Cerrar viaje`
+- Lista de asistencia con estado visual (verde/rojo)
+- Alerta operativa si alguien subió y no bajó
 
-**No entra en V1**
+**Incluye**
+
+- Login con Supabase Auth
+- Escaneo del QR (campo `codigo`)
+- Registro de eventos: `boarded`, `alighted`, `manual`
+- Inicio y cierre de viaje (`ida` / `vuelta`)
+
+**Base de datos**
+
+- `social_bus_escolar` no se modifica
+- Solo se agregan `trips` y `attendance_records`
+
+**No incluye**
 
 - Notificaciones
 - Múltiples buses
 - Modo offline
-- Panel web
+- Panel web de coordinación
 - Foto del alumno
 - Historial avanzado
+- Alta temporal de alumno sin carnet
 
-### V2 — Consolidación en campo (~1-2 semanas después)
+### V2 — Consolidación en campo (~1-2 semanas)
 
-- Foto del alumno al escanear (Supabase Storage)
-- Notificación por WhatsApp (Twilio o WhatsApp API)
-- Recogida por padre/tutor (`event_type: parent_pickup`)
+**Lo que se verá en esta versión**
+
+- Foto del alumno al escanear (validación visual)
 - Historial por alumno (últimos 7 días)
-- BD: agregar `photo_url` y `bus_id` a `social_bus_escolar`
+- Recogida por padre/tutor (`event_type: parent_pickup`)
+- Notificación por WhatsApp (subida/bajada)
 
-### V3 — Escalamiento operativo (~1 mes después)
+> [!IMPORTANT]
+> **“Agregar temporal” entra en V2 (no en V1).**
 
-- Tablas `buses` y `bus_operators`
-- RLS en Supabase por operador/bus
-- Modo offline + sincronización automática
-- Panel web de coordinación (Next.js)
-- Renovación de QR (invalidar código viejo y generar nuevo)
+**Flujo de alta temporal (V2)**
+`Asistente ve al niño sin carnet -> toca "Agregar temporal" -> escribe nombre -> queda en el viaje como unregistered -> coordinador lo revisa en panel web -> decide registro formal y generación de QR`
+
+**Soporte de coordinación**
+
+- Panel web básico para revisar registros temporales y dar seguimiento.
+
+**Base de datos**
+
+- `social_bus_escolar`: agregar `photo_url` y `bus_id`
+- Soporte de registro temporal `unregistered` asociado al viaje
+
+### V3 — Escalamiento operativo (~1 mes)
+
+**Lo que se verá en esta versión**
+
+- Operación multi-bus con operadores por unidad
+- Modo offline con sincronización automática al recuperar conexión
+- Renovación de QR (invalidar código anterior y emitir nuevo)
+
+**Coordinación web (versión completa)**
+
+- Dashboard de buses
+- Gestión de operadores
+- Historial de asistencia y reportes/exportación
+
+**Base de datos y seguridad**
+
+- Nuevas tablas: `buses`, `bus_operators`
+- Políticas RLS por bus/operador en Supabase
 
 ### V4 — Sistema completo (futuro)
 
-- App para padres
-- GPS del bus durante escaneos
+**Lo que se verá en esta versión**
+
+- App para padres (seguimiento y QR digital de respaldo)
+- GPS del bus durante eventos de escaneo
 - Alertas automáticas nocturnas
 - Calendarios y excepciones (feriados, suspensiones, cambios de ruta)
 
