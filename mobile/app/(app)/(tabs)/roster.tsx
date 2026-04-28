@@ -4,7 +4,7 @@ import { Button, Card, HelperText, Searchbar, Text } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 
 import { RosterStudentRow } from '@/src/components/roster/RosterStudentRow';
-import { getTripRoster, type TripRosterItem } from '@/src/services/tripRoster';
+import { getTripRoster, markStudentManually, type TripRosterItem } from '@/src/services/tripRoster';
 import { useTripStore } from '@/src/stores/tripStore';
 import { colors, radius, spacing } from '@/src/theme/theme';
 
@@ -15,6 +15,8 @@ export default function RosterScreen() {
   const [items, setItems] = useState<TripRosterItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
+  const [isMarkingStudentId, setIsMarkingStudentId] = useState<string | null>(null);
 
   const loadRoster = useCallback(async () => {
     if (!activeTrip) {
@@ -38,6 +40,29 @@ export default function RosterScreen() {
   useEffect(() => {
     void loadRoster();
   }, [loadRoster]);
+
+  const handleManualMark = useCallback(
+    async (studentId: string) => {
+      if (!activeTrip || isMarkingStudentId) {
+        return;
+      }
+
+      setIsMarkingStudentId(studentId);
+      setErrorMessage(null);
+      setInfoMessage(null);
+
+      try {
+        await markStudentManually(activeTrip.id, studentId);
+        setInfoMessage('Registro manual guardado.');
+        await loadRoster();
+      } catch (error: unknown) {
+        setErrorMessage(error instanceof Error ? error.message : 'No se pudo registrar manualmente.');
+      } finally {
+        setIsMarkingStudentId(null);
+      }
+    },
+    [activeTrip, isMarkingStudentId, loadRoster],
+  );
 
   const filteredItems = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -111,6 +136,7 @@ export default function RosterScreen() {
       ) : null}
 
       {errorMessage ? <HelperText type="error">{errorMessage}</HelperText> : null}
+      {infoMessage ? <HelperText type="info">{infoMessage}</HelperText> : null}
 
       {!isLoading && filteredItems.length === 0 ? (
         <Card mode="outlined" style={styles.emptyStateCard}>
@@ -124,7 +150,13 @@ export default function RosterScreen() {
       <FlatList
         data={filteredItems}
         keyExtractor={(item) => item.student.id}
-        renderItem={({ item }) => <RosterStudentRow item={item} />}
+        renderItem={({ item }) => (
+          <RosterStudentRow
+            item={item}
+            onMarkManual={handleManualMark}
+            isMarkingManual={isMarkingStudentId === item.student.id}
+          />
+        )}
         contentContainerStyle={styles.list}
         ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
         refreshing={isLoading}

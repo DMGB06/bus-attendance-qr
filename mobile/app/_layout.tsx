@@ -5,25 +5,27 @@ import type { Session } from '@supabase/supabase-js';
 import { Redirect, Stack, useSegments } from 'expo-router';
 
 import { supabase } from '@/src/lib/supabase';
+import { getSession } from '@/src/services/auth';
+import { useTripStore } from '@/src/stores/tripStore';
 import { paperTheme } from '@/src/theme/theme';
 
 void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const segments = useSegments();
+  const { hydrateActiveTrip, clearActiveTrip } = useTripStore();
   const [session, setSession] = useState<Session | null>(null);
   const [isLoadingSession, setIsLoadingSession] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
 
-    void supabase.auth
-      .getSession()
-      .then(({ data }) => {
+    void getSession()
+      .then((activeSession) => {
         if (!isMounted) {
           return;
         }
-        setSession(data.session ?? null);
+        setSession(activeSession ?? null);
         setIsLoadingSession(false);
       })
       .catch(() => {
@@ -51,6 +53,28 @@ export default function RootLayout() {
       void SplashScreen.hideAsync();
     }
   }, [isLoadingSession]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!session) {
+      clearActiveTrip();
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    void hydrateActiveTrip().catch(() => {
+      if (!isMounted) {
+        return;
+      }
+      clearActiveTrip();
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [session, hydrateActiveTrip, clearActiveTrip]);
 
   if (isLoadingSession) {
     return null;

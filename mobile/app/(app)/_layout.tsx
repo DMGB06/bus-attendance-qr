@@ -1,4 +1,5 @@
 import { Stack } from 'expo-router';
+import { colors } from '@/src/theme/theme';
 
 export default function AppLayout() {
   return (
@@ -10,6 +11,10 @@ export default function AppLayout() {
           headerShown: true,
           title: 'Cerrar viaje',
           presentation: 'modal',
+          headerStyle: { backgroundColor: colors.background },
+          headerTintColor: colors.textPrimary,
+          headerTitleStyle: { color: colors.textPrimary },
+          headerShadowVisible: false,
         }}
       />
     </Stack>

@@ -2,14 +2,14 @@ import { Tabs, useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { TouchableOpacity, View, StyleSheet } from 'react-native';
 import { Text } from 'react-native-paper';
+import { logout } from '@/src/services/auth';
 import { colors, fontSize, spacing } from '@/src/theme/theme';
-import { supabase } from '@/src/lib/supabase';
 
 export default function TabsLayout() {
     const router = useRouter();
 
     async function handleLogout() {
-        await supabase.auth.signOut();
+        await logout();
         router.replace('/(auth)/login');
     }
 

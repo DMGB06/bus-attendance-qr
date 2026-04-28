@@ -4,7 +4,8 @@ import { Button, HelperText, Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
-import { createTrip } from '@/src/services/trips';
+import { TripHeader } from '@/src/components/TripHeader';
+import { startTrip } from '@/src/services/trips';
 import { useTripStore } from '@/src/stores/tripStore';
 import type { TripDirection } from '@/src/types';
 import { colors, fontSize, radius, spacing } from '@/src/theme/theme';
@@ -25,7 +26,7 @@ export default function ScanScreen() {
         setErrorMessage(null);
 
         try {
-            const trip = await createTrip(direction);
+            const trip = await startTrip(direction);
             setActiveTrip(trip);
         } catch (error: unknown) {
             setErrorMessage(error instanceof Error ? error.message : 'No se pudo iniciar el viaje.');
@@ -107,9 +108,7 @@ export default function ScanScreen() {
                 </View>
             ) : (
                 <View style={styles.activeTripCard}>
-                    <MaterialCommunityIcons name="bus-clock" size={28} color={colors.primary} />
-                    <Text style={styles.activeTripTitle}>Viaje {activeTrip.direction.toUpperCase()}</Text>
-                    <Text style={styles.activeTripBody}>Inicio: {new Date(activeTrip.started_at).toLocaleTimeString()}</Text>
+                    <TripHeader trip={activeTrip} />
 
                     <View style={styles.activeActions}>
                         <Button mode="contained" onPress={() => router.push('/(app)/(tabs)/scan-tab')}>
@@ -236,21 +235,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row-reverse',
     },
     activeTripCard: {
-        backgroundColor: colors.surface,
-        borderColor: colors.border,
-        borderWidth: 1,
-        borderRadius: radius.lg,
-        padding: spacing.lg,
-        gap: spacing.xs,
-    },
-    activeTripTitle: {
-        color: colors.textPrimary,
-        fontSize: 22,
-        fontWeight: '700',
-    },
-    activeTripBody: {
-        color: colors.textMuted,
-        fontSize: fontSize.sm,
+        gap: spacing.md,
     },
     activeActions: {
         gap: spacing.sm,

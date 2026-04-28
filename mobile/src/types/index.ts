@@ -24,8 +24,10 @@ export type Trip = {
   id: string;
   direction: TripDirection;
   status: TripStatus;
-  started_at: string;
+  started_at: string | null;
   ended_at: string | null;
+  operator_id: string | null;
+  trip_date: string;
 };
 
 export type AttendanceRecord = {
@@ -33,7 +35,7 @@ export type AttendanceRecord = {
   trip_id: string;
   student_id: string;
   event_type: AttendanceEventType;
-  scanned_at: string;
+  scanned_at: string | null;
 };
 
 export type Database = {
@@ -79,15 +81,19 @@ export type Database = {
           id?: string;
           direction: TripDirection;
           status?: TripStatus;
-          started_at?: string;
+          started_at?: string | null;
           ended_at?: string | null;
+          operator_id?: string | null;
+          trip_date?: string;
         };
         Update: {
           id?: string;
           direction?: TripDirection;
           status?: TripStatus;
-          started_at?: string;
+          started_at?: string | null;
           ended_at?: string | null;
+          operator_id?: string | null;
+          trip_date?: string;
         };
         Relationships: [];
       };
@@ -98,14 +104,14 @@ export type Database = {
           trip_id: string;
           student_id: string;
           event_type: AttendanceEventType;
-          scanned_at?: string;
+          scanned_at?: string | null;
         };
         Update: {
           id?: string;
           trip_id?: string;
           student_id?: string;
           event_type?: AttendanceEventType;
-          scanned_at?: string;
+          scanned_at?: string | null;
         };
         Relationships: [];
       };

@@ -8,13 +8,17 @@ interface TripHeaderProps {
 }
 
 export function TripHeader({ trip }: TripHeaderProps) {
-  const startedAt = new Date(trip.started_at);
+  const startedAtLabel = trip.started_at ? new Date(trip.started_at).toLocaleString() : 'Sin hora de inicio';
 
   return (
     <Card mode="outlined">
-      <Card.Title title={`Viaje activo: ${trip.direction.toUpperCase()}`} subtitle={`Estado: ${trip.status}`} />
+      <Card.Title
+        title={`Viaje ${trip.direction.toUpperCase()}`}
+        subtitle={`Estado: ${trip.status.toUpperCase()}`}
+      />
       <Card.Content style={styles.content}>
-        <Text variant="bodyMedium">Inicio: {startedAt.toLocaleString()}</Text>
+        <Text variant="bodyMedium">Fecha: {trip.trip_date}</Text>
+        <Text variant="bodyMedium">Inicio: {startedAtLabel}</Text>
       </Card.Content>
     </Card>
   );

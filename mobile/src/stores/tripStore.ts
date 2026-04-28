@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 
+import { getActiveTripByOperator } from "@/src/services/trips";
 import type { Trip } from "@/src/types";
 
 interface TripState {
@@ -9,6 +10,7 @@ interface TripState {
 interface TripStoreActions {
   setActiveTrip: (trip: Trip) => void;
   clearActiveTrip: () => void;
+  hydrateActiveTrip: () => Promise<Trip | null>;
 }
 
 type Listener = () => void;
@@ -44,16 +46,27 @@ function getSnapshot() {
   return state;
 }
 
+async function hydrateActiveTrip() {
+  const activeTrip = await getActiveTripByOperator();
+  setState({ activeTrip });
+  return activeTrip;
+}
+
+function setActiveTrip(trip: Trip) {
+  setState({ activeTrip: trip });
+}
+
+function clearActiveTrip() {
+  setState({ activeTrip: null });
+}
+
 export function useTripStore(): TripState & TripStoreActions {
   const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
   return {
     ...snapshot,
-    setActiveTrip: (trip) => {
-      setState({ activeTrip: trip });
-    },
-    clearActiveTrip: () => {
-      setState({ activeTrip: null });
-    },
+    setActiveTrip,
+    clearActiveTrip,
+    hydrateActiveTrip,
   };
 }

@@ -1,4 +1,5 @@
 import { supabase } from "@/src/lib/supabase";
+import { markManualAttendance } from "@/src/services/attendace";
 import type { AttendanceRecord, Student } from "@/src/types";
 
 export type TripRosterStatus = "registered" | "pending";
@@ -20,27 +21,30 @@ export async function getTripRoster(tripId: string): Promise<TripRosterItem[]> {
   ]);
 
   if (studentsResult.error) {
-    throw new Error(studentsResult.error.message);
+    throw new Error("No se pudo cargar la lista de alumnos.");
   }
 
   if (attendanceResult.error) {
-    throw new Error(attendanceResult.error.message);
+    throw new Error("No se pudo cargar la asistencia del viaje.");
   }
 
   const attendanceByStudent = new Map<string, AttendanceRecord>();
-  for (const record of attendanceResult.data ?? []) {
-    if (!attendanceByStudent.has(record.student_id)) {
-      attendanceByStudent.set(record.student_id, record);
+  for (const attendance of attendanceResult.data ?? []) {
+    if (!attendanceByStudent.has(attendance.student_id)) {
+      attendanceByStudent.set(attendance.student_id, attendance);
     }
   }
 
   return (studentsResult.data ?? []).map((student) => {
     const attendance = attendanceByStudent.get(student.id) ?? null;
-
     return {
       student,
       attendance,
       status: attendance ? "registered" : "pending",
     };
   });
+}
+
+export async function markStudentManually(tripId: string, studentId: string): Promise<void> {
+  await markManualAttendance(tripId, studentId);
 }

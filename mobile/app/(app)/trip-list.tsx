@@ -88,7 +88,7 @@ export default function TripListScreen() {
               <List.Item
                 key={item.id}
                 title={item.student_id}
-                description={`${item.event_type} • ${new Date(item.scanned_at).toLocaleTimeString()}`}
+                description={`${item.event_type} • ${item.scanned_at ? new Date(item.scanned_at).toLocaleTimeString() : 'Sin hora'}`}
                 left={(props) => <List.Icon {...props} icon="account-school-outline" />}
               />
             ))}

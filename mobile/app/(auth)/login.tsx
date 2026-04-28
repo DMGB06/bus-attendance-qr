@@ -8,6 +8,24 @@ import { useTheme } from 'react-native-paper';
 import { hasSupabaseConfig } from '@/src/lib/supabase';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
+function getFriendlyLoginError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return 'No se pudo iniciar sesión. Intenta nuevamente.';
+  }
+
+  const normalizedMessage = error.message.toLowerCase();
+
+  if (normalizedMessage.includes('invalid login credentials')) {
+    return 'Credenciales incorrectas. Verifica tu correo y contraseña.';
+  }
+
+  if (normalizedMessage.includes('email not confirmed')) {
+    return 'Tu correo aún no está confirmado.';
+  }
+
+  return 'No se pudo iniciar sesión. Intenta nuevamente.';
+}
+
 export default function LoginScreen() {
   const theme = useTheme();
   const [email, setEmail] = useState('');
@@ -20,16 +38,18 @@ export default function LoginScreen() {
       setErrorMessage('Ingresa correo y contraseña.');
       return;
     }
+
+    if (!hasSupabaseConfig) {
+      setErrorMessage('Falta configurar la conexión con Supabase.');
+      return;
+    }
+
     setIsSubmitting(true);
     setErrorMessage(null);
     try {
-      await login(email, password);
+      await login(email.trim(), password);
     } catch (error: unknown) {
-      if (error instanceof Error) {
-        setErrorMessage(`Error de autenticación: ${error.message}`);
-      } else {
-        setErrorMessage('Error de autenticación desconocido.');
-      }
+      setErrorMessage(getFriendlyLoginError(error));
     } finally {
       setIsSubmitting(false);
     }

@@ -46,7 +46,7 @@ export default function ScannerTabScreen() {
 
       if (!foundStudent) {
         setLookupState('not_found');
-        setErrorMessage('No se encontró el alumno. Puedes probar con el código manual.');
+        setErrorMessage('Alumno no encontrado');
         return;
       }
 
@@ -186,7 +186,7 @@ export default function ScannerTabScreen() {
             Escanea el QR o ingresa el código manual. Luego confirma la asistencia del alumno.
           </Text>
 
-          {student ? <StudentCard student={student} /> : null}
+          {student ? <StudentCard student={student} statusLabel="Pendiente de registrar" /> : null}
 
           {lookupState === 'not_found' ? (
             <View style={styles.manualBlock}>
@@ -201,9 +201,9 @@ export default function ScannerTabScreen() {
                 autoCapitalize="none"
                 editable={!isRegistering}
               />
-               <Button mode="contained" onPress={handleManualSearch} loading={isSearching}>
-                 Buscar código
-               </Button>
+              <Button mode="contained" onPress={handleManualSearch} loading={isSearching}>
+                Buscar código
+              </Button>
             </View>
           ) : null}
 

@@ -1,26 +1,33 @@
 import { StyleSheet, View } from 'react-native';
-import { Avatar, Chip, Text } from 'react-native-paper';
+import { Avatar, Button, Text } from 'react-native-paper';
 
+import { AttendanceBadge } from '@/src/components/AttendanceBadge';
 import type { TripRosterItem } from '@/src/services/tripRoster';
 import { colors, radius, spacing } from '@/src/theme/theme';
 
 interface RosterStudentRowProps {
   item: TripRosterItem;
+  onMarkManual?: (studentId: string) => void;
+  isMarkingManual?: boolean;
 }
 
-function getChipStyles(status: TripRosterItem['status']) {
-  return status === 'registered' ? styles.chipRegistered : styles.chipPending;
-}
-
-function getChipLabel(item: TripRosterItem) {
+function getBadgeLabel(item: TripRosterItem) {
   if (!item.attendance) {
     return 'PENDIENTE';
   }
 
-  return item.attendance.event_type === 'boarded' ? 'REGISTRADO' : item.attendance.event_type.toUpperCase();
+  if (item.attendance.event_type === 'boarded') {
+    return 'ABORDO';
+  }
+
+  if (item.attendance.event_type === 'alighted') {
+    return 'BAJO';
+  }
+
+  return 'MANUAL';
 }
 
-export function RosterStudentRow({ item }: RosterStudentRowProps) {
+export function RosterStudentRow({ item, onMarkManual, isMarkingManual = false }: RosterStudentRowProps) {
   const initials = item.student.nombre_alumno
     .split(' ')
     .filter(Boolean)
@@ -40,9 +47,14 @@ export function RosterStudentRow({ item }: RosterStudentRowProps) {
         ) : null}
       </View>
 
-      <Chip compact style={getChipStyles(item.status)} textStyle={styles.chipText}>
-        {getChipLabel(item)}
-      </Chip>
+      <View style={styles.rightColumn}>
+        <AttendanceBadge status={item.status} label={getBadgeLabel(item)} />
+        {item.status === 'pending' && onMarkManual ? (
+          <Button mode="outlined" compact onPress={() => onMarkManual(item.student.id)} loading={isMarkingManual} disabled={isMarkingManual}>
+            Manual
+          </Button>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -78,15 +90,8 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 11,
   },
-  chipRegistered: {
-    backgroundColor: '#0f766e',
-  },
-  chipPending: {
-    backgroundColor: '#991b1b',
-  },
-  chipText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '700',
+  rightColumn: {
+    alignItems: 'flex-end',
+    gap: spacing.xs,
   },
 });
