@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button, Card, HelperText, Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TripHeader } from '@/src/components/TripHeader';
 import { getPendingDropoffStudents } from '@/src/services/attendace';
@@ -40,6 +41,7 @@ function confirmCloseWithPendingStudents(studentNames: string[], totalPending: n
 
 export default function CloseTripScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { activeTrip, clearActiveTrip } = useTripStore();
   const [isClosing, setIsClosing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -81,60 +83,71 @@ export default function CloseTripScreen() {
 
   if (!activeTrip) {
     return (
-      <View style={styles.container}>
-        <Card mode="outlined" style={styles.emptyStateCard}>
-          <Card.Content style={styles.emptyContent}>
-            <MaterialCommunityIcons name="bus-stop" size={40} color={colors.textMuted} />
-            <Text style={styles.emptyTitle}>Sin viaje activo</Text>
-            <Text style={styles.emptyBody}>No hay un viaje en curso para cerrar.</Text>
-            <Button mode="contained" onPress={() => router.replace('/')}>
-              Ir a inicio
-            </Button>
-          </Card.Content>
-        </Card>
-      </View>
+      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+        <View style={[styles.container, { paddingBottom: insets.bottom + spacing.lg }]}>
+          <Card mode="outlined" style={styles.emptyStateCard}>
+            <Card.Content style={styles.emptyContent}>
+              <MaterialCommunityIcons name="bus-stop" size={40} color={colors.textMuted} />
+              <Text style={styles.emptyTitle}>Sin viaje activo</Text>
+              <Text style={styles.emptyBody}>No hay un viaje en curso para cerrar.</Text>
+              <Button mode="contained" onPress={() => router.replace('/')}>
+                Ir a inicio
+              </Button>
+            </Card.Content>
+          </Card>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Cerrar viaje</Text>
-        <Text style={styles.subtitle}>Revisa la información antes de confirmar el cierre.</Text>
-      </View>
+    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+      <ScrollView
+        contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + spacing.lg }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
+          <Text style={styles.title}>Cerrar viaje</Text>
+          <Text style={styles.subtitle}>Revisa la información antes de confirmar el cierre.</Text>
+        </View>
 
-      <TripHeader trip={activeTrip} />
+        <TripHeader trip={activeTrip} />
 
-      <Card mode="outlined" style={styles.warningCard}>
-        <Card.Content style={styles.warningContent}>
-          <View style={styles.warningHeader}>
-            <MaterialCommunityIcons name="alert-outline" size={18} color="#fcd34d" />
-            <Text style={styles.warningTitle}>Validación previa</Text>
-          </View>
-          <Text style={styles.warningBody}>
-            Verificaremos alumnos con abordo sin bajada registrada y te pediremos confirmación antes de cerrar.
-          </Text>
-        </Card.Content>
-      </Card>
+        <Card mode="outlined" style={styles.warningCard}>
+          <Card.Content style={styles.warningContent}>
+            <View style={styles.warningHeader}>
+              <MaterialCommunityIcons name="alert-outline" size={18} color="#fcd34d" />
+              <Text style={styles.warningTitle}>Validación previa</Text>
+            </View>
+            <Text style={styles.warningBody}>
+              Verificaremos alumnos con abordo sin bajada registrada y te pediremos confirmación antes de cerrar.
+            </Text>
+          </Card.Content>
+        </Card>
 
-      <Card mode="outlined" style={styles.actionCard}>
-        <Card.Content style={styles.content}>
-          {errorMessage ? <HelperText type="error">{errorMessage}</HelperText> : null}
-          <Button mode="contained" onPress={handleCloseTrip} loading={isClosing} disabled={isClosing}>
-            Cerrar viaje
-          </Button>
-          <Button mode="outlined" onPress={() => router.back()} disabled={isClosing}>
-            Volver
-          </Button>
-        </Card.Content>
-      </Card>
-    </View>
+        <Card mode="outlined" style={styles.actionCard}>
+          <Card.Content style={styles.content}>
+            {errorMessage ? <HelperText type="error">{errorMessage}</HelperText> : null}
+            <Button mode="contained" onPress={handleCloseTrip} loading={isClosing} disabled={isClosing}>
+              Cerrar viaje
+            </Button>
+            <Button mode="outlined" onPress={() => router.back()} disabled={isClosing}>
+              Volver
+            </Button>
+          </Card.Content>
+        </Card>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
+    backgroundColor: colors.background,
+  },
+  container: {
+    flexGrow: 1,
     backgroundColor: colors.background,
     padding: spacing.lg,
     gap: spacing.md,

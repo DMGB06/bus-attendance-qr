@@ -49,6 +49,38 @@ export async function markManualAttendance(
   return registerAttendance(tripId, studentId, "manual");
 }
 
+export async function registerDropoffAttendance(
+  tripId: string,
+  studentId: string,
+): Promise<AttendanceRecord> {
+  const { data: attendanceRows, error } = await supabase
+    .from("bus_attendance_records")
+    .select("event_type")
+    .eq("trip_id", tripId)
+    .eq("student_id", studentId)
+    .in("event_type", ["boarded", "manual", "alighted"]);
+
+  if (error) {
+    throw new Error("No se pudo validar la salida del alumno.");
+  }
+
+  const hasBoarding = (attendanceRows ?? []).some(
+    (attendance) => attendance.event_type === "boarded" || attendance.event_type === "manual",
+  );
+  if (!hasBoarding) {
+    throw new Error("Primero debes registrar la asistencia de entrada del alumno.");
+  }
+
+  const hasDropoff = (attendanceRows ?? []).some(
+    (attendance) => attendance.event_type === "alighted",
+  );
+  if (hasDropoff) {
+    throw new Error("La salida del alumno ya fue registrada.");
+  }
+
+  return registerAttendance(tripId, studentId, "alighted");
+}
+
 export async function getAttendanceByTrip(tripId: string): Promise<AttendanceRecord[]> {
   const { data, error } = await supabase
     .from("bus_attendance_records")
