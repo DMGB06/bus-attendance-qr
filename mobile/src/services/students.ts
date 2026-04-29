@@ -28,6 +28,26 @@ export async function findStudentByLookup(value: string): Promise<Student | null
   return findStudentByCode(value);
 }
 
+export async function searchStudentsByName(name: string, limit = 8): Promise<Student[]> {
+  const normalizedName = normalizeLookup(name);
+  if (!normalizedName) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("social_bus_escolar")
+    .select("*")
+    .ilike("nombre_alumno", `%${normalizedName}%`)
+    .order("nombre_alumno", { ascending: true })
+    .limit(limit);
+
+  if (error) {
+    throw new Error("No se pudo consultar la base de alumnos.");
+  }
+
+  return data ?? [];
+}
+
 export async function getStudentById(id: string): Promise<Student | null> {
   const normalizedId = normalizeLookup(id);
   if (!normalizedId) {
