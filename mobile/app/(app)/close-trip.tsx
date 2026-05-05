@@ -135,8 +135,12 @@ export default function CloseTripScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
+    backgroundColor: colors.background,
+  },
+  container: {
+    flexGrow: 1,
     backgroundColor: colors.background,
     padding: spacing.lg,
     gap: spacing.md,

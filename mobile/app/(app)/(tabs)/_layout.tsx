@@ -3,6 +3,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { TouchableOpacity, View, StyleSheet } from 'react-native';
 import { Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import { logout } from '@/src/services/auth';
 import { colors, fontSize, spacing } from '@/src/theme/theme';
 
@@ -29,8 +31,8 @@ export default function TabsLayout() {
                     </View>
                 ),
                 headerRight: () => (
-                    <TouchableOpacity onPress={handleLogout} style={styles.headerRight}>
-                        <Text style={styles.logoutText}>Logout</Text>
+                    <TouchableOpacity onPress={handleLogout} style={styles.headerRight} hitSlop={8}>
+                        <Text style={styles.logoutText}>Salir</Text>
                     </TouchableOpacity>
                 ),
                 headerTitle: () => null,
@@ -42,12 +44,16 @@ export default function TabsLayout() {
                     paddingTop: 8,
                     paddingBottom: 8 + insets.bottom,
                 },
+                tabBarHideOnKeyboard: true,
                 tabBarActiveTintColor: colors.primary,
                 tabBarInactiveTintColor: colors.textMuted,
                 tabBarLabelStyle: {
                     fontSize: fontSize.xs,
                     fontWeight: '700',
                     letterSpacing: 0.8,
+                },
+                tabBarItemStyle: {
+                    paddingVertical: 2,
                 },
             }}
         >
@@ -99,6 +105,7 @@ const styles = StyleSheet.create({
     },
     headerRight: {
         paddingRight: spacing.lg,
+        paddingVertical: spacing.xs,
     },
     logoutText: {
         color: colors.textMuted,

@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, HelperText, Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TripHeader } from '@/src/components/TripHeader';
 import { startTrip } from '@/src/services/trips';
@@ -38,7 +38,7 @@ export default function ScanScreen() {
     }
 
     return (
-        <SafeAreaView edges={['bottom', 'left', 'right']} style={[styles.container, { paddingBottom: insets.bottom + 16 }]}>
+        <View style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.title}>{activeTrip ? 'Viaje activo' : 'Iniciar Viaje'}</Text>
                 <Text style={styles.subtitle}>
@@ -152,20 +152,24 @@ export default function ScanScreen() {
                     </Text>
                 </View>
             </View>
-        </SafeAreaView>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
+    safeArea: {
         flex: 1,
+        backgroundColor: colors.background,
+    },
+    container: {
+        flexGrow: 1,
         backgroundColor: colors.background,
         padding: spacing.lg,
         gap: spacing.lg,
     },
     header: {
         gap: spacing.xs,
-        marginTop: spacing.sm,
+        marginTop: spacing.xs,
     },
     title: {
         color: colors.textPrimary,
@@ -238,10 +242,15 @@ const styles = StyleSheet.create({
     },
     activeTripCard: {
         gap: spacing.md,
+        backgroundColor: colors.surface,
+        borderRadius: radius.lg,
+        borderWidth: 1,
+        borderColor: colors.border,
+        padding: spacing.md,
     },
     activeActions: {
         gap: spacing.sm,
-        marginTop: spacing.sm,
+        marginTop: spacing.xs,
     },
     warning: {
         flexDirection: 'row',

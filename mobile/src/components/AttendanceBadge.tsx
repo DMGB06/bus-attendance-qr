@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { Text } from 'react-native-paper';
 
-export type AttendanceBadgeStatus = 'registered' | 'pending';
+export type AttendanceBadgeStatus = 'pending' | 'onboard' | 'completed';
 
 interface AttendanceBadgeProps {
     status: AttendanceBadgeStatus;
@@ -9,11 +9,23 @@ interface AttendanceBadgeProps {
 }
 
 export function AttendanceBadge({ status, label }: AttendanceBadgeProps) {
-    const isRegistered = status === 'registered';
+    const variantStyle =
+        status === 'completed'
+            ? styles.badgeCompleted
+            : status === 'onboard'
+                ? styles.badgeOnboard
+                : styles.badgePending;
+
+    const defaultLabel =
+        status === 'completed'
+            ? 'SALIDA'
+            : status === 'onboard'
+                ? 'ABORDO'
+                : 'PENDIENTE';
 
     return (
-        <View style={[styles.badge, isRegistered ? styles.badgeRegistered : styles.badgePending]}>
-            <Text style={styles.badgeText}>{label ?? (isRegistered ? 'REGISTRADO' : 'PENDIENTE')}</Text>
+        <View style={[styles.badge, variantStyle]}>
+            <Text style={styles.badgeText}>{label ?? defaultLabel}</Text>
         </View>
     );
 }
@@ -26,7 +38,10 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
         alignItems: 'center',
     },
-    badgeRegistered: {
+    badgeOnboard: {
+        backgroundColor: '#1d4ed8',
+    },
+    badgeCompleted: {
         backgroundColor: '#166534',
     },
     badgePending: {
