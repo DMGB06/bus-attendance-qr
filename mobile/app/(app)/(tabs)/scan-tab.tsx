@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Button, Card, HelperText, Text, TextInput } from 'react-native-paper';
@@ -14,6 +15,7 @@ import type { Student } from '@/src/types';
 type LookupState = 'idle' | 'searching' | 'found' | 'not_found';
 
 export default function ScannerTabScreen() {
+  const insets = useSafeAreaInsets();
   const { activeTrip } = useTripStore();
   const [permission, requestPermission] = useCameraPermissions();
   const [lookupState, setLookupState] = useState<LookupState>('idle');
@@ -25,6 +27,7 @@ export default function ScannerTabScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const scanLockedRef = useRef(false);
+  const containerStyle = [styles.container, { paddingBottom: 100 + insets.bottom }];
 
   async function resolveStudent(value: string) {
     const normalizedValue = value.trim();
@@ -108,7 +111,7 @@ export default function ScannerTabScreen() {
 
   if (!activeTrip) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView edges={['bottom', 'left', 'right']} style={containerStyle}>
         <Card mode="outlined" style={styles.blockedCard}>
           <Card.Content style={styles.blockedContent}>
             <MaterialCommunityIcons name="lock-outline" size={38} color={colors.textMuted} />
@@ -118,13 +121,13 @@ export default function ScannerTabScreen() {
             </Text>
           </Card.Content>
         </Card>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (!permission) {
     return (
-      <View style={styles.container}>
+      <View style={containerStyle}>
         <Card mode="outlined" style={styles.blockedCard}>
           <Card.Content style={styles.blockedContent}>
             <MaterialCommunityIcons name="camera-outline" size={38} color={colors.textMuted} />
@@ -138,7 +141,7 @@ export default function ScannerTabScreen() {
 
   if (!permission.granted) {
     return (
-      <View style={styles.container}>
+      <View style={containerStyle}>
         <Card mode="outlined" style={styles.permissionCard}>
           <Card.Content style={styles.permissionContent}>
             <MaterialCommunityIcons name="camera-off-outline" size={42} color={colors.primary} />
@@ -156,7 +159,7 @@ export default function ScannerTabScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={containerStyle}>
       <View style={styles.badge}>
         <MaterialCommunityIcons name="qrcode-scan" size={16} color={colors.primary} />
         <Text style={styles.badgeText}>ESCANER ACTIVO</Text>
@@ -248,6 +251,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     padding: spacing.lg,
     gap: spacing.lg,
+    paddingBottom: 100,
   },
   blockedCard: {
     flex: 1,

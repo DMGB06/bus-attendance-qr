@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Button, Card, HelperText, Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -40,6 +41,7 @@ function confirmCloseWithPendingStudents(studentNames: string[], totalPending: n
 
 export default function CloseTripScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { activeTrip, clearActiveTrip } = useTripStore();
   const [isClosing, setIsClosing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -81,7 +83,7 @@ export default function CloseTripScreen() {
 
   if (!activeTrip) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView edges={['bottom', 'left', 'right']} style={[styles.container, { paddingBottom: insets.bottom + 16 }]}>
         <Card mode="outlined" style={styles.emptyStateCard}>
           <Card.Content style={styles.emptyContent}>
             <MaterialCommunityIcons name="bus-stop" size={40} color={colors.textMuted} />
@@ -92,12 +94,12 @@ export default function CloseTripScreen() {
             </Button>
           </Card.Content>
         </Card>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView edges={['bottom', 'left', 'right']} style={[styles.container, { paddingBottom: insets.bottom + 16 }]}>
       <View style={styles.header}>
         <Text style={styles.title}>Cerrar viaje</Text>
         <Text style={styles.subtitle}>Revisa la información antes de confirmar el cierre.</Text>
@@ -128,7 +130,7 @@ export default function CloseTripScreen() {
           </Button>
         </Card.Content>
       </Card>
-    </View>
+    </SafeAreaView>
   );
 }
 

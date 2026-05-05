@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, HelperText, Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -12,6 +13,7 @@ import { colors, fontSize, radius, spacing } from '@/src/theme/theme';
 
 export default function ScanScreen() {
     const router = useRouter();
+    const insets = useSafeAreaInsets();
     const { activeTrip, setActiveTrip } = useTripStore();
     const [direction, setDirection] = useState<TripDirection>('ida');
     const [isStartingTrip, setIsStartingTrip] = useState(false);
@@ -36,7 +38,7 @@ export default function ScanScreen() {
     }
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView edges={['bottom', 'left', 'right']} style={[styles.container, { paddingBottom: insets.bottom + 16 }]}>
             <View style={styles.header}>
                 <Text style={styles.title}>{activeTrip ? 'Viaje activo' : 'Iniciar Viaje'}</Text>
                 <Text style={styles.subtitle}>
@@ -150,7 +152,7 @@ export default function ScanScreen() {
                     </Text>
                 </View>
             </View>
-        </View>
+        </SafeAreaView>
     );
 }
 

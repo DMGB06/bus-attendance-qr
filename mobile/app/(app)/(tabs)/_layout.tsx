@@ -2,17 +2,18 @@ import { Tabs, useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { TouchableOpacity, View, StyleSheet } from 'react-native';
 import { Text } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { logout } from '@/src/services/auth';
 import { colors, fontSize, spacing } from '@/src/theme/theme';
 
 export default function TabsLayout() {
     const router = useRouter();
+    const insets = useSafeAreaInsets();
 
     async function handleLogout() {
         await logout();
         router.replace('/(auth)/login');
     }
-
     return (
         <Tabs
             initialRouteName="scan"
@@ -37,9 +38,9 @@ export default function TabsLayout() {
                     backgroundColor: colors.background,
                     borderTopColor: colors.border,
                     borderTopWidth: 1,
-                    height: 72,
+                    height: 72 + insets.bottom,
                     paddingTop: 8,
-                    paddingBottom: 8,
+                    paddingBottom: 8 + insets.bottom,
                 },
                 tabBarActiveTintColor: colors.primary,
                 tabBarInactiveTintColor: colors.textMuted,

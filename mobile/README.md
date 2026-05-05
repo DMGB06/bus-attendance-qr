@@ -10,10 +10,16 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm install
    ```
 
-2. Start the app (tunnel)
+2. Start the app on your local network
 
    ```bash
    npm run start
+   ```
+
+   If you specifically need a tunnel, use:
+
+   ```bash
+   npm run start:tunnel
    ```
 
 In the output, you'll find options to open the app in a

@@ -128,8 +128,10 @@ git clone https://github.com/tuusuario/buscontrol
 cd buscontrol
 cd mobile
 npm install
-npx expo start --tunnel
+npm run start
 ```
+
+Si necesitas compartir la app fuera de la red local, usa `npm run start:tunnel`.
 
 Luego, en el celular:
 

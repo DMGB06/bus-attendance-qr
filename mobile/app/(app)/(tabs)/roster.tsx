@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Card, HelperText, Searchbar, Text } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 
@@ -10,6 +11,7 @@ import { colors, radius, spacing } from '@/src/theme/theme';
 
 export default function RosterScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { activeTrip } = useTripStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [items, setItems] = useState<TripRosterItem[]>([]);
@@ -85,7 +87,7 @@ export default function RosterScreen() {
 
   if (!activeTrip) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView edges={['bottom', 'left', 'right']} style={[styles.container, { paddingBottom: insets.bottom + 16 }]}>
         <Card mode="outlined" style={styles.emptyStateCard}>
           <Card.Content style={styles.emptyContent}>
             <Text style={styles.emptyTitle}>Sin viaje activo</Text>
@@ -95,12 +97,12 @@ export default function RosterScreen() {
             </Button>
           </Card.Content>
         </Card>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView edges={['bottom', 'left', 'right']} style={[styles.container, { paddingBottom: insets.bottom + 16 }]}>
       <View style={styles.header}>
         <Text style={styles.title}>Lista de Asistencia</Text>
         <Text style={styles.subtitle}>Viaje {activeTrip.direction.toUpperCase()}</Text>
@@ -163,7 +165,7 @@ export default function RosterScreen() {
         onRefresh={() => void loadRoster()}
         style={styles.listView}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Card, HelperText, List, Text } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 
@@ -52,7 +53,7 @@ export default function TripListScreen() {
 
   if (!activeTrip) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView edges={['bottom', 'left', 'right']} style={styles.container}>
         <Card mode="outlined">
           <Card.Title title="Sin viaje activo" />
           <Card.Content style={styles.content}>
@@ -62,12 +63,12 @@ export default function TripListScreen() {
             </Button>
           </Card.Content>
         </Card>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView edges={['bottom', 'left', 'right']} style={styles.container}>
       <Card mode="outlined">
         <Card.Title title="Lista del viaje" subtitle={`Viaje ${activeTrip.direction}`} />
         <Card.Content style={styles.content}>
@@ -95,7 +96,7 @@ export default function TripListScreen() {
           </ScrollView>
         </Card.Content>
       </Card>
-    </View>
+    </SafeAreaView>
   );
 }
 
