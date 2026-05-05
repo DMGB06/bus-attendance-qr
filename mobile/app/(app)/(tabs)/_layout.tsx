@@ -3,8 +3,6 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { TouchableOpacity, View, StyleSheet } from 'react-native';
 import { Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
 import { logout } from '@/src/services/auth';
 import { colors, fontSize, spacing } from '@/src/theme/theme';
 

@@ -3,8 +3,6 @@ import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Card, HelperText, Searchbar, Text } from 'react-native-paper';
 import { useRouter } from 'expo-router';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-
 import { RosterStudentRow } from '@/src/components/roster/RosterStudentRow';
 import {
   getTripRoster,
@@ -14,7 +12,7 @@ import {
 } from '@/src/services/tripRoster';
 import { useTripStore } from '@/src/stores/tripStore';
 import { colors, radius, spacing } from '@/src/theme/theme';
-
+import { Alert } from 'react-native';
 type RosterViewMode = 'all' | 'attended';
 
 function confirmManualAttendance(studentName: string) {
@@ -63,7 +61,6 @@ function confirmStudentDropoff(studentName: string) {
 
 export default function RosterScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const insets = useSafeAreaInsets();
   const { activeTrip } = useTripStore();
   const [viewMode, setViewMode] = useState<RosterViewMode>('all');

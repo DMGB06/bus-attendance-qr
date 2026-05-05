@@ -1,11 +1,9 @@
 import { useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, ScrollView, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Button, Card, HelperText, Text, TextInput } from 'react-native-paper';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-
 import { StudentConfirmModal } from '@/src/components/StudentConfirmModal';
 import { registerAttendance } from '@/src/services/attendace';
 import { findStudentByCode, searchStudentsByName } from '@/src/services/students';
@@ -18,7 +16,6 @@ type LookupState = 'idle' | 'searching' | 'found' | 'not_found';
 export default function ScannerTabScreen() {
   const insets = useSafeAreaInsets();
   const { activeTrip } = useTripStore();
-  const insets = useSafeAreaInsets();
   const { height: screenHeight } = useWindowDimensions();
   const [permission, requestPermission] = useCameraPermissions();
   const [lookupState, setLookupState] = useState<LookupState>('idle');
@@ -33,9 +30,10 @@ export default function ScannerTabScreen() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const scanLockedRef = useRef(false);
-  const containerStyle = [styles.container, { paddingBottom: 100 + insets.bottom }];
+  const cameraHeight = Math.max(220, Math.min(360, screenHeight * 0.34));
+  const containerStyle = [styles.screenContainer, { paddingBottom: 100 + insets.bottom }];
 
-  async function resolveStudent(value: string) {
+  async function resolveStudentByCode(value: string) {
     const normalizedValue = value.trim();
 
     if (!normalizedValue) {
@@ -79,6 +77,22 @@ export default function ScannerTabScreen() {
 
     scanLockedRef.current = true;
     void resolveStudentByCode(data);
+  }
+
+  function clearStudentSelection(clearManualName: boolean) {
+    scanLockedRef.current = false;
+    setLookupState('idle');
+    setScannedValue('');
+    setStudent(null);
+    setManualCandidates([]);
+    setIsConfirmModalVisible(false);
+    setErrorMessage(null);
+    setInfoMessage(null);
+
+    if (clearManualName) {
+      setManualName('');
+      setSuccessMessage(null);
+    }
   }
 
   function handleResetScanner() {
@@ -217,11 +231,12 @@ export default function ScannerTabScreen() {
   }
 
   return (
-    <View style={containerStyle}>
-      <View style={styles.badge}>
-        <MaterialCommunityIcons name="qrcode-scan" size={16} color={colors.primary} />
-        <Text style={styles.badgeText}>ESCANER ACTIVO</Text>
-      </View>
+    <SafeAreaView edges={['bottom', 'left', 'right']} style={styles.safeArea}>
+      <View style={containerStyle}>
+        <View style={styles.badge}>
+          <MaterialCommunityIcons name="qrcode-scan" size={16} color={colors.primary} />
+          <Text style={styles.badgeText}>ESCANER ACTIVO</Text>
+        </View>
 
         <View style={[styles.cameraFrame, { height: cameraHeight }]}>
           <CameraView
@@ -239,97 +254,98 @@ export default function ScannerTabScreen() {
             <Text style={styles.overlayHint}>Apunta el QR dentro del marco</Text>
           </View>
         </View>
+        <ScrollView>
+          <Card mode="outlined" style={styles.panel}>
+            <Card.Content style={styles.panelContent}>
+              <Text style={styles.panelTitle}>Escaneo y confirmación</Text>
+              <Text style={styles.panelBody}>
+                Escanea el QR o busca al alumno por nombre para registrarlo manualmente.
+              </Text>
 
-        <Card mode="outlined" style={styles.panel}>
-          <Card.Content style={styles.panelContent}>
-            <Text style={styles.panelTitle}>Escaneo y confirmación</Text>
-            <Text style={styles.panelBody}>
-              Escanea el QR o busca al alumno por nombre para registrarlo manualmente.
-            </Text>
-
-            <View style={styles.manualBlock}>
-              <TextInput
-                mode="outlined"
-                label="Nombre del alumno"
-                value={manualName}
-                onChangeText={(value) => {
-                  setManualName(value);
-                  setErrorMessage(null);
-                  setInfoMessage(null);
-                }}
-                autoCapitalize="words"
-                autoCorrect={false}
-                editable={!isSearching && !isRegistering}
-                returnKeyType="search"
-                onSubmitEditing={() => {
-                  void handleManualSearch();
-                }}
-              />
-              <Button mode="contained" onPress={handleManualSearch} loading={isSearching} disabled={isRegistering}>
-                Buscar por nombre
-              </Button>
-            </View>
-
-            {manualCandidates.length > 1 ? (
-              <View style={styles.matchesBlock}>
-                {manualCandidates.map((candidate) => (
-                  <View key={candidate.id} style={styles.matchItem}>
-                    <View style={styles.matchTextBlock}>
-                      <Text style={styles.matchName}>{candidate.nombre_alumno}</Text>
-                      <Text style={styles.matchMeta}>
-                        DNI: {candidate.dni_alumno}
-                      </Text>
-                    </View>
-                    <Button mode="contained-tonal" compact onPress={() => handleSelectManualStudent(candidate)}>
-                      Elegir
-                    </Button>
-                  </View>
-                ))}
-              </View>
-            ) : null}
-
-            {student ? (
-              <View style={styles.selectionBlock}>
-                <Text style={styles.selectionLabel}>Alumno seleccionado: {student.nombre_alumno}</Text>
-                <Button mode="contained-tonal" onPress={() => setIsConfirmModalVisible(true)} disabled={isRegistering}>
-                  Ver ficha y confirmar
+              <View style={styles.manualBlock}>
+                <TextInput
+                  mode="outlined"
+                  label="Nombre del alumno"
+                  value={manualName}
+                  onChangeText={(value) => {
+                    setManualName(value);
+                    setErrorMessage(null);
+                    setInfoMessage(null);
+                  }}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  editable={!isSearching && !isRegistering}
+                  returnKeyType="search"
+                  onSubmitEditing={() => {
+                    void handleManualSearch();
+                  }}
+                />
+                <Button mode="contained" onPress={handleManualSearch} loading={isSearching} disabled={isRegistering}>
+                  Buscar por nombre
                 </Button>
               </View>
-            ) : null}
 
-            {scannedValue ? (
-              <Text style={styles.scannedValue}>Valor leído: {scannedValue}</Text>
-            ) : null}
+              {manualCandidates.length > 1 ? (
+                <View style={styles.matchesBlock}>
+                  {manualCandidates.map((candidate) => (
+                    <View key={candidate.id} style={styles.matchItem}>
+                      <View style={styles.matchTextBlock}>
+                        <Text style={styles.matchName}>{candidate.nombre_alumno}</Text>
+                        <Text style={styles.matchMeta}>
+                          DNI: {candidate.dni_alumno}
+                        </Text>
+                      </View>
+                      <Button mode="contained-tonal" compact onPress={() => handleSelectManualStudent(candidate)}>
+                        Elegir
+                      </Button>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
 
-            {errorMessage ? <HelperText type="error">{errorMessage}</HelperText> : null}
-            {infoMessage ? <HelperText type="info">{infoMessage}</HelperText> : null}
-            {successMessage ? <HelperText type="info">{successMessage}</HelperText> : null}
+              {student ? (
+                <View style={styles.selectionBlock}>
+                  <Text style={styles.selectionLabel}>Alumno seleccionado: {student.nombre_alumno}</Text>
+                  <Button mode="contained-tonal" onPress={() => setIsConfirmModalVisible(true)} disabled={isRegistering}>
+                    Ver ficha y confirmar
+                  </Button>
+                </View>
+              ) : null}
 
-            <View style={styles.actions}>
-              <Button
-                mode="contained-tonal"
-                icon="qrcode"
-                onPress={handleResetScanner}
-                disabled={isSearching || isRegistering}
-              >
-                {student ? 'Limpiar y escanear otro' : 'Reiniciar escaneo'}
-              </Button>
-            </View>
-          </Card.Content>
-        </Card>
-      </ScrollView>
+              {scannedValue ? (
+                <Text style={styles.scannedValue}>Valor leído: {scannedValue}</Text>
+              ) : null}
 
-      <StudentConfirmModal
-        visible={isConfirmModalVisible}
-        student={student}
-        isSubmitting={isRegistering}
-        errorMessage={errorMessage}
-        onDismiss={handleCloseConfirmModal}
-        onConfirm={() => {
-          void handleConfirmAttendance();
-        }}
-      />
-    </SafeAreaView >
+              {errorMessage ? <HelperText type="error">{errorMessage}</HelperText> : null}
+              {infoMessage ? <HelperText type="info">{infoMessage}</HelperText> : null}
+              {successMessage ? <HelperText type="info">{successMessage}</HelperText> : null}
+
+              <View style={styles.actions}>
+                <Button
+                  mode="contained-tonal"
+                  icon="qrcode"
+                  onPress={handleResetScanner}
+                  disabled={isSearching || isRegistering}
+                >
+                  {student ? 'Limpiar y escanear otro' : 'Reiniciar escaneo'}
+                </Button>
+              </View>
+            </Card.Content>
+          </Card>
+        </ScrollView>
+
+        <StudentConfirmModal
+          visible={isConfirmModalVisible}
+          student={student}
+          isSubmitting={isRegistering}
+          errorMessage={errorMessage}
+          onDismiss={handleCloseConfirmModal}
+          onConfirm={() => {
+            void handleConfirmAttendance();
+          }}
+        />
+      </View>
+    </SafeAreaView>
   );
 }
 
