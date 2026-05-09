@@ -1,0 +1,28 @@
+import { StyleSheet } from 'react-native';
+import { Card, Text } from 'react-native-paper';
+
+import type { Student } from '@/src/features/trips/types';
+
+interface StudentCardProps {
+  student: Student;
+  statusLabel?: string;
+}
+
+export function StudentCard({ student, statusLabel }: StudentCardProps) {
+  return (
+    <Card mode="outlined">
+      <Card.Title title="Alumno identificado" subtitle={student.nombre_alumno} />
+      <Card.Content style={styles.content}>
+        <Text variant="bodyMedium">Código: {student.codigo ?? 'Sin código'}</Text>
+        <Text variant="bodySmall">DNI: {student.dni_alumno}</Text>
+        <Text variant="bodySmall">Estado: {statusLabel ?? 'Listo para registrar'}</Text>
+      </Card.Content>
+    </Card>
+  );
+}
+
+const styles = StyleSheet.create({
+  content: {
+    gap: 6,
+  },
+});

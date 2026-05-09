@@ -4,15 +4,22 @@ import * as SplashScreen from 'expo-splash-screen';
 import type { Session } from '@supabase/supabase-js';
 import { Redirect, Stack, useSegments } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { supabase } from '@/src/lib/supabase';
-import { getSession } from '@/src/services/auth';
-import { useTripStore } from '@/src/stores/tripStore';
-import { paperTheme } from '@/src/theme/theme';
-import { AppLoadingScreen } from '@/src/components/AppLoadingScreen';
+import { useFonts } from 'expo-font';
+import { Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
+import { supabase } from '@/src/core/config/supabase';
+import { getSession } from '@/src/features/auth/services/auth.service';
+import { useTripStore } from '@/src/features/trips/store/tripStore';
+import { paperTheme } from '@/src/core/theme/theme';
+import { AppLoadingScreen } from '@/src/shared/ui/AppLoadingScreen';
 
 void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const [fontsLoaded, fontsError] = useFonts({
+    Inter_400Regular,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  });
   const segments = useSegments();
   const { hydrateActiveTrip, clearActiveTrip } = useTripStore();
   const [session, setSession] = useState<Session | null>(null);
@@ -83,26 +90,32 @@ export default function RootLayout() {
   }, [session, hydrateActiveTrip, clearActiveTrip]);
 
   useEffect(() => {
-    void SplashScreen.hideAsync();
-  }, []);
+    if (fontsLoaded && !isBootLoading) {
+      void SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, isBootLoading]);
+
+  if (fontsError) {
+    return <AppLoadingScreen />;
+  }
 
   const rootSegment = segments[0];
   const inAuthGroup = rootSegment === '(auth)';
-  const inAppGroup = rootSegment === '(app)';
+  const inTabsGroup = rootSegment === '(tabs)';
 
   return (
     <SafeAreaProvider>
       <PaperProvider theme={paperTheme}>
-        {isBootLoading ? (
+        {!fontsLoaded || isBootLoading ? (
           <AppLoadingScreen />
         ) : !session && !inAuthGroup ? (
           <Redirect href="/(auth)/login" />
-        ) : session && !inAppGroup ? (
-          <Redirect href="/(app)" />
+        ) : session && !inTabsGroup ? (
+          <Redirect href="/(tabs)/trip" />
         ) : (
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(app)" />
+            <Stack.Screen name="(tabs)" />
           </Stack>
         )}
       </PaperProvider>
