@@ -1,158 +1,410 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { Button, HelperText, Text } from 'react-native-paper';
+
+import {
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    View,
+} from 'react-native';
+
+import { LinearGradient } from 'expo-linear-gradient';
+
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+
 import { useRouter } from 'expo-router';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import {
+    Button,
+    HelperText,
+    Text,
+} from 'react-native-paper';
+
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 
 import { TripHeader } from '@/src/features/trips/components/TripHeader';
-import { startTrip } from '@/src/features/trips/services/trips.service';
-import { useTripStore } from '@/src/features/trips/store/tripStore';
-import type { TripDirection } from '@/src/features/trips/types';
-import { colors, fontSize, radius, spacing } from '@/src/core/theme/theme';
 
-const DIRECTION_OPTIONS: Array<{
-    value: TripDirection;
-    title: string;
-    subtitle: string;
-    icon: 'arrow-up' | 'arrow-down';
-}> = [
-        {
-            value: 'ida',
-            title: 'IDA',
-            subtitle: 'Hacia el establecimiento',
-            icon: 'arrow-up',
-        },
-        {
-            value: 'vuelta',
-            title: 'VUELTA',
-            subtitle: 'Hacia los domicilios',
-            icon: 'arrow-down',
-        },
-    ];
+import { startTrip } from '@/src/features/trips/services/trips.service';
+
+import { useTripStore } from '@/src/features/trips/store/tripStore';
+
+import type { TripDirection } from '@/src/features/trips/types';
+
+import { spacing } from '@/src/core/theme/theme';
 
 export default function TripScreen() {
     const router = useRouter();
-    const insets = useSafeAreaInsets();
-    const { activeTrip, setActiveTrip } = useTripStore();
-    const [direction, setDirection] = useState<TripDirection>('ida');
-    const [isStartingTrip, setIsStartingTrip] = useState(false);
-    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-    const scrollBottomPadding = activeTrip ? insets.bottom + spacing.lg : insets.bottom + 132;
+    const insets = useSafeAreaInsets();
+
+    const { activeTrip, setActiveTrip } = useTripStore();
+
+    const [direction, setDirection] =
+        useState<TripDirection>('recojo');
+
+    const [isStartingTrip, setIsStartingTrip] =
+        useState(false);
+
+    const [errorMessage, setErrorMessage] =
+        useState<string | null>(null);
 
     async function handleStartTrip() {
-        if (activeTrip) {
-            return;
-        }
+        if (activeTrip) return;
 
         setIsStartingTrip(true);
+
         setErrorMessage(null);
 
         try {
             const trip = await startTrip(direction);
+
             setActiveTrip(trip);
         } catch (error: unknown) {
-            setErrorMessage(error instanceof Error ? error.message : 'No se pudo iniciar el viaje.');
+            setErrorMessage(
+                error instanceof Error
+                    ? error.message
+                    : 'No se pudo iniciar el viaje.'
+            );
         } finally {
             setIsStartingTrip(false);
         }
     }
 
     return (
-        <SafeAreaView edges={['bottom', 'left', 'right']} style={styles.safeArea}>
-            <View style={styles.root}>
-                <ScrollView
-                    contentContainerStyle={[styles.scrollContent, { paddingBottom: scrollBottomPadding }]}
-                    showsVerticalScrollIndicator={false}
-                >
-                    <View style={styles.header}>
-                        <Text style={styles.title}>{activeTrip ? 'Viaje activo' : 'Iniciar viaje'}</Text>
-                        <Text style={styles.subtitle}>
-                            {activeTrip ? 'Ya puedes escanear y revisar la lista' : 'Selecciona el sentido del viaje'}
-                        </Text>
+        <SafeAreaView
+            style={styles.safeArea}
+            edges={['bottom', 'left', 'right']}
+        >
+            <LinearGradient
+                colors={[
+                    '#0B1020',
+                    '#111827',
+                    '#0A1222',
+                ]}
+                style={StyleSheet.absoluteFill}
+            />
+
+            <View style={styles.glowBlue} />
+            <View style={styles.glowPurple} />
+
+            <ScrollView
+                contentContainerStyle={[
+                    styles.scrollContent,
+                    {
+                        paddingBottom:
+                            insets.bottom + 12,
+                    },
+                ]}
+                showsVerticalScrollIndicator={false}
+            >
+                <View style={styles.container}>
+
+                    <Text style={styles.title}>
+                        {activeTrip
+                            ? 'Viaje activo'
+                            : 'Iniciar viaje'}
+                    </Text>
+
+                    <Text style={styles.subtitle}>
+                        {activeTrip
+                            ? 'Gestiona el recorrido y controla pasajeros.'
+                            : 'Selecciona el sentido del recorrido para comenzar.'}
+                    </Text>
+
+                    <View style={styles.mainCard}>
+
+                        {!activeTrip ? (
+                            <>
+                                <View
+                                    style={
+                                        styles.selectorContainer
+                                    }
+                                >
+                                    <Pressable
+                                        style={[
+                                            styles.selectorButton,
+
+                                            direction ===
+                                            'recojo' &&
+                                            styles.selectorButtonActive,
+                                        ]}
+                                        onPress={() =>
+                                            setDirection(
+                                                'recojo'
+                                            )
+                                        }
+                                    >
+                                        <MaterialCommunityIcons
+                                            name="arrow-up"
+                                            size={18}
+                                            color="#fff"
+                                        />
+
+                                        <Text
+                                            style={
+                                                styles.selectorText
+                                            }
+                                        >
+                                            Recojo
+                                        </Text>
+                                    </Pressable>
+
+                                    <Pressable
+                                        style={[
+                                            styles.selectorButton,
+
+                                            direction ===
+                                            'retorno' &&
+                                            styles.selectorButtonActive,
+                                        ]}
+                                        onPress={() =>
+                                            setDirection(
+                                                'retorno'
+                                            )
+                                        }
+                                    >
+                                        <MaterialCommunityIcons
+                                            name="arrow-down"
+                                            size={18}
+                                            color="#fff"
+                                        />
+
+                                        <Text
+                                            style={
+                                                styles.selectorText
+                                            }
+                                        >
+                                            Retorno
+                                        </Text>
+                                    </Pressable>
+                                </View>
+
+                                <View
+                                    style={
+                                        styles.infoContainer
+                                    }
+                                >
+                                    <View
+                                        style={
+                                            styles.infoRow
+                                        }
+                                    >
+                                        <MaterialCommunityIcons
+                                            name="bus"
+                                            size={18}
+                                            color="#60A5FA"
+                                        />
+
+                                        <Text
+                                            style={
+                                                styles.infoText
+                                            }
+                                        >
+                                            Unidad asignada:
+                                            BUS-03
+                                        </Text>
+                                    </View>
+
+                                    <View
+                                        style={
+                                            styles.infoRow
+                                        }
+                                    >
+                                        <MaterialCommunityIcons
+                                            name="account-check"
+                                            size={18}
+                                            color="#60A5FA"
+                                        />
+
+                                        <Text
+                                            style={
+                                                styles.infoText
+                                            }
+                                        >
+                                            Conductor listo
+                                        </Text>
+                                    </View>
+
+                                    <View
+                                        style={
+                                            styles.infoRow
+                                        }
+                                    >
+                                        <MaterialCommunityIcons
+                                            name="clock-outline"
+                                            size={18}
+                                            color="#60A5FA"
+                                        />
+
+                                        <Text
+                                            style={
+                                                styles.infoText
+                                            }
+                                        >
+                                            Sistema operativo
+                                        </Text>
+                                    </View>
+                                </View>
+
+                                {errorMessage ? (
+                                    <HelperText
+                                        type="error"
+                                        visible
+                                        style={
+                                            styles.errorText
+                                        }
+                                    >
+                                        {
+                                            errorMessage
+                                        }
+                                    </HelperText>
+                                ) : null}
+
+                                <LinearGradient
+                                    colors={[
+                                        '#3B82F6',
+                                        '#2563EB',
+                                    ]}
+                                    start={{
+                                        x: 0,
+                                        y: 0,
+                                    }}
+                                    end={{
+                                        x: 1,
+                                        y: 1,
+                                    }}
+                                    style={
+                                        styles.buttonGradient
+                                    }
+                                >
+                                    <Button
+                                        mode="contained"
+                                        icon="play"
+                                        onPress={
+                                            handleStartTrip
+                                        }
+                                        loading={
+                                            isStartingTrip
+                                        }
+                                        disabled={
+                                            isStartingTrip
+                                        }
+                                        style={
+                                            styles.button
+                                        }
+                                        contentStyle={
+                                            styles.buttonContent
+                                        }
+                                        labelStyle={
+                                            styles.buttonLabel
+                                        }
+                                    >
+                                        Iniciar viaje
+                                    </Button>
+                                </LinearGradient>
+                            </>
+                        ) : (
+                            <>
+                                <TripHeader
+                                    trip={activeTrip}
+                                />
+
+                                <View
+                                    style={
+                                        styles.activeActions
+                                    }
+                                >
+                                    <Button
+                                        mode="contained"
+                                        buttonColor="#2563EB"
+                                        onPress={() =>
+                                            router.push(
+                                                '/(tabs)/scanner'
+                                            )
+                                        }
+                                        style={
+                                            styles.actionButton
+                                        }
+                                    >
+                                        Ir a scanner
+                                    </Button>
+
+                                    <Button
+                                        mode="contained-tonal"
+                                        onPress={() =>
+                                            router.push(
+                                                '/(tabs)/roster'
+                                            )
+                                        }
+                                        style={
+                                            styles.actionButton
+                                        }
+                                    >
+                                        Ver lista
+                                    </Button>
+
+                                    <Button
+                                        mode="outlined"
+                                        textColor="#E2E8F0"
+                                        onPress={() =>
+                                            router.push(
+                                                '/(tabs)/close-trip'
+                                            )
+                                        }
+                                        style={
+                                            styles.actionButton
+                                        }
+                                    >
+                                        Cerrar viaje
+                                    </Button>
+                                </View>
+                            </>
+                        )}
                     </View>
 
-                    {!activeTrip ? (
-                        <View style={styles.cards}>
-                            {DIRECTION_OPTIONS.map((option) => {
-                                const isSelected = direction === option.value;
-
-                                return (
-                                    <Pressable
-                                        key={option.value}
-                                        style={[styles.tripCard, isSelected && styles.tripCardActive]}
-                                        onPress={() => setDirection(option.value)}
-                                    >
-                                        <View style={[styles.cardOrb, isSelected && styles.cardOrbActive]} pointerEvents="none" />
-
-                                        <View style={styles.tripCardTop}>
-                                            <View style={[styles.iconCircle, isSelected && styles.iconCircleActive]}>
-                                                <MaterialCommunityIcons
-                                                    name={option.icon}
-                                                    size={22}
-                                                    color={isSelected ? '#ffffff' : '#a9b3d3'}
-                                                />
-                                            </View>
-
-                                            <View style={[styles.radioOuter, isSelected && styles.radioOuterActive]}>
-                                                {isSelected ? <MaterialCommunityIcons name="check" size={12} color="#ffffff" /> : null}
-                                            </View>
-                                        </View>
-
-                                        <Text style={[styles.cardTitle, !isSelected && styles.cardTitleMuted]}>{option.title}</Text>
-                                        <Text style={styles.cardSubtitle}>{option.subtitle}</Text>
-                                    </Pressable>
-                                );
-                            })}
-                        </View>
-                    ) : (
-                        <View style={styles.activeTripCard}>
-                            <TripHeader trip={activeTrip} />
-
-                            <View style={styles.activeActions}>
-                                <Button mode="contained" onPress={() => router.push('/(tabs)/scanner')}>
-                                    Ir a scanner
-                                </Button>
-                                <Button mode="contained-tonal" onPress={() => router.push('/(tabs)/roster')}>
-                                    Ver lista
-                                </Button>
-                                <Button mode="outlined" onPress={() => router.push('/(tabs)/close-trip')}>
-                                    Cerrar viaje
-                                </Button>
-                            </View>
-                        </View>
-                    )}
-
                     <View style={styles.warning}>
-                        <MaterialCommunityIcons name="alert-outline" size={16} color="#f59e0b" style={{ marginTop: 2 }} />
-                        <View style={styles.warningText}>
-                            <Text style={styles.warningTitle}>Recordatorio de Seguridad</Text>
-                            <Text style={styles.warningBody}>
-                                Asegúrate de que todos los pasajeros tengan el cinturón puesto antes de iniciar.
+                        <View
+                            style={
+                                styles.warningIcon
+                            }
+                        >
+                            <MaterialCommunityIcons
+                                name="shield-alert-outline"
+                                size={18}
+                                color="#FACC15"
+                            />
+                        </View>
+
+                        <View
+                            style={
+                                styles.warningText
+                            }
+                        >
+                            <Text
+                                style={
+                                    styles.warningTitle
+                                }
+                            >
+                                Seguridad
+                            </Text>
+
+                            <Text
+                                style={
+                                    styles.warningBody
+                                }
+                            >
+                                Verifica que todos
+                                los estudiantes
+                                tengan el cinturón
+                                colocado antes de
+                                iniciar.
                             </Text>
                         </View>
                     </View>
-                </ScrollView>
-
-                {!activeTrip ? (
-                    <View style={[styles.ctaDock, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}>
-                        {errorMessage ? <HelperText type="error">{errorMessage}</HelperText> : null}
-                        <Button
-                            mode="contained"
-                            style={styles.ctaButton}
-                            contentStyle={styles.ctaButtonContent}
-                            labelStyle={styles.ctaButtonLabel}
-                            icon="plus"
-                            onPress={handleStartTrip}
-                            loading={isStartingTrip}
-                            disabled={isStartingTrip}
-                        >
-                            Iniciar viaje
-                        </Button>
-                    </View>
-                ) : null}
-            </View>
+                </View>
+            </ScrollView>
         </SafeAreaView>
     );
 }
@@ -160,163 +412,294 @@ export default function TripScreen() {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: '#0a1026',
+        backgroundColor: '#0B1020',
     },
-    root: {
+
+    glowBlue: {
+        position: 'absolute',
+
+        width: 320,
+        height: 320,
+
+        borderRadius: 160,
+
+        backgroundColor:
+            'rgba(59,130,246,0.15)',
+
+        top: -120,
+        right: -120,
+    },
+
+    glowPurple: {
+        position: 'absolute',
+
+        width: 240,
+        height: 240,
+
+        borderRadius: 120,
+
+        backgroundColor:
+            'rgba(168,85,247,0.10)',
+
+        bottom: 100,
+        left: -80,
+    },
+
+    container: {
         flex: 1,
-        backgroundColor: '#0a1026',
+
+        justifyContent: 'center',
+
+        paddingHorizontal: 24,
+
+        paddingTop: 30,
+
+        gap: 22,
     },
-    scrollContent: {
-        paddingHorizontal: spacing.lg,
-        paddingTop: spacing.md,
-        gap: spacing.md,
-    },
-    header: {
-        gap: spacing.xs,
-    },
-    title: {
-        color: colors.textPrimary,
-        fontSize: 30,
-        fontWeight: '700',
-        textAlign: 'center',
-        letterSpacing: 0.3,
-    },
-    subtitle: {
-        color: '#9aa3c7',
-        fontSize: fontSize.md,
-        textAlign: 'center',
-    },
-    cards: {
-        gap: spacing.md,
-        marginTop: spacing.sm,
-    },
-    tripCard: {
-        backgroundColor: '#252b52',
-        borderRadius: 22,
-        padding: spacing.lg,
-        gap: spacing.sm,
-        borderWidth: 1,
-        borderColor: 'rgba(143, 160, 255, 0.18)',
-        overflow: 'hidden',
-        minHeight: 150,
-    },
-    tripCardActive: {
-        borderColor: '#4c6fff',
-        borderWidth: 2,
-    },
-    cardOrb: {
-        position: 'absolute',
-        width: 180,
-        height: 180,
-        borderRadius: 90,
-        right: -68,
-        top: -24,
-        backgroundColor: 'rgba(63, 101, 244, 0.24)',
-    },
-    cardOrbActive: {
-        backgroundColor: 'rgba(63, 101, 244, 0.44)',
-    },
-    tripCardTop: {
+
+    badge: {
         flexDirection: 'row',
+
         alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: spacing.xs,
-    },
-    iconCircle: {
-        width: 46,
-        height: 46,
-        borderRadius: 23,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#3d4a6b',
-    },
-    iconCircleActive: {
-        backgroundColor: '#3168ff',
-    },
-    cardTitle: {
-        color: colors.textPrimary,
-        fontSize: 24,
-        fontWeight: '700',
-        letterSpacing: 1,
-    },
-    cardTitleMuted: {
-        color: '#d1d7ef',
-    },
-    cardSubtitle: {
-        color: '#adb7d9',
-        fontSize: fontSize.sm,
-    },
-    radioOuter: {
-        width: 22,
-        height: 22,
-        borderRadius: 11,
-        borderWidth: 1.5,
-        borderColor: colors.border,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: colors.surfaceLight,
-    },
-    radioOuterActive: {
-        backgroundColor: '#3168ff',
-        borderColor: '#3168ff',
-    },
-    ctaDock: {
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        bottom: 0,
-        paddingHorizontal: spacing.lg,
-        backgroundColor: '#0a1026',
-    },
-    ctaButton: {
-        borderRadius: radius.lg,
-        backgroundColor: '#0f6bff',
-    },
-    ctaButtonContent: {
-        height: 50,
-        flexDirection: 'row-reverse',
-    },
-    ctaButtonLabel: {
-        fontSize: 16,
-        fontWeight: '700',
-    },
-    activeTripCard: {
-        gap: spacing.md,
-        backgroundColor: '#252b52',
-        borderRadius: radius.xl + 2,
+
+        alignSelf: 'center',
+
+        gap: 8,
+
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+
+        borderRadius: 999,
+
+        backgroundColor:
+            'rgba(59,130,246,0.10)',
+
         borderWidth: 1,
-        borderColor: 'rgba(143, 160, 255, 0.2)',
-        padding: spacing.md,
-        marginTop: spacing.sm,
+
+        borderColor:
+            'rgba(255,255,255,0.06)',
     },
+
+    badgeText: {
+        color: '#DCE7FF',
+
+        fontSize: 13,
+
+        fontWeight: '600',
+    },
+
+    title: {
+        color: '#F8FAFC',
+
+        fontSize: 34,
+
+        fontWeight: '800',
+
+        textAlign: 'center',
+
+        letterSpacing: 0.4,
+    },
+
+    subtitle: {
+        color: '#94A3B8',
+
+        textAlign: 'center',
+
+        fontSize: 15,
+
+        lineHeight: 24,
+    },
+
+    mainCard: {
+        position: 'relative',
+
+        overflow: 'hidden',
+
+        backgroundColor:
+            'rgba(22,28,45,0.88)',
+
+        borderRadius: 32,
+
+        padding: 26,
+
+        gap: 24,
+
+        borderWidth: 1,
+
+        borderColor:
+            'rgba(255,255,255,0.06)',
+
+        shadowColor: '#000',
+
+        shadowOpacity: 0.4,
+
+        shadowRadius: 24,
+
+        shadowOffset: {
+            width: 0,
+            height: 14,
+        },
+
+        elevation: 18,
+    },
+
+
+    selectorContainer: {
+        flexDirection: 'row',
+
+        backgroundColor:
+            'rgba(255,255,255,0.04)',
+
+        padding: 6,
+
+        borderRadius: 20,
+
+        gap: 8,
+    },
+
+    selectorButton: {
+        flex: 1,
+
+        height: 56,
+
+        borderRadius: 16,
+
+        alignItems: 'center',
+
+        justifyContent: 'center',
+
+        flexDirection: 'row',
+
+        gap: 8,
+    },
+
+    selectorButtonActive: {
+        backgroundColor: '#2563EB',
+
+        shadowColor: '#2563EB',
+
+        shadowOpacity: 0.35,
+
+        shadowRadius: 12,
+
+        elevation: 10,
+    },
+
+    selectorText: {
+        color: '#FFFFFF',
+
+        fontWeight: '700',
+
+        fontSize: 15,
+    },
+
+    infoContainer: {
+        gap: 16,
+    },
+
+    infoRow: {
+        flexDirection: 'row',
+
+        alignItems: 'center',
+
+        gap: 12,
+    },
+
+    infoText: {
+        color: '#CBD5E1',
+
+        fontSize: 15,
+    },
+
+    buttonGradient: {
+        borderRadius: 20,
+
+        overflow: 'hidden',
+    },
+
+    button: {
+        backgroundColor: 'transparent',
+    },
+
+    buttonContent: {
+        height: 58,
+    },
+
+    buttonLabel: {
+        fontSize: 16,
+
+        fontWeight: '700',
+    },
+
+    errorText: {
+        marginTop: -10,
+    },
+
     activeActions: {
         gap: spacing.sm,
-        marginTop: spacing.xs,
     },
+
+    actionButton: {
+        borderRadius: 16,
+    },
+
     warning: {
         flexDirection: 'row',
-        backgroundColor: 'rgba(45, 52, 73, 0.65)',
-        borderRadius: radius.md,
-        padding: spacing.md,
-        gap: spacing.sm,
+
         alignItems: 'flex-start',
-        borderLeftWidth: 3,
-        borderLeftColor: '#f59e0b',
-        borderTopLeftRadius: 0,
-        borderBottomLeftRadius: 0,
+
+        gap: 14,
+
+        backgroundColor:
+            'rgba(245,158,11,0.08)',
+
+        borderRadius: 22,
+
+        borderWidth: 1,
+
+        borderColor:
+            'rgba(245,158,11,0.14)',
+
+        padding: 18,
     },
+
+    warningIcon: {
+        width: 38,
+        height: 38,
+
+        borderRadius: 19,
+
+        alignItems: 'center',
+
+        justifyContent: 'center',
+
+        backgroundColor:
+            'rgba(245,158,11,0.12)',
+    },
+
     warningText: {
         flex: 1,
-        gap: spacing.xs,
+
+        gap: 6,
     },
+
     warningTitle: {
-        color: '#fcd34d',
+        color: '#FCD34D',
+
+        fontSize: 15,
+
         fontWeight: '700',
-        fontSize: fontSize.md,
     },
+
     warningBody: {
-        color: '#b8c0de',
-        fontSize: fontSize.sm,
-        lineHeight: 18,
+        color: '#CBD5E1',
+
+        fontSize: 14,
+
+        lineHeight: 22,
+    },
+    scrollContent: {
+        gap: 22,
+        paddingBottom: 20
     },
 });

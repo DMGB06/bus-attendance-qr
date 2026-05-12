@@ -1,17 +1,35 @@
 import { Tabs, useRouter } from 'expo-router';
+
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { TouchableOpacity, View, StyleSheet } from 'react-native';
+
+import {
+  TouchableOpacity,
+  View,
+  StyleSheet,
+} from 'react-native';
+
+import { LinearGradient } from 'expo-linear-gradient';
+
 import { Text } from 'react-native-paper';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import { logout } from '@/src/features/auth/services/auth.service';
-import { colors, fontSize, spacing } from '@/src/core/theme/theme';
+
+import {
+  colors,
+  fontSize,
+  spacing,
+} from '@/src/core/theme/theme';
 
 export default function TabsLayout() {
   const router = useRouter();
+
   const insets = useSafeAreaInsets();
 
   async function handleLogout() {
     await logout();
+
     router.replace('/(auth)/login');
   }
 
@@ -19,40 +37,106 @@ export default function TabsLayout() {
     <Tabs
       initialRouteName="trip"
       screenOptions={{
-        headerStyle: {
-          backgroundColor: colors.background,
+        sceneStyle: {
+          backgroundColor: '#0B1020',
         },
+
         headerShadowVisible: false,
+
+        headerStyle: {
+          backgroundColor: '#0B1020',
+        },
+
+        headerBackground: () => (
+          <LinearGradient
+            colors={[
+              '#0B1020',
+              '#111827',
+            ]}
+            style={StyleSheet.absoluteFill}
+          />
+        ),
+
         headerLeft: () => (
           <View style={styles.headerLeft}>
-            <MaterialCommunityIcons name="bus" size={18} color={colors.primary} />
-            <Text style={styles.headerTitle}>Bus Attendance</Text>
+            <View style={styles.logoContainer}>
+              <MaterialCommunityIcons
+                name="bus-school"
+                size={18}
+                color="#BFDBFE"
+              />
+            </View>
+
+            <View>
+              <Text style={styles.headerTitle}>
+                Bus Attendance
+              </Text>
+
+              <Text style={styles.headerSubtitle}>
+                Transporte Inteligente
+              </Text>
+            </View>
           </View>
         ),
+
         headerRight: () => (
-          <TouchableOpacity onPress={handleLogout} style={styles.headerRight} hitSlop={8}>
-            <Text style={styles.logoutText}>Salir</Text>
+          <TouchableOpacity
+            onPress={handleLogout}
+            style={styles.headerRight}
+            activeOpacity={0.8}
+          >
+            <MaterialCommunityIcons
+              name="logout"
+              size={18}
+              color="#94A3B8"
+            />
+
+            <Text style={styles.logoutText}>
+              Salir
+            </Text>
           </TouchableOpacity>
         ),
+
         headerTitle: () => null,
-        tabBarStyle: {
-          backgroundColor: colors.background,
-          borderTopColor: colors.border,
-          borderTopWidth: 1,
-          height: 72 + insets.bottom,
-          paddingTop: 8,
-          paddingBottom: 8 + insets.bottom,
-        },
+
         tabBarHideOnKeyboard: true,
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textMuted,
-        tabBarLabelStyle: {
-          fontSize: fontSize.xs,
-          fontWeight: '700',
-          letterSpacing: 0.8,
+
+        tabBarActiveTintColor: '#3B82F6',
+
+        tabBarInactiveTintColor: '#7C8AA5',
+
+        tabBarStyle: {
+          position: 'absolute',
+
+          backgroundColor:
+            'rgba(11,16,32,0.96)',
+
+          borderTopWidth: 1,
+
+          borderTopColor:
+            'rgba(255,255,255,0.05)',
+
+          height: 60 + insets.bottom,
+
+          paddingTop: 6,
+
+          paddingBottom: insets.bottom,
+
+          elevation: 0,
         },
+
+        tabBarLabelStyle: {
+          fontSize: 11,
+
+          fontWeight: '700',
+
+          letterSpacing: 0.8,
+
+          marginTop: -2,
+        },
+
         tabBarItemStyle: {
-          paddingVertical: 2,
+          paddingVertical: 4,
         },
       }}
     >
@@ -60,38 +144,99 @@ export default function TabsLayout() {
         name="trip"
         options={{
           title: 'Iniciar Viaje',
+
           tabBarLabel: 'VIAJE',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="bus-clock" size={size} color={color} />
+
+          tabBarIcon: ({
+            color,
+            focused,
+          }) => (
+            <View
+              style={[
+                styles.tabIconContainer,
+
+                focused &&
+                styles.tabIconContainerActive,
+              ]}
+            >
+              <MaterialCommunityIcons
+                name="bus-clock"
+                size={22}
+                color={color}
+              />
+            </View>
           ),
         }}
       />
+
       <Tabs.Screen
         name="scanner"
         options={{
           title: 'Escanear QR',
+
           tabBarLabel: 'SCAN',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="qrcode-scan" size={size} color={color} />
+
+          tabBarIcon: ({
+            color,
+            focused,
+          }) => (
+            <View
+              style={[
+                styles.tabIconContainer,
+
+                focused &&
+                styles.tabIconContainerActive,
+              ]}
+            >
+              <MaterialCommunityIcons
+                name="qrcode-scan"
+                size={22}
+                color={color}
+              />
+            </View>
           ),
         }}
       />
+
       <Tabs.Screen
         name="roster"
         options={{
-          title: 'Lista de Asistencia',
+          title: 'Lista',
+
           tabBarLabel: 'LISTA',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="format-list-bulleted" size={size} color={color} />
+
+          tabBarIcon: ({
+            color,
+            focused,
+          }) => (
+            <View
+              style={[
+                styles.tabIconContainer,
+
+                focused &&
+                styles.tabIconContainerActive,
+              ]}
+            >
+              <MaterialCommunityIcons
+                name="format-list-bulleted"
+                size={22}
+                color={color}
+              />
+            </View>
           ),
         }}
       />
+
       <Tabs.Screen
         name="close-trip"
         options={{
           href: null,
+
           title: 'Cerrar viaje',
-          tabBarStyle: { display: 'none' },
+
+          tabBarStyle: {
+            display: 'none',
+          },
         }}
       />
     </Tabs>
@@ -101,22 +246,101 @@ export default function TabsLayout() {
 const styles = StyleSheet.create({
   headerLeft: {
     flexDirection: 'row',
+
     alignItems: 'center',
-    gap: spacing.sm,
+
+    gap: 12,
+
     paddingLeft: spacing.lg,
   },
+
+  logoContainer: {
+    width: 38,
+    height: 38,
+
+    borderRadius: 19,
+
+    alignItems: 'center',
+
+    justifyContent: 'center',
+
+    backgroundColor:
+      'rgba(59,130,246,0.14)',
+
+    borderWidth: 1,
+
+    borderColor:
+      'rgba(255,255,255,0.06)',
+  },
+
   headerTitle: {
-    color: colors.primary,
-    fontWeight: '700',
-    fontSize: fontSize.lg,
+    color: '#EAF1FF',
+
+    fontWeight: '800',
+
+    fontSize: 17,
+
+    letterSpacing: 0.3,
   },
+
+  headerSubtitle: {
+    color: '#7C8AA5',
+
+    fontSize: 11,
+
+    marginTop: -1,
+  },
+
   headerRight: {
-    paddingRight: spacing.lg,
-    paddingVertical: spacing.xs,
+    flexDirection: 'row',
+
+    alignItems: 'center',
+
+    gap: 6,
+
+    marginRight: spacing.lg,
+
+    paddingHorizontal: 12,
+
+    paddingVertical: 8,
+
+    borderRadius: 14,
+
+    backgroundColor:
+      'rgba(255,255,255,0.04)',
+
+    borderWidth: 1,
+
+    borderColor:
+      'rgba(255,255,255,0.05)',
   },
+
   logoutText: {
-    color: colors.textMuted,
-    fontSize: fontSize.md,
+    color: '#94A3B8',
+
+    fontSize: 14,
+
     fontWeight: '600',
+  },
+
+  tabIconContainer: {
+    width: 42,
+    height: 42,
+
+    borderRadius: 21,
+
+    alignItems: 'center',
+
+    justifyContent: 'center',
+  },
+
+  tabIconContainerActive: {
+    backgroundColor:
+      'rgba(59,130,246,0.14)',
+
+    borderWidth: 1,
+
+    borderColor:
+      'rgba(59,130,246,0.18)',
   },
 });

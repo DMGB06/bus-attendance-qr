@@ -113,7 +113,7 @@ export default function RootLayout() {
         ) : session && !inTabsGroup ? (
           <Redirect href="/(tabs)/trip" />
         ) : (
-          <Stack screenOptions={{ headerShown: false }}>
+          <Stack screenOptions={{ headerShown: false, contentStyle: { flex: 1 } }}>
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(tabs)" />
           </Stack>

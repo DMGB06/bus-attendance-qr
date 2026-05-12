@@ -26,11 +26,15 @@ function getBadgeLabel(item: TripRosterItem) {
     return 'ABORDO';
   }
 
+  if (item.attendance.event_type === 'ausente') {
+    return 'AUSENTE';
+  }
+
   if (item.attendance.event_type === 'manual') {
     return 'MANUAL';
   }
 
-  if (item.attendance.event_type === 'boarded') {
+  if (item.attendance.event_type === 'subio') {
     return 'ABORDO';
   }
 

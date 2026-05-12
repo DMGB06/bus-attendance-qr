@@ -1,17 +1,35 @@
-import { Image, StyleSheet, View } from "react-native";
-import { ActivityIndicator, Text } from 'react-native-paper';
+import { StyleSheet, View } from 'react-native';
+
+import { LinearGradient } from 'expo-linear-gradient';
+
+import { Text } from 'react-native-paper';
+import BusControlLogo from '../../../assets/images/bus_logo.svg';
+
 
 export function AppLoadingScreen() {
     return (
         <View style={styles.root}>
-            <View style={styles.topShape} />
-            <View style={styles.bottomShape} />
+            {/* Background Gradient */}
+            <LinearGradient
+                colors={['#0F1115', '#131A24', '#1A1F27']}
+                style={StyleSheet.absoluteFill}
+            />
 
-            <View style={styles.centerCard}>
-                <Image source={require('../../../assets/images/splash-icon.png')} style={styles.logo} resizeMode="contain" />
-                <Text style={styles.title}>BUSCONTROL QR</Text>
-                <Text style={styles.subtitle}>Registro de asistencia escolar</Text>
-                <ActivityIndicator size="small" color="#2f5de0" style={styles.loader} />
+            {/* Ambient Glow */}
+            <View style={styles.glowBlue} />
+            <View style={styles.glowPurple} />
+
+            {/* Center Content */}
+            <View style={styles.centerContent}>
+                <View style={styles.logoWrapper}>
+                    <BusControlLogo width={350} height={350} />
+                </View>
+                {/* Minimal Loader */}
+                <View style={styles.loaderContainer}>
+                    <View style={[styles.dot, styles.dot1]} />
+                    <View style={[styles.dot, styles.dot2]} />
+                    <View style={[styles.dot, styles.dot3]} />
+                </View>
             </View>
         </View>
     );
@@ -20,60 +38,63 @@ export function AppLoadingScreen() {
 const styles = StyleSheet.create({
     root: {
         flex: 1,
-        backgroundColor: '#f4f6fa',
         justifyContent: 'center',
         alignItems: 'center',
         overflow: 'hidden',
+        backgroundColor: '#0F1115',
     },
-    topShape: {
+
+    glowBlue: {
         position: 'absolute',
+        width: 320,
+        height: 320,
+        borderRadius: 160,
+        backgroundColor: 'rgba(59,130,246,0.16)',
         top: -120,
-        width: 420,
-        height: 240,
-        backgroundColor: '#3d63f0',
-        transform: [{ rotate: '-12deg' }],
+        right: -100,
     },
-    bottomShape: {
+
+    glowPurple: {
         position: 'absolute',
-        bottom: -130,
-        width: 430,
-        height: 250,
-        backgroundColor: '#3d63f0',
-        transform: [{ rotate: '14deg' }],
+        width: 240,
+        height: 240,
+        borderRadius: 120,
+        backgroundColor: 'rgba(168,85,247,0.10)',
+        bottom: -40,
+        left: -60,
     },
-    centerCard: {
-        width: '84%',
-        maxWidth: 340,
-        borderRadius: 24,
+
+    centerContent: {
         alignItems: 'center',
-        paddingVertical: 28,
-        paddingHorizontal: 20,
-        backgroundColor: '#ffffff',
-        shadowColor: '#0f172a',
-        shadowOpacity: 0.18,
-        shadowRadius: 18,
-        shadowOffset: { width: 0, height: 10 },
-        elevation: 8,
+        paddingHorizontal: 32,
     },
-    logo: {
-        width: 88,
-        height: 88,
-        marginBottom: 12,
+
+    logoWrapper: {
+        marginBottom: 26,
     },
-    title: {
-        fontSize: 23,
-        fontWeight: '800',
-        letterSpacing: 0.8,
-        color: '#111827',
-        textAlign: 'center',
+    loaderContainer: {
+        flexDirection: 'row',
+        marginTop: 30,
+        gap: 10,
     },
-    subtitle: {
-        marginTop: 6,
-        fontSize: 13,
-        color: '#4b5563',
-        textAlign: 'center',
+
+    dot: {
+        width: 8,
+        height: 8,
+        borderRadius: 999,
+        backgroundColor: '#3B82F6',
+        opacity: 0.5,
     },
-    loader: {
-        marginTop: 16,
+
+    dot1: {
+        opacity: 1,
+    },
+
+    dot2: {
+        opacity: 0.7,
+    },
+
+    dot3: {
+        opacity: 0.4,
     },
 });

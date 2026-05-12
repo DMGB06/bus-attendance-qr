@@ -46,9 +46,9 @@ export async function getTripRoster(tripId: string): Promise<TripRosterItem[]> {
     const attendance = history.length > 0 ? history[history.length - 1] : null;
 
     const hasBoarding = history.some(
-      (record) => record.event_type === "boarded" || record.event_type === "manual",
+      (record) => record.event_type === "subio" || record.event_type === "manual",
     );
-    const hasDropoff = history.some((record) => record.event_type === "alighted");
+    const hasDropoff = history.some((record) => record.event_type === "bajo");
 
     let status: TripRosterStatus = "pending";
     if (hasDropoff) {

@@ -3,6 +3,7 @@ import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Card, HelperText, Searchbar, Text } from 'react-native-paper';
 import { useRouter } from 'expo-router';
+import { formatTripDirectionLabel } from '@/src/features/trips/components/TripHeader';
 import { RosterStudentRow } from '@/src/features/trips/components/roster/RosterStudentRow';
 import {
   getTripRoster,
@@ -202,11 +203,16 @@ export default function RosterScreen() {
     );
   }
 
+  const emptyBody =
+    viewMode === 'attended'
+      ? 'Aún no hay estudiantes con asistencia registrada.'
+      : 'No encontramos alumnos con ese filtro.';
+
   return (
-    <SafeAreaView edges={['bottom', 'left', 'right']} style={[styles.container, { paddingBottom: insets.bottom + 16 }]}>
+    <SafeAreaView edges={['bottom', 'left', 'right']} style={[styles.container, { paddingBottom: insets.bottom + spacing.sm }]}>
       <View style={styles.header}>
         <Text style={styles.title}>Lista de Asistencia</Text>
-        <Text style={styles.subtitle}>Viaje {activeTrip.direction.toUpperCase()}</Text>
+        <Text style={styles.subtitle}>Viaje {formatTripDirectionLabel(activeTrip.direction)}</Text>
       </View>
 
       <Searchbar
@@ -250,44 +256,44 @@ export default function RosterScreen() {
         </Card>
       </View>
 
-      {isLoading ? (
-        <View style={styles.loading}>
-          <ActivityIndicator color={colors.primary} />
-        </View>
-      ) : null}
-
       {errorMessage ? <HelperText type="error">{errorMessage}</HelperText> : null}
       {infoMessage ? <HelperText type="info">{infoMessage}</HelperText> : null}
 
-      {!isLoading && filteredItems.length === 0 ? (
-        <Card mode="outlined" style={styles.emptyStateCard}>
-          <Card.Content style={styles.emptyContent}>
-            <Text style={styles.emptyTitle}>Sin resultados</Text>
-            <Text style={styles.emptyBody}>
-              {viewMode === 'attended'
-                ? 'Aún no hay estudiantes con asistencia registrada.'
-                : 'No encontramos alumnos con ese filtro.'}
-            </Text>
-          </Card.Content>
-        </Card>
-      ) : null}
-
-      <FlatList
-        data={filteredItems}
-        keyExtractor={(item) => item.student.id}
-        renderItem={({ item }) => (
-          <RosterStudentRow
-            item={item}
-            onMarkManual={handleManualMark}
-            isMarkingManual={isMarkingStudentId === item.student.id}
+      <View style={styles.listWrap}>
+        {isLoading && items.length === 0 ? (
+          <View style={styles.centerFill}>
+            <ActivityIndicator color={colors.primary} size="large" />
+          </View>
+        ) : !isLoading && filteredItems.length === 0 ? (
+          <View style={styles.centerFill}>
+            <Card mode="outlined" style={styles.emptyStateCard}>
+              <Card.Content style={styles.emptyContent}>
+                <Text style={styles.emptyTitle}>Sin resultados</Text>
+                <Text style={styles.emptyBody}>{emptyBody}</Text>
+              </Card.Content>
+            </Card>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredItems}
+            keyExtractor={(item) => item.student.id}
+            renderItem={({ item }) => (
+              <RosterStudentRow
+                item={item}
+                onMarkManual={handleManualMark}
+                onMarkExit={handleExitMark}
+                isMarkingManual={isMarkingStudentId === item.student.id}
+                isMarkingExit={isMarkingStudentId === item.student.id}
+              />
+            )}
+            contentContainerStyle={styles.list}
+            ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
+            refreshing={isLoading}
+            onRefresh={() => void loadRoster()}
+            style={styles.listView}
           />
         )}
-        contentContainerStyle={styles.list}
-        ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
-        refreshing={isLoading}
-        onRefresh={() => void loadRoster()}
-        style={styles.listView}
-      />
+      </View>
     </SafeAreaView>
   );
 }
@@ -302,7 +308,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
-    gap: spacing.md,
+    gap: spacing.sm,
+  },
+  listWrap: {
+    flex: 1,
+    minHeight: 0,
+  },
+  centerFill: {
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 120,
   },
   header: {
     gap: 2,
@@ -349,9 +364,6 @@ const styles = StyleSheet.create({
   summaryLabel: {
     color: colors.textMuted,
     fontSize: 12,
-  },
-  loading: {
-    paddingVertical: spacing.sm,
   },
   list: {
     paddingBottom: spacing.md,

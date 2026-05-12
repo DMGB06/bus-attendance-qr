@@ -58,27 +58,27 @@ export async function registerDropoffAttendance(
     .select("event_type")
     .eq("trip_id", tripId)
     .eq("student_id", studentId)
-    .in("event_type", ["boarded", "manual", "alighted"]);
+    .in("event_type", ["subio", "manual", "bajo"]);
 
   if (error) {
     throw new Error("No se pudo validar la salida del alumno.");
   }
 
   const hasBoarding = (attendanceRows ?? []).some(
-    (attendance) => attendance.event_type === "boarded" || attendance.event_type === "manual",
+    (attendance) => attendance.event_type === "subio" || attendance.event_type === "manual",
   );
   if (!hasBoarding) {
     throw new Error("Primero debes registrar la asistencia de entrada del alumno.");
   }
 
   const hasDropoff = (attendanceRows ?? []).some(
-    (attendance) => attendance.event_type === "alighted",
+    (attendance) => attendance.event_type === "bajo",
   );
   if (hasDropoff) {
     throw new Error("La salida del alumno ya fue registrada.");
   }
 
-  return registerAttendance(tripId, studentId, "alighted");
+  return registerAttendance(tripId, studentId, "bajo");
 }
 
 export async function getAttendanceByTrip(tripId: string): Promise<AttendanceRecord[]> {
@@ -100,7 +100,7 @@ export async function getPendingDropoffStudents(tripId: string): Promise<Pending
     .from("bus_attendance_records")
     .select("student_id, event_type")
     .eq("trip_id", tripId)
-    .in("event_type", ["boarded", "alighted", "manual"]);
+    .in("event_type", ["subio", "bajo", "manual", "ausente"]);
 
   if (attendanceError) {
     throw new Error("No se pudo validar el estado de asistencia para cerrar el viaje.");
@@ -110,11 +110,11 @@ export async function getPendingDropoffStudents(tripId: string): Promise<Pending
   const alightedSet = new Set<string>();
 
   for (const row of attendanceRows ?? []) {
-    if (row.event_type === "boarded" || row.event_type === "manual") {
+    if (row.event_type === "subio" || row.event_type === "manual") {
       boardedSet.add(row.student_id);
     }
 
-    if (row.event_type === "alighted") {
+    if (row.event_type === "bajo") {
       alightedSet.add(row.student_id);
     }
   }

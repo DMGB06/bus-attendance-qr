@@ -34,7 +34,8 @@ export default function ScannerScreen() {
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const scanLockedRef = useRef(false);
   const cameraHeight = Math.max(220, Math.min(360, screenHeight * 0.34));
-  const containerStyle = [styles.screenContainer, { paddingBottom: 100 + insets.bottom }];
+  /** Padding inferior razonable; un valor grande (p.ej. 100) deja un “vacío” gigante sobre la barra de pestañas. */
+  const containerStyle = [styles.screenContainer, { paddingBottom: Math.max(insets.bottom, spacing.md) }];
 
   async function resolveStudentByCode(value: string) {
     const normalizedValue = value.trim();
@@ -170,7 +171,7 @@ export default function ScannerScreen() {
 
     try {
       const studentName = student.nombre_alumno;
-      await registerAttendance(activeTrip.id, student.id, 'boarded');
+      await registerAttendance(activeTrip.id, student.id, 'subio');
       clearStudentSelection(false);
       setSuccessMessage(`Asistencia registrada para ${studentName}.`);
     } catch (error: unknown) {
@@ -257,84 +258,91 @@ export default function ScannerScreen() {
             <Text style={styles.overlayHint}>Apunta el QR dentro del marco</Text>
           </View>
         </View>
-        <ScrollView>
-          <Card mode="outlined" style={styles.panel}>
-            <Card.Content style={styles.panelContent}>
-              <Text style={styles.panelTitle}>Escaneo y confirmación</Text>
-              <Text style={styles.panelBody}>
-                Escanea el QR o busca al alumno por nombre para registrarlo manualmente.
-              </Text>
+        <ScrollView
+          style={styles.panelScroll}
+          contentContainerStyle={styles.panelScrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.panelFill}>
+            <Card mode="outlined" style={styles.panel}>
+              <Card.Content style={styles.panelContent}>
+                <Text style={styles.panelTitle}>Escaneo y confirmación</Text>
+                <Text style={styles.panelBody}>
+                  Escanea el QR o busca al alumno por nombre para registrarlo manualmente.
+                </Text>
 
-              <View style={styles.manualBlock}>
-                <TextInput
-                  mode="outlined"
-                  label="Nombre del alumno"
-                  value={manualName}
-                  onChangeText={(value) => {
-                    setManualName(value);
-                    setErrorMessage(null);
-                    setInfoMessage(null);
-                  }}
-                  autoCapitalize="words"
-                  autoCorrect={false}
-                  editable={!isSearching && !isRegistering}
-                  returnKeyType="search"
-                  onSubmitEditing={() => {
-                    void handleManualSearch();
-                  }}
-                />
-                <Button mode="contained" onPress={handleManualSearch} loading={isSearching} disabled={isRegistering}>
-                  Buscar por nombre
-                </Button>
-              </View>
-
-              {manualCandidates.length > 1 ? (
-                <View style={styles.matchesBlock}>
-                  {manualCandidates.map((candidate) => (
-                    <View key={candidate.id} style={styles.matchItem}>
-                      <View style={styles.matchTextBlock}>
-                        <Text style={styles.matchName}>{candidate.nombre_alumno}</Text>
-                        <Text style={styles.matchMeta}>
-                          DNI: {candidate.dni_alumno}
-                        </Text>
-                      </View>
-                      <Button mode="contained-tonal" compact onPress={() => handleSelectManualStudent(candidate)}>
-                        Elegir
-                      </Button>
-                    </View>
-                  ))}
-                </View>
-              ) : null}
-
-              {student ? (
-                <View style={styles.selectionBlock}>
-                  <Text style={styles.selectionLabel}>Alumno seleccionado: {student.nombre_alumno}</Text>
-                  <Button mode="contained-tonal" onPress={() => setIsConfirmModalVisible(true)} disabled={isRegistering}>
-                    Ver ficha y confirmar
+                <View style={styles.manualBlock}>
+                  <TextInput
+                    mode="outlined"
+                    label="Nombre del alumno"
+                    value={manualName}
+                    onChangeText={(value) => {
+                      setManualName(value);
+                      setErrorMessage(null);
+                      setInfoMessage(null);
+                    }}
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                    editable={!isSearching && !isRegistering}
+                    returnKeyType="search"
+                    onSubmitEditing={() => {
+                      void handleManualSearch();
+                    }}
+                  />
+                  <Button mode="contained" onPress={handleManualSearch} loading={isSearching} disabled={isRegistering}>
+                    Buscar por nombre
                   </Button>
                 </View>
-              ) : null}
 
-              {scannedValue ? (
-                <Text style={styles.scannedValue}>Valor leído: {scannedValue}</Text>
-              ) : null}
+                {manualCandidates.length > 1 ? (
+                  <View style={styles.matchesBlock}>
+                    {manualCandidates.map((candidate) => (
+                      <View key={candidate.id} style={styles.matchItem}>
+                        <View style={styles.matchTextBlock}>
+                          <Text style={styles.matchName}>{candidate.nombre_alumno}</Text>
+                          <Text style={styles.matchMeta}>
+                            DNI: {candidate.dni_alumno}
+                          </Text>
+                        </View>
+                        <Button mode="contained-tonal" compact onPress={() => handleSelectManualStudent(candidate)}>
+                          Elegir
+                        </Button>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
 
-              {errorMessage ? <HelperText type="error">{errorMessage}</HelperText> : null}
-              {infoMessage ? <HelperText type="info">{infoMessage}</HelperText> : null}
-              {successMessage ? <HelperText type="info">{successMessage}</HelperText> : null}
+                {student ? (
+                  <View style={styles.selectionBlock}>
+                    <Text style={styles.selectionLabel}>Alumno seleccionado: {student.nombre_alumno}</Text>
+                    <Button mode="contained-tonal" onPress={() => setIsConfirmModalVisible(true)} disabled={isRegistering}>
+                      Ver ficha y confirmar
+                    </Button>
+                  </View>
+                ) : null}
 
-              <View style={styles.actions}>
-                <Button
-                  mode="contained-tonal"
-                  icon="qrcode"
-                  onPress={handleResetScanner}
-                  disabled={isSearching || isRegistering}
-                >
-                  {student ? 'Limpiar y escanear otro' : 'Reiniciar escaneo'}
-                </Button>
-              </View>
-            </Card.Content>
-          </Card>
+                {scannedValue ? (
+                  <Text style={styles.scannedValue}>Valor leído: {scannedValue}</Text>
+                ) : null}
+
+                {errorMessage ? <HelperText type="error">{errorMessage}</HelperText> : null}
+                {infoMessage ? <HelperText type="info">{infoMessage}</HelperText> : null}
+                {successMessage ? <HelperText type="info">{successMessage}</HelperText> : null}
+
+                <View style={styles.actions}>
+                  <Button
+                    mode="contained-tonal"
+                    icon="qrcode"
+                    onPress={handleResetScanner}
+                    disabled={isSearching || isRegistering}
+                  >
+                    {student ? 'Limpiar y escanear otro' : 'Reiniciar escaneo'}
+                  </Button>
+                </View>
+              </Card.Content>
+            </Card>
+          </View>
         </ScrollView>
 
         <StudentConfirmModal
@@ -355,205 +363,399 @@ export default function ScannerScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#060B18',
   },
+
   screenContainer: {
     flex: 1,
-    backgroundColor: colors.background,
-    padding: spacing.lg,
-    gap: spacing.lg,
-    paddingBottom: 100,
+    backgroundColor: '#060B18',
+
+    paddingHorizontal: 20,
+
+    paddingTop: 14,
+
+    gap: 20,
   },
-  blockedCard: {
+
+  panelScroll: {
     flex: 1,
-    justifyContent: 'center',
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+
+    minHeight: 0,
   },
-  blockedContent: {
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.xl,
+
+  panelScrollContent: {
+    paddingBottom: 14,
   },
-  blockedTitle: {
-    color: colors.textPrimary,
-    fontSize: 20,
-    fontWeight: '700',
-    textAlign: 'center',
+
+  panelFill: {
+    minHeight: 120,
   },
-  blockedBody: {
-    color: colors.textMuted,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  permissionCard: {
-    flex: 1,
-    justifyContent: 'center',
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  permissionContent: {
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.xl,
-  },
-  permissionTitle: {
-    color: colors.textPrimary,
-    fontSize: 20,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  permissionBody: {
-    color: colors.textMuted,
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: spacing.xs,
-  },
+
   badge: {
     alignSelf: 'center',
+
     flexDirection: 'row',
+
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+
+    gap: 8,
+
+    backgroundColor:
+      'rgba(59,130,246,0.10)',
+
+    borderRadius: 999,
+
+    paddingHorizontal: 16,
+
+    paddingVertical: 10,
   },
+
   badgeText: {
-    color: colors.primary,
-    fontSize: fontSize.xs,
+    color: '#60A5FA',
+
+    fontSize: 11,
+
     fontWeight: '700',
-    letterSpacing: 1,
+
+    letterSpacing: 1.1,
   },
+
   cameraFrame: {
-    borderRadius: radius.lg,
+    borderRadius: 32,
+
     overflow: 'hidden',
-    backgroundColor: colors.surface,
+
+    backgroundColor: '#111827',
+
     borderWidth: 1,
-    borderColor: colors.border,
+
+    borderColor:
+      'rgba(96,165,250,0.18)',
+
     position: 'relative',
+
+    shadowColor: '#3B82F6',
+
+    shadowOpacity: 0.18,
+
+    shadowRadius: 30,
+
+    shadowOffset: {
+      width: 0,
+      height: 12,
+    },
+
+    elevation: 10,
   },
+
   camera: {
     flex: 1,
   },
+
   overlay: {
     ...StyleSheet.absoluteFillObject,
+
     justifyContent: 'center',
+
     alignItems: 'center',
-    backgroundColor: 'rgba(11, 20, 39, 0.15)',
+
+    backgroundColor:
+      'rgba(6,11,24,0.16)',
   },
+
   corner: {
     position: 'absolute',
-    width: 28,
-    height: 28,
-    borderColor: '#a8c7ff',
+
+    width: 34,
+
+    height: 34,
+
+    borderColor: '#60A5FA',
+
     borderWidth: 3,
   },
+
   topLeft: {
-    top: 18,
-    left: 18,
+    top: 24,
+
+    left: 24,
+
     borderRightWidth: 0,
+
     borderBottomWidth: 0,
   },
+
   topRight: {
-    top: 18,
-    right: 18,
+    top: 24,
+
+    right: 24,
+
     borderLeftWidth: 0,
+
     borderBottomWidth: 0,
   },
+
   bottomLeft: {
-    bottom: 18,
-    left: 18,
+    bottom: 24,
+
+    left: 24,
+
     borderRightWidth: 0,
+
     borderTopWidth: 0,
   },
+
   bottomRight: {
-    bottom: 18,
-    right: 18,
+    bottom: 24,
+
+    right: 24,
+
     borderLeftWidth: 0,
+
     borderTopWidth: 0,
   },
+
   scanLine: {
-    width: '100%',
-    height: 2,
-    backgroundColor: '#a8c7ff',
-    opacity: 0.8,
+    width: '82%',
+
+    height: 4,
+
+    borderRadius: 999,
+
+    backgroundColor: '#60A5FA',
+
+    opacity: 0.95,
   },
+
   overlayHint: {
     position: 'absolute',
-    bottom: 18,
-    color: colors.textPrimary,
+
+    bottom: 22,
+
+    color: '#F8FAFC',
+
     fontSize: 12,
+
     fontWeight: '600',
-    backgroundColor: 'rgba(45, 52, 73, 0.8)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+
+    backgroundColor:
+      'rgba(15,23,42,0.88)',
+
+    paddingHorizontal: 14,
+
+    paddingVertical: 8,
+
     borderRadius: 999,
+
     overflow: 'hidden',
   },
+
   panel: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
+    backgroundColor: '#111827',
+
+    borderRadius: 30,
+
+    borderWidth: 1,
+
+    borderColor:
+      'rgba(255,255,255,0.04)',
+
+    shadowColor: '#000',
+
+    shadowOpacity: 0.25,
+
+    shadowRadius: 24,
+
+    shadowOffset: {
+      width: 0,
+      height: 12,
+    },
+
+    elevation: 8,
   },
+
   panelContent: {
-    gap: spacing.sm,
+    gap: 18,
+
+    paddingVertical: 8,
   },
+
   panelTitle: {
-    color: colors.textPrimary,
-    fontSize: 22,
+    color: '#F8FAFC',
+
+    fontSize: 25,
+
     fontWeight: '700',
   },
+
   panelBody: {
-    color: colors.textMuted,
-    lineHeight: 20,
+    color: '#94A3B8',
+
+    fontSize: 14,
+
+    lineHeight: 22,
   },
-  scannedValue: {
-    color: colors.textMuted,
-    fontSize: fontSize.sm,
-  },
+
   manualBlock: {
-    gap: spacing.sm,
+    gap: 14,
   },
+
   matchesBlock: {
-    gap: spacing.sm,
-    backgroundColor: colors.surfaceLight,
-    borderRadius: radius.md,
-    padding: spacing.sm,
+    gap: 12,
+
+    backgroundColor:
+      'rgba(255,255,255,0.03)',
+
+    borderRadius: 22,
+
+    padding: 12,
   },
+
   matchItem: {
     flexDirection: 'row',
+
     alignItems: 'center',
+
     justifyContent: 'space-between',
-    gap: spacing.sm,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.sm,
+
+    gap: 12,
+
+    backgroundColor:
+      'rgba(255,255,255,0.04)',
+
+    borderRadius: 20,
+
+    padding: 14,
   },
+
   matchTextBlock: {
     flex: 1,
-    gap: 2,
+
+    gap: 4,
   },
+
   matchName: {
-    color: colors.textPrimary,
-    fontSize: fontSize.md,
+    color: '#F8FAFC',
+
+    fontSize: 15,
+
     fontWeight: '700',
   },
+
   matchMeta: {
-    color: colors.textMuted,
-    fontSize: fontSize.sm,
+    color: '#94A3B8',
+
+    fontSize: 13,
   },
+
   selectionBlock: {
-    gap: spacing.sm,
+    gap: 12,
+
+    backgroundColor:
+      'rgba(59,130,246,0.10)',
+
+    borderRadius: 20,
+
+    padding: 16,
   },
+
   selectionLabel: {
-    color: colors.textLabel,
-    fontSize: fontSize.sm,
+    color: '#DBEAFE',
+
+    fontSize: 14,
+
+    fontWeight: '600',
   },
+
+  scannedValue: {
+    color: '#94A3B8',
+
+    fontSize: 13,
+  },
+
   actions: {
-    gap: spacing.sm,
+    gap: 12,
+  },
+
+  blockedCard: {
+    flex: 1,
+
+    justifyContent: 'center',
+
+    backgroundColor: '#111827',
+
+    borderRadius: 28,
+
+    borderWidth: 1,
+
+    borderColor:
+      'rgba(255,255,255,0.04)',
+  },
+
+  blockedContent: {
+    alignItems: 'center',
+
+    gap: 14,
+
+    paddingVertical: 40,
+  },
+
+  blockedTitle: {
+    color: '#F8FAFC',
+
+    fontSize: 22,
+
+    fontWeight: '700',
+
+    textAlign: 'center',
+  },
+
+  blockedBody: {
+    color: '#94A3B8',
+
+    textAlign: 'center',
+
+    lineHeight: 22,
+  },
+
+  permissionCard: {
+    flex: 1,
+
+    justifyContent: 'center',
+
+    backgroundColor: '#111827',
+
+    borderRadius: 28,
+
+    borderWidth: 1,
+
+    borderColor:
+      'rgba(255,255,255,0.04)',
+  },
+
+  permissionContent: {
+    alignItems: 'center',
+
+    gap: 14,
+
+    paddingVertical: 40,
+  },
+
+  permissionTitle: {
+    color: '#F8FAFC',
+
+    fontSize: 22,
+
+    fontWeight: '700',
+
+    textAlign: 'center',
+  },
+
+  permissionBody: {
+    color: '#94A3B8',
+
+    textAlign: 'center',
+
+    lineHeight: 22,
   },
 });

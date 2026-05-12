@@ -2,6 +2,11 @@ import { supabase } from "@/src/core/config/supabase";
 import { getUser } from "@/src/features/auth/services/auth.service";
 import type { Trip, TripDirection } from "@/src/features/trips/types";
 
+function formatSupabaseError(prefix: string, err: { message: string; details?: string; hint?: string; code?: string }) {
+  const parts = [err.message, err.details, err.hint].filter(Boolean);
+  return `${prefix}${parts.length ? `: ${parts.join(" — ")}` : ""}${err.code ? ` [${err.code}]` : ""}`;
+}
+
 function getTodayDate() {
   return new Date().toISOString().split("T")[0];
 }
@@ -27,7 +32,7 @@ async function getAnyActiveTripByOperator(operatorId: string): Promise<Trip | nu
     .maybeSingle();
 
   if (error) {
-    throw new Error("No se pudo validar si existe un viaje activo.");
+    throw new Error(formatSupabaseError("No se pudo validar si existe un viaje activo", error));
   }
 
   return data;
@@ -39,17 +44,17 @@ async function validateCompletedOutboundTrip(operatorId: string, tripDate: strin
     .select("id")
     .eq("operator_id", operatorId)
     .eq("trip_date", tripDate)
-    .eq("direction", "ida")
+    .eq("direction", "recojo")
     .eq("status", "completed")
     .limit(1)
     .maybeSingle();
 
   if (error) {
-    throw new Error("No se pudo validar la ida del día.");
+    throw new Error(formatSupabaseError("No se pudo validar el recojo del día", error));
   }
 
   if (!data) {
-    throw new Error("Debes completar el viaje de ida antes de iniciar la vuelta.");
+    throw new Error("Debes completar el viaje de recojo antes de iniciar el retorno.");
   }
 }
 
@@ -62,7 +67,7 @@ export async function startTrip(direction: TripDirection): Promise<Trip> {
     throw new Error("Ya tienes un viaje activo. Ciérralo antes de iniciar otro.");
   }
 
-  if (direction === "vuelta") {
+  if (direction === "retorno") {
     await validateCompletedOutboundTrip(operatorId, tripDate);
   }
 
@@ -79,7 +84,9 @@ export async function startTrip(direction: TripDirection): Promise<Trip> {
     .single();
 
   if (error || !data) {
-    throw new Error("No se pudo iniciar el viaje.");
+    throw new Error(
+      error ? formatSupabaseError("No se pudo iniciar el viaje", error) : "No se pudo iniciar el viaje.",
+    );
   }
 
   return data;
@@ -100,7 +107,7 @@ export async function closeTrip(tripId: string): Promise<void> {
     .eq("id", tripId);
 
   if (error) {
-    throw new Error("No se pudo cerrar el viaje.");
+    throw new Error(formatSupabaseError("No se pudo cerrar el viaje", error));
   }
 }
 

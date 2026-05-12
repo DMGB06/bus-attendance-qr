@@ -1,9 +1,9 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Button, Card, HelperText, Modal, Portal, Text } from 'react-native-paper';
+import { Button, HelperText, Modal, Portal, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StudentCard } from '@/src/features/trips/components/StudentCard';
-import { colors, fontSize, spacing } from '@/src/core/theme/theme';
+import { spacing } from '@/src/core/theme/theme';
 import type { Student } from '@/src/features/trips/types';
 
 interface StudentConfirmModalProps {
@@ -13,10 +13,6 @@ interface StudentConfirmModalProps {
   errorMessage?: string | null;
   onDismiss: () => void;
   onConfirm: () => void;
-}
-
-function formatStudentValue(value: string | null | undefined) {
-  return value?.trim() ? value : 'No registrado';
 }
 
 export function StudentConfirmModal({
@@ -29,64 +25,72 @@ export function StudentConfirmModal({
 }: StudentConfirmModalProps) {
   const insets = useSafeAreaInsets();
 
-  if (!student) {
-    return null;
-  }
+  if (!student) return null;
 
   return (
     <Portal>
       <Modal
         visible={visible}
-        onDismiss={() => {
-          if (!isSubmitting) {
-            onDismiss();
-          }
-        }}
-        contentContainerStyle={[
-          styles.modalContainer,
-          { marginBottom: Math.max(insets.bottom, spacing.md) },
-        ]}
+        onDismiss={() => { if (!isSubmitting) onDismiss(); }}
+        contentContainerStyle={styles.modalContainer}
       >
-        <Card mode="outlined" style={styles.card}>
+        <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 24) }]}>
+
+          {/* Handle */}
+          <View style={styles.handle} />
+
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <Card.Content style={styles.content}>
-              <Text style={styles.title}>Confirmar asistencia</Text>
-              <Text style={styles.subtitle}>
-                Verifica los datos del alumno antes de registrar el abordo.
-              </Text>
+            <Text style={styles.title}>Confirmar asistencia</Text>
+            <Text style={styles.subtitle}>
+              Verifica los datos del alumno antes de registrar el abordo.
+            </Text>
 
-              <StudentCard student={student} statusLabel="Pendiente de confirmación" />
-
-              <View style={styles.extraDataBlock}>
-                <Text style={styles.extraLabel}>Colegio: {formatStudentValue(student.colegio)}</Text>
-                <Text style={styles.extraLabel}>
-                  Apoderado: {formatStudentValue(student.nombre_apoderado)}
-                </Text>
-                <Text style={styles.extraLabel}>
-                  Teléfono: {formatStudentValue(student.telefono_apoderado)}
-                </Text>
-                <Text style={styles.extraLabel}>
-                  Dirección: {formatStudentValue(student.direccion)}
-                </Text>
+            {/* Header alumno */}
+            <View style={styles.studentHeader}>
+              <View style={styles.studentAvatar}>
+                <MaterialCommunityIcons name="account" size={30} color="#FFFFFF" />
               </View>
-
-              {errorMessage ? <HelperText type="error">{errorMessage}</HelperText> : null}
-
-              <View style={styles.actions}>
-                <Button mode="contained" onPress={onConfirm} loading={isSubmitting} disabled={isSubmitting}>
-                  Confirmar asistencia
-                </Button>
-                <Button mode="outlined" onPress={onDismiss} disabled={isSubmitting}>
-                  Cancelar
-                </Button>
+              <View style={styles.studentHeaderInfo}>
+                <Text style={styles.studentName}>{student.nombre_alumno}</Text>
+                <Text style={styles.studentStatus}>Pendiente de confirmación</Text>
               </View>
-            </Card.Content>
+            </View>
+
+            <StudentCard student={student} statusLabel="Pendiente de confirmación" />
+
+            {errorMessage ? (
+              <HelperText type="error" style={styles.errorText}>
+                {errorMessage}
+              </HelperText>
+            ) : null}
+
+            <View style={styles.actions}>
+              <Button
+                mode="contained"
+                onPress={onConfirm}
+                loading={isSubmitting}
+                disabled={isSubmitting}
+                contentStyle={styles.btnContent}
+                style={styles.btnConfirm}
+              >
+                Confirmar asistencia
+              </Button>
+              <Button
+                mode="outlined"
+                onPress={onDismiss}
+                disabled={isSubmitting}
+                contentStyle={styles.btnContent}
+                style={styles.btnCancel}
+              >
+                Cancelar
+              </Button>
+            </View>
           </ScrollView>
-        </Card>
+        </View>
       </Modal>
     </Portal>
   );
@@ -94,40 +98,110 @@ export function StudentConfirmModal({
 
 const styles = StyleSheet.create({
   modalContainer: {
-    marginHorizontal: spacing.lg,
+    justifyContent: 'flex-end',
+    margin: 0,
+    flex: 1,
   },
-  card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
+
+  sheet: {
+    backgroundColor: '#111827',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.07)',
+    borderBottomWidth: 0,
+    paddingTop: 12,
+    paddingHorizontal: 20,
     maxHeight: '90%',
+    shadowColor: '#000',
+    shadowOpacity: 0.4,
+    shadowRadius: 30,
+    shadowOffset: { width: 0, height: -8 },
+    elevation: 16,
   },
+
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+
   scrollContent: {
-    flexGrow: 1,
+    gap: 20,
+    paddingBottom: 8,
   },
-  content: {
-    gap: spacing.sm,
-  },
+
   title: {
-    color: colors.textPrimary,
-    fontSize: 20,
+    color: '#F8FAFC',
+    fontSize: 24,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+
+  subtitle: {
+    color: '#94A3B8',
+    fontSize: 14,
+    lineHeight: 22,
+    textAlign: 'center',
+    marginTop: -8,
+  },
+
+  studentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    backgroundColor: 'rgba(59,130,246,0.10)',
+    borderRadius: 22,
+    padding: 18,
+  },
+
+  studentAvatar: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: '#2563EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  studentHeaderInfo: {
+    flex: 1,
+    gap: 6,
+  },
+
+  studentName: {
+    color: '#F8FAFC',
+    fontSize: 18,
     fontWeight: '700',
   },
-  subtitle: {
-    color: colors.textMuted,
-    fontSize: fontSize.md,
-    lineHeight: 18,
+
+  studentStatus: {
+    color: '#93C5FD',
+    fontSize: 13,
+    fontWeight: '600',
   },
-  extraDataBlock: {
-    gap: spacing.xs,
-    backgroundColor: colors.surfaceLight,
-    borderRadius: 10,
-    padding: spacing.sm,
+
+  errorText: {
+    marginTop: -8,
   },
-  extraLabel: {
-    color: colors.textLabel,
-    fontSize: fontSize.sm,
-  },
+
   actions: {
-    gap: spacing.sm,
+    gap: 12,
+    marginTop: 4,
+  },
+
+  btnContent: {
+    paddingVertical: 6,
+  },
+
+  btnConfirm: {
+    borderRadius: 14,
+  },
+
+  btnCancel: {
+    borderRadius: 14,
   },
 });

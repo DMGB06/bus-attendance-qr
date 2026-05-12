@@ -1,8 +1,10 @@
 // src/features/trips/types/index.ts
 
-export type TripDirection = "ida" | "vuelta";
+export type TripDirection = "recojo" | "retorno";
+/** Valores reales en Postgres (constraint en inglés). */
 export type TripStatus = "active" | "completed";
-export type AttendanceEventType = "boarded" | "alighted" | "manual";
+export type TurnType = "mañana" | "tarde";
+export type AttendanceEventType = "subio" | "bajo" | "ausente" | "manual";
 
 export type Student = {
   id: string;
@@ -18,6 +20,9 @@ export type Student = {
   usuario_registro: string | null;
   created_at: string;
   codigo: string | null;
+  foto_url: string | null;
+  activo: boolean | null;
+  notas: string | null;
 };
 
 export type Trip = {
@@ -28,6 +33,7 @@ export type Trip = {
   ended_at: string | null;
   operator_id: string | null;
   trip_date: string;
+  turn_type: TurnType | null;
 };
 
 export type AttendanceRecord = {
@@ -36,6 +42,10 @@ export type AttendanceRecord = {
   student_id: string;
   event_type: AttendanceEventType;
   scanned_at: string | null;
+  lat: number | null;
+  lng: number | null;
+  operator_id: string | null;
+  is_offline_sync: boolean | null;
 };
 
 export type Database = {
@@ -57,6 +67,9 @@ export type Database = {
           usuario_registro?: string | null;
           created_at?: string;
           codigo?: string | null;
+          foto_url?: string | null;
+          activo?: boolean | null;
+          notas?: string | null;
         };
         Update: {
           id?: string;
@@ -72,6 +85,9 @@ export type Database = {
           usuario_registro?: string | null;
           created_at?: string;
           codigo?: string | null;
+          foto_url?: string | null;
+          activo?: boolean | null;
+          notas?: string | null;
         };
         Relationships: [];
       };
@@ -85,6 +101,7 @@ export type Database = {
           ended_at?: string | null;
           operator_id?: string | null;
           trip_date?: string;
+          turn_type?: TurnType | null;
         };
         Update: {
           id?: string;
@@ -94,6 +111,7 @@ export type Database = {
           ended_at?: string | null;
           operator_id?: string | null;
           trip_date?: string;
+          turn_type?: TurnType | null;
         };
         Relationships: [];
       };
@@ -105,6 +123,10 @@ export type Database = {
           student_id: string;
           event_type: AttendanceEventType;
           scanned_at?: string | null;
+          lat?: number | null;
+          lng?: number | null;
+          operator_id?: string | null;
+          is_offline_sync?: boolean | null;
         };
         Update: {
           id?: string;
@@ -112,6 +134,10 @@ export type Database = {
           student_id?: string;
           event_type?: AttendanceEventType;
           scanned_at?: string | null;
+          lat?: number | null;
+          lng?: number | null;
+          operator_id?: string | null;
+          is_offline_sync?: boolean | null;
         };
         Relationships: [];
       };
