@@ -1,6 +1,8 @@
+import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import { TextInput, type TextInputProps } from 'react-native-paper';
-import { colors, radius } from '@/src/core/theme/theme';
+
+import { useAppTheme } from '@/src/core/theme/ThemeProvider';
 
 type AppInputVariant = 'default' | 'auth';
 
@@ -9,7 +11,19 @@ type AppInputProps = TextInputProps & {
 };
 
 const BaseAppInput = ({ variant = 'default', style, theme, ...props }: AppInputProps) => {
+  const { colors, tokens } = useAppTheme();
   const isAuth = variant === 'auth';
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        authInput: {
+          backgroundColor: colors.authInputBg,
+          fontSize: 16,
+        },
+      }),
+    [colors.authInputBg],
+  );
 
   return (
     <TextInput
@@ -18,9 +32,9 @@ const BaseAppInput = ({ variant = 'default', style, theme, ...props }: AppInputP
       style={[isAuth ? styles.authInput : undefined, style]}
       outlineColor={isAuth ? colors.authInputBorder : props.outlineColor}
       activeOutlineColor={isAuth ? colors.authInputBorderActive : props.activeOutlineColor}
-      textColor={isAuth ? colors.authTextPrimary : props.textColor}
+      textColor={isAuth ? colors.authInputText : props.textColor}
       placeholderTextColor={isAuth ? colors.authInputPlaceholder : props.placeholderTextColor}
-      theme={isAuth ? { ...theme, roundness: radius.lg } : theme}
+      theme={isAuth ? { ...theme, roundness: tokens.radius.lg } : theme}
       {...props}
     />
   );
@@ -33,10 +47,3 @@ type AppInputComponent = typeof BaseAppInput & {
 export const AppInput = Object.assign(BaseAppInput, {
   Icon: TextInput.Icon,
 }) as AppInputComponent;
-
-const styles = StyleSheet.create({
-  authInput: {
-    backgroundColor: colors.authInputBackground,
-    fontSize: 16,
-  },
-});

@@ -1,239 +1,193 @@
+import { useCallback, useMemo } from 'react';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Tabs, useRouter } from 'expo-router';
-
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-
-import {
-  TouchableOpacity,
-  View,
-  StyleSheet,
-} from 'react-native';
-
 import { LinearGradient } from 'expo-linear-gradient';
-
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Text } from 'react-native-paper';
-
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { logout } from '@/src/features/auth/services/auth.service';
-
-import {
-  colors,
-  fontSize,
-  spacing,
-} from '@/src/core/theme/theme';
+import { useAppTheme } from '@/src/core/theme/ThemeProvider';
+import { ThemeAppearanceControl } from '@/src/shared/ui/ThemeAppearanceControl';
 
 export default function TabsLayout() {
   const router = useRouter();
-
   const insets = useSafeAreaInsets();
+  const { colors, tokens } = useAppTheme();
 
-  async function handleLogout() {
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        headerLeft: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: tokens.spacing.md,
+          paddingLeft: tokens.spacing.lg,
+        },
+        logoContainer: {
+          width: 38,
+          height: 38,
+          borderRadius: tokens.radius.full,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: colors.navLogoWrapBg,
+          borderWidth: 1,
+          borderColor: colors.navLogoWrapBorder,
+        },
+        headerTitle: {
+          ...tokens.typography.title3,
+          color: colors.navHeaderTitle,
+        },
+        headerSubtitle: {
+          ...tokens.typography.caption,
+          color: colors.navHeaderSubtitle,
+          marginTop: 1,
+        },
+        headerRight: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: tokens.spacing.sm,
+          marginRight: tokens.spacing.lg,
+        },
+        logoutPill: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: tokens.spacing.sm,
+          paddingHorizontal: tokens.spacing.md,
+          paddingVertical: tokens.spacing.sm,
+          minHeight: tokens.layout.appearanceNavbarHeight,
+          borderRadius: tokens.radius.lg,
+          backgroundColor: colors.navLogoutPillBg,
+          borderWidth: 1,
+          borderColor: colors.navLogoutPillBorder,
+        },
+        logoutText: {
+          ...tokens.typography.bodyStrong,
+          color: colors.navLogoutText,
+        },
+        tabIconContainer: {
+          width: 42,
+          height: 42,
+          borderRadius: tokens.radius.full,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        tabIconContainerActive: {
+          backgroundColor: colors.navTabRingActiveBg,
+          borderWidth: 1,
+          borderColor: colors.navTabRingActiveBorder,
+        },
+      }),
+    [colors, tokens],
+  );
+
+  const handleLogout = useCallback(async () => {
     await logout();
-
     router.replace('/(auth)/login');
-  }
+  }, [router]);
+
+  const screenOptions = useMemo(
+    () => ({
+      sceneStyle: {
+        backgroundColor: colors.screenSolid,
+      },
+      headerShadowVisible: false,
+      headerStyle: {
+        backgroundColor: colors.screenSolid,
+      },
+      headerBackground: () => (
+        <LinearGradient colors={colors.headerGradient} style={StyleSheet.absoluteFill} />
+      ),
+      headerLeft: () => (
+        <View style={styles.headerLeft}>
+          <View style={styles.logoContainer}>
+            <MaterialCommunityIcons name="bus-school" size={18} color={colors.navBusIcon} />
+          </View>
+          <View>
+            <Text style={styles.headerTitle}>Bus Attendance</Text>
+            <Text style={styles.headerSubtitle}>Transporte Inteligente</Text>
+          </View>
+        </View>
+      ),
+      headerRight: () => (
+        <View style={styles.headerRight}>
+          <ThemeAppearanceControl />
+          <TouchableOpacity onPress={handleLogout} style={styles.logoutPill} activeOpacity={0.8}>
+            <MaterialCommunityIcons name="logout" size={18} color={colors.navLogoutIcon} />
+            <Text style={styles.logoutText}>Salir</Text>
+          </TouchableOpacity>
+        </View>
+      ),
+      headerTitle: () => null,
+      tabBarHideOnKeyboard: true,
+      tabBarActiveTintColor: colors.tabBarActive,
+      tabBarInactiveTintColor: colors.tabBarInactive,
+      tabBarStyle: {
+        position: 'absolute' as const,
+        backgroundColor: colors.tabBarBg,
+        borderTopWidth: 1,
+        borderTopColor: colors.tabBarBorder,
+        height: 60 + insets.bottom,
+        paddingTop: 6,
+        paddingBottom: insets.bottom,
+        elevation: 0,
+      },
+      tabBarLabelStyle: {
+        fontSize: 11,
+        fontWeight: '700' as const,
+        letterSpacing: 0.8,
+        marginTop: -2,
+      },
+      tabBarItemStyle: {
+        paddingVertical: 4,
+      },
+    }),
+    [colors, insets.bottom, styles, handleLogout],
+  );
 
   return (
-    <Tabs
-      initialRouteName="trip"
-      screenOptions={{
-        sceneStyle: {
-          backgroundColor: '#0B1020',
-        },
-
-        headerShadowVisible: false,
-
-        headerStyle: {
-          backgroundColor: '#0B1020',
-        },
-
-        headerBackground: () => (
-          <LinearGradient
-            colors={[
-              '#0B1020',
-              '#111827',
-            ]}
-            style={StyleSheet.absoluteFill}
-          />
-        ),
-
-        headerLeft: () => (
-          <View style={styles.headerLeft}>
-            <View style={styles.logoContainer}>
-              <MaterialCommunityIcons
-                name="bus-school"
-                size={18}
-                color="#BFDBFE"
-              />
-            </View>
-
-            <View>
-              <Text style={styles.headerTitle}>
-                Bus Attendance
-              </Text>
-
-              <Text style={styles.headerSubtitle}>
-                Transporte Inteligente
-              </Text>
-            </View>
-          </View>
-        ),
-
-        headerRight: () => (
-          <TouchableOpacity
-            onPress={handleLogout}
-            style={styles.headerRight}
-            activeOpacity={0.8}
-          >
-            <MaterialCommunityIcons
-              name="logout"
-              size={18}
-              color="#94A3B8"
-            />
-
-            <Text style={styles.logoutText}>
-              Salir
-            </Text>
-          </TouchableOpacity>
-        ),
-
-        headerTitle: () => null,
-
-        tabBarHideOnKeyboard: true,
-
-        tabBarActiveTintColor: '#3B82F6',
-
-        tabBarInactiveTintColor: '#7C8AA5',
-
-        tabBarStyle: {
-          position: 'absolute',
-
-          backgroundColor:
-            'rgba(11,16,32,0.96)',
-
-          borderTopWidth: 1,
-
-          borderTopColor:
-            'rgba(255,255,255,0.05)',
-
-          height: 60 + insets.bottom,
-
-          paddingTop: 6,
-
-          paddingBottom: insets.bottom,
-
-          elevation: 0,
-        },
-
-        tabBarLabelStyle: {
-          fontSize: 11,
-
-          fontWeight: '700',
-
-          letterSpacing: 0.8,
-
-          marginTop: -2,
-        },
-
-        tabBarItemStyle: {
-          paddingVertical: 4,
-        },
-      }}
-    >
+    <Tabs initialRouteName="trip" screenOptions={screenOptions}>
       <Tabs.Screen
         name="trip"
         options={{
           title: 'Iniciar Viaje',
-
           tabBarLabel: 'VIAJE',
-
-          tabBarIcon: ({
-            color,
-            focused,
-          }) => (
-            <View
-              style={[
-                styles.tabIconContainer,
-
-                focused &&
-                styles.tabIconContainerActive,
-              ]}
-            >
-              <MaterialCommunityIcons
-                name="bus-clock"
-                size={22}
-                color={color}
-              />
+          tabBarIcon: ({ color, focused }) => (
+            <View style={[styles.tabIconContainer, focused && styles.tabIconContainerActive]}>
+              <MaterialCommunityIcons name="bus-clock" size={22} color={color} />
             </View>
           ),
         }}
       />
-
       <Tabs.Screen
         name="scanner"
         options={{
           title: 'Escanear QR',
-
           tabBarLabel: 'SCAN',
-
-          tabBarIcon: ({
-            color,
-            focused,
-          }) => (
-            <View
-              style={[
-                styles.tabIconContainer,
-
-                focused &&
-                styles.tabIconContainerActive,
-              ]}
-            >
-              <MaterialCommunityIcons
-                name="qrcode-scan"
-                size={22}
-                color={color}
-              />
+          tabBarIcon: ({ color, focused }) => (
+            <View style={[styles.tabIconContainer, focused && styles.tabIconContainerActive]}>
+              <MaterialCommunityIcons name="qrcode-scan" size={22} color={color} />
             </View>
           ),
         }}
       />
-
       <Tabs.Screen
         name="roster"
         options={{
           title: 'Lista',
-
           tabBarLabel: 'LISTA',
-
-          tabBarIcon: ({
-            color,
-            focused,
-          }) => (
-            <View
-              style={[
-                styles.tabIconContainer,
-
-                focused &&
-                styles.tabIconContainerActive,
-              ]}
-            >
-              <MaterialCommunityIcons
-                name="format-list-bulleted"
-                size={22}
-                color={color}
-              />
+          tabBarIcon: ({ color, focused }) => (
+            <View style={[styles.tabIconContainer, focused && styles.tabIconContainerActive]}>
+              <MaterialCommunityIcons name="format-list-bulleted" size={22} color={color} />
             </View>
           ),
         }}
       />
-
       <Tabs.Screen
         name="close-trip"
         options={{
           href: null,
-
           title: 'Cerrar viaje',
-
           tabBarStyle: {
             display: 'none',
           },
@@ -242,105 +196,3 @@ export default function TabsLayout() {
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  headerLeft: {
-    flexDirection: 'row',
-
-    alignItems: 'center',
-
-    gap: 12,
-
-    paddingLeft: spacing.lg,
-  },
-
-  logoContainer: {
-    width: 38,
-    height: 38,
-
-    borderRadius: 19,
-
-    alignItems: 'center',
-
-    justifyContent: 'center',
-
-    backgroundColor:
-      'rgba(59,130,246,0.14)',
-
-    borderWidth: 1,
-
-    borderColor:
-      'rgba(255,255,255,0.06)',
-  },
-
-  headerTitle: {
-    color: '#EAF1FF',
-
-    fontWeight: '800',
-
-    fontSize: 17,
-
-    letterSpacing: 0.3,
-  },
-
-  headerSubtitle: {
-    color: '#7C8AA5',
-
-    fontSize: 11,
-
-    marginTop: -1,
-  },
-
-  headerRight: {
-    flexDirection: 'row',
-
-    alignItems: 'center',
-
-    gap: 6,
-
-    marginRight: spacing.lg,
-
-    paddingHorizontal: 12,
-
-    paddingVertical: 8,
-
-    borderRadius: 14,
-
-    backgroundColor:
-      'rgba(255,255,255,0.04)',
-
-    borderWidth: 1,
-
-    borderColor:
-      'rgba(255,255,255,0.05)',
-  },
-
-  logoutText: {
-    color: '#94A3B8',
-
-    fontSize: 14,
-
-    fontWeight: '600',
-  },
-
-  tabIconContainer: {
-    width: 42,
-    height: 42,
-
-    borderRadius: 21,
-
-    alignItems: 'center',
-
-    justifyContent: 'center',
-  },
-
-  tabIconContainerActive: {
-    backgroundColor:
-      'rgba(59,130,246,0.14)',
-
-    borderWidth: 1,
-
-    borderColor:
-      'rgba(59,130,246,0.18)',
-  },
-});

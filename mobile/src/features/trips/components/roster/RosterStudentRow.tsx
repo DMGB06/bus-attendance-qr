@@ -1,9 +1,10 @@
+import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Avatar, Button, Text } from 'react-native-paper';
 
 import { AttendanceBadge } from '@/src/features/trips/components/AttendanceBadge';
 import type { TripRosterItem } from '@/src/features/trips/services/trip-roster.service';
-import { colors, radius, spacing } from '@/src/core/theme/theme';
+import { useAppTheme } from '@/src/core/theme/ThemeProvider';
 
 interface RosterStudentRowProps {
   item: TripRosterItem;
@@ -48,6 +49,49 @@ export function RosterStudentRow({
   isMarkingManual = false,
   isMarkingExit = false,
 }: RosterStudentRowProps) {
+  const { colors, tokens } = useAppTheme();
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        row: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: tokens.spacing.sm,
+          backgroundColor: colors.surfaceListItem,
+          borderRadius: tokens.radius.md,
+          padding: tokens.spacing.sm,
+          borderWidth: 1,
+          borderColor: colors.borderDefault,
+        },
+        avatar: {
+          backgroundColor: colors.primary,
+        },
+        body: {
+          flex: 1,
+          gap: 2,
+        },
+        name: {
+          color: colors.textTitle,
+          fontSize: 15,
+          fontWeight: '700',
+        },
+        stop: {
+          color: colors.textMuted,
+          fontSize: 12,
+        },
+        meta: {
+          color: colors.textMuted,
+          fontSize: 11,
+        },
+        rightColumn: {
+          alignItems: 'flex-end',
+          gap: tokens.spacing.xs,
+        },
+      }),
+    [colors, tokens.spacing.sm, tokens.spacing.xs, tokens.radius.md],
+  );
+
   const initials = item.student.nombre_alumno
     .split(' ')
     .filter(Boolean)
@@ -70,12 +114,24 @@ export function RosterStudentRow({
       <View style={styles.rightColumn}>
         <AttendanceBadge status={item.status} label={getBadgeLabel(item)} />
         {item.canMarkManual && onMarkManual ? (
-          <Button mode="outlined" compact onPress={() => onMarkManual(item.student.id)} loading={isMarkingManual} disabled={isMarkingManual || isMarkingExit}>
+          <Button
+            mode="outlined"
+            compact
+            onPress={() => onMarkManual(item.student.id)}
+            loading={isMarkingManual}
+            disabled={isMarkingManual || isMarkingExit}
+          >
             Manual
           </Button>
         ) : null}
         {item.canMarkExit && onMarkExit ? (
-          <Button mode="contained-tonal" compact onPress={() => onMarkExit(item.student.id)} loading={isMarkingExit} disabled={isMarkingExit || isMarkingManual}>
+          <Button
+            mode="contained-tonal"
+            compact
+            onPress={() => onMarkExit(item.student.id)}
+            loading={isMarkingExit}
+            disabled={isMarkingExit || isMarkingManual}
+          >
             Salida
           </Button>
         ) : null}
@@ -83,40 +139,3 @@ export function RosterStudentRow({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  avatar: {
-    backgroundColor: colors.primary,
-  },
-  body: {
-    flex: 1,
-    gap: 2,
-  },
-  name: {
-    color: colors.textPrimary,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  stop: {
-    color: colors.textMuted,
-    fontSize: 12,
-  },
-  meta: {
-    color: colors.textMuted,
-    fontSize: 11,
-  },
-  rightColumn: {
-    alignItems: 'flex-end',
-    gap: spacing.xs,
-  },
-});

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Card, HelperText, Searchbar, Text } from 'react-native-paper';
 import { useRouter } from 'expo-router';
@@ -12,8 +12,8 @@ import {
   type TripRosterItem,
 } from '@/src/features/trips/services/trip-roster.service';
 import { useTripStore } from '@/src/features/trips/store/tripStore';
-import { colors, radius, spacing } from '@/src/core/theme/theme';
-import { Alert } from 'react-native';
+import { useAppTheme } from '@/src/core/theme/ThemeProvider';
+import { useScrollBottomPadding } from '@/src/core/theme/useScrollBottomPadding';
 type RosterViewMode = 'all' | 'attended';
 
 function confirmManualAttendance(studentName: string) {
@@ -63,6 +63,8 @@ function confirmStudentDropoff(studentName: string) {
 export default function RosterScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { colors, tokens } = useAppTheme();
+  const scrollBottom = useScrollBottomPadding(tokens.spacing.md);
   const { activeTrip } = useTripStore();
   const [viewMode, setViewMode] = useState<RosterViewMode>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -187,6 +189,103 @@ export default function RosterScreen() {
   const onboardCount = items.filter((item) => item.status === 'onboard').length;
   const pendingCount = items.filter((item) => item.status === 'pending').length;
 
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          backgroundColor: colors.screenSolid,
+          paddingHorizontal: tokens.spacing.lg,
+          paddingTop: tokens.spacing.md,
+          gap: tokens.spacing.sm,
+        },
+        listWrap: {
+          flex: 1,
+          minHeight: 0,
+        },
+        centerFill: {
+          flex: 1,
+          justifyContent: 'center',
+          minHeight: 120,
+        },
+        header: {
+          gap: 2,
+        },
+        title: {
+          color: colors.textTitle,
+          fontSize: 28,
+          fontWeight: '700',
+        },
+        subtitle: {
+          color: colors.textMuted,
+          fontSize: 13,
+        },
+        search: {
+          backgroundColor: colors.surfaceCard,
+          borderRadius: tokens.radius.md,
+        },
+        searchInput: {
+          color: colors.textTitle,
+          minHeight: 0,
+        },
+        filterRow: {
+          flexDirection: 'row',
+          gap: tokens.spacing.sm,
+        },
+        summaryRow: {
+          flexDirection: 'row',
+          gap: tokens.spacing.sm,
+        },
+        summaryCard: {
+          flex: 1,
+          backgroundColor: colors.surfaceCard,
+          borderColor: colors.borderDefault,
+        },
+        summaryContent: {
+          alignItems: 'center',
+          gap: 4,
+        },
+        summaryValue: {
+          color: colors.textTitle,
+          fontSize: 24,
+          fontWeight: '700',
+        },
+        summaryLabel: {
+          color: colors.textMuted,
+          fontSize: 12,
+        },
+        list: {
+          paddingBottom: tokens.spacing.md,
+        },
+        listView: {
+          flex: 1,
+        },
+        emptyStateCard: {
+          backgroundColor: colors.surfaceCard,
+          borderColor: colors.borderDefault,
+        },
+        emptyContent: {
+          alignItems: 'center',
+          gap: tokens.spacing.sm,
+          paddingVertical: tokens.spacing.xl,
+        },
+        emptyTitle: {
+          color: colors.textTitle,
+          fontSize: 18,
+          fontWeight: '700',
+        },
+        emptyBody: {
+          color: colors.textMuted,
+          textAlign: 'center',
+          lineHeight: 20,
+        },
+        separator: {
+          height: tokens.spacing.sm,
+        },
+      }),
+    [colors, tokens],
+  );
+
   if (!activeTrip) {
     return (
       <SafeAreaView edges={['bottom', 'left', 'right']} style={[styles.container, { paddingBottom: insets.bottom + 16 }]}>
@@ -209,7 +308,7 @@ export default function RosterScreen() {
       : 'No encontramos alumnos con ese filtro.';
 
   return (
-    <SafeAreaView edges={['bottom', 'left', 'right']} style={[styles.container, { paddingBottom: insets.bottom + spacing.sm }]}>
+    <SafeAreaView edges={['bottom', 'left', 'right']} style={[styles.container, { paddingBottom: insets.bottom + tokens.spacing.sm }]}>
       <View style={styles.header}>
         <Text style={styles.title}>Lista de Asistencia</Text>
         <Text style={styles.subtitle}>Viaje {formatTripDirectionLabel(activeTrip.direction)}</Text>
@@ -286,8 +385,8 @@ export default function RosterScreen() {
                 isMarkingExit={isMarkingStudentId === item.student.id}
               />
             )}
-            contentContainerStyle={styles.list}
-            ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
+            contentContainerStyle={[styles.list, { paddingBottom: scrollBottom }]}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
             refreshing={isLoading}
             onRefresh={() => void loadRoster()}
             style={styles.listView}
@@ -297,97 +396,3 @@ export default function RosterScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    gap: spacing.sm,
-  },
-  listWrap: {
-    flex: 1,
-    minHeight: 0,
-  },
-  centerFill: {
-    flex: 1,
-    justifyContent: 'center',
-    minHeight: 120,
-  },
-  header: {
-    gap: 2,
-  },
-  title: {
-    color: colors.textPrimary,
-    fontSize: 28,
-    fontWeight: '700',
-  },
-  subtitle: {
-    color: colors.textMuted,
-    fontSize: 13,
-  },
-  search: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-  },
-  searchInput: {
-    color: colors.textPrimary,
-    minHeight: 0,
-  },
-  filterRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  summaryCard: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-  },
-  summaryContent: {
-    alignItems: 'center',
-    gap: 4,
-  },
-  summaryValue: {
-    color: colors.textPrimary,
-    fontSize: 24,
-    fontWeight: '700',
-  },
-  summaryLabel: {
-    color: colors.textMuted,
-    fontSize: 12,
-  },
-  list: {
-    paddingBottom: spacing.md,
-  },
-  listView: {
-    flex: 1,
-  },
-  emptyStateCard: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-  },
-  emptyContent: {
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.xl,
-  },
-  emptyTitle: {
-    color: colors.textPrimary,
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  emptyBody: {
-    color: colors.textMuted,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-});

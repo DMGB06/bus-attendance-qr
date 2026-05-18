@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
@@ -8,15 +8,15 @@ import {
   TextInput as NativeTextInput,
   View,
 } from 'react-native';
-
 import { LinearGradient } from 'expo-linear-gradient';
-
 import { HelperText, Text } from 'react-native-paper';
-
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useAppTheme } from '@/src/core/theme/ThemeProvider';
 import { AppButton } from '@/src/shared/ui/AppButton';
 import { AppInput } from '@/src/shared/ui/AppInput';
+import { AppScrollView } from '@/src/shared/ui/AppScrollView';
+import { ThemeAppearanceControl } from '@/src/shared/ui/ThemeAppearanceControl';
 
 type LoginFormProps = {
   email: string;
@@ -44,38 +44,128 @@ export function LoginForm({
   onForgotPassword,
 }: LoginFormProps) {
   const passwordInputRef = useRef<NativeTextInput | null>(null);
-
   const insets = useSafeAreaInsets();
+  const { colors, tokens } = useAppTheme();
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        safeArea: {
+          flex: 1,
+          backgroundColor: colors.screenSolid,
+        },
+        root: {
+          flex: 1,
+        },
+        scrollInner: {
+          flexGrow: 1,
+          justifyContent: 'center',
+          paddingVertical: tokens.spacing.xl,
+          paddingHorizontal: tokens.spacing.xl,
+        },
+        card: {
+          width: '100%',
+          maxWidth: 400,
+          alignSelf: 'center',
+          backgroundColor: colors.authCardBg,
+          borderRadius: tokens.radius['2xl'],
+          padding: tokens.spacing.xl,
+          borderWidth: 1,
+          borderColor: colors.authCardBorder,
+          shadowColor: colors.authCardShadow,
+          shadowOpacity: 0.12,
+          shadowRadius: 28,
+          shadowOffset: { width: 0, height: 16 },
+          elevation: 10,
+        },
+        logoContainer: {
+          alignItems: 'center',
+          marginBottom: tokens.spacing.lg,
+        },
+        logo: {
+          width: 112,
+          height: 112,
+        },
+        title: {
+          ...tokens.typography.title1,
+          color: colors.textTitle,
+          textAlign: 'center',
+        },
+        subtitle: {
+          ...tokens.typography.body,
+          color: colors.textSubtitle,
+          textAlign: 'center',
+          marginTop: tokens.spacing.sm,
+          marginBottom: tokens.spacing.xl,
+        },
+        fields: {
+          gap: tokens.spacing.md,
+        },
+        errorText: {
+          marginTop: tokens.spacing.sm,
+        },
+        forgotPassword: {
+          ...tokens.typography.bodyStrong,
+          color: colors.authForgotPassword,
+          textAlign: 'right',
+          marginTop: tokens.spacing.md,
+          marginBottom: tokens.spacing.md,
+        },
+        buttonGradient: {
+          borderRadius: tokens.radius.lg,
+          overflow: 'hidden',
+        },
+        buttonContent: {
+          height: 48,
+        },
+        footer: {
+          ...tokens.typography.caption,
+          marginTop: tokens.spacing.xl,
+          textAlign: 'center',
+          color: colors.authFooter,
+        },
+        themeSection: {
+          marginTop: tokens.spacing.sm,
+          paddingTop: tokens.spacing.sm,
+          borderTopWidth: 1,
+          borderTopColor: colors.borderMuted,
+        },
+        bottomFooter: {
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          alignItems: 'center',
+          paddingTop: tokens.spacing.sm,
+        },
+        bottomFooterText: {
+          ...tokens.typography.caption,
+          color: colors.authBottomNote,
+        },
+      }),
+    [colors, tokens],
+  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <LinearGradient
-        colors={['#0F1115', '#131A24', '#0F1722']}
-        style={StyleSheet.absoluteFill}
-      />
+      <LinearGradient colors={colors.authScreenGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
 
-      <View style={styles.glowBlue} />
-      <View style={styles.glowPurple} />
-
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.root}
-      >
-        <View style={styles.container}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.root}>
+        <AppScrollView
+          omitTabBarInset
+          extraBottomInset={88}
+          contentContainerStyle={styles.scrollInner}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.card}>
             <View style={styles.logoContainer}>
-              <Image
-                source={require('../../../../assets/images/escudo_MDCA.png')}
-                style={styles.logo}
-                resizeMode="contain"
-              />
+              <Image source={require('../../../../assets/images/escudo_MDCA.png')} style={styles.logo} resizeMode="contain" />
             </View>
 
             <Text style={styles.title}>Bienvenido de nuevo</Text>
 
-            <Text style={styles.subtitle}>
-              Accede al sistema de transporte escolar municipal.
-            </Text>
+            <Text style={styles.subtitle}>Accede al sistema de transporte escolar municipal.</Text>
 
             <View style={styles.fields}>
               <AppInput
@@ -89,7 +179,7 @@ export function LoginForm({
                 onSubmitEditing={() => passwordInputRef.current?.focus()}
                 blurOnSubmit={false}
                 disabled={isSubmitting || isResettingPassword}
-                left={<AppInput.Icon icon="account-outline" color="#94A3B8" />}
+                left={<AppInput.Icon icon="account-outline" color={colors.authIconMuted} />}
               />
 
               <AppInput
@@ -102,7 +192,7 @@ export function LoginForm({
                 returnKeyType="go"
                 onSubmitEditing={onSubmit}
                 disabled={isSubmitting || isResettingPassword}
-                left={<AppInput.Icon icon="lock-outline" color="#94A3B8" />}
+                left={<AppInput.Icon icon="lock-outline" color={colors.authIconMuted} />}
               />
             </View>
 
@@ -118,186 +208,36 @@ export function LoginForm({
               </HelperText>
             ) : null}
 
-            <Pressable
-              onPress={onForgotPassword}
-              disabled={isSubmitting || isResettingPassword}
-            >
+            <Pressable onPress={onForgotPassword} disabled={isSubmitting || isResettingPassword}>
               <Text style={styles.forgotPassword}>
-                {isResettingPassword
-                  ? 'Enviando enlace...'
-                  : '¿Olvidaste tu contraseña?'}
+                {isResettingPassword ? 'Enviando enlace...' : '¿Olvidaste tu contraseña?'}
               </Text>
             </Pressable>
 
-            <LinearGradient
-              colors={['#3B82F6', '#2563EB']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.buttonGradient}
-            >
+            <View style={styles.themeSection}>
+              <ThemeAppearanceControl variant="panel" />
+            </View>
+
+            <LinearGradient colors={colors.authCtaGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.buttonGradient}>
               <AppButton
                 variant="authPrimary"
                 onPress={onSubmit}
                 loading={isSubmitting}
                 disabled={isSubmitting || isResettingPassword}
-                style={styles.button}
                 contentStyle={styles.buttonContent}
               >
                 Ingresar
               </AppButton>
             </LinearGradient>
 
-            <Text style={styles.footer}>
-              Acceso seguro • Municipalidad de Cerro Azul
-            </Text>
+            <Text style={styles.footer}>Acceso seguro • Municipalidad de Cerro Azul</Text>
           </View>
-        </View>
+        </AppScrollView>
 
-        <View
-          style={[
-            styles.bottomFooter,
-            { paddingBottom: 20 + insets.bottom },
-          ]}
-        >
-          <Text style={styles.bottomFooterText}>
-            Transporte Escolar Inteligente
-          </Text>
+        <View style={[styles.bottomFooter, { paddingBottom: tokens.spacing.md + insets.bottom }]}>
+          <Text style={styles.bottomFooterText}>Transporte Escolar Inteligente</Text>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#0F1115',
-  },
-
-  root: {
-    flex: 1,
-  },
-
-  glowBlue: {
-    position: 'absolute',
-    width: 320,
-    height: 320,
-    borderRadius: 160,
-    backgroundColor: 'rgba(59,130,246,0.15)',
-    top: -100,
-    right: -100,
-  },
-
-  glowPurple: {
-    position: 'absolute',
-    width: 240,
-    height: 240,
-    borderRadius: 120,
-    backgroundColor: 'rgba(168,85,247,0.08)',
-    bottom: 120,
-    left: -80,
-  },
-
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-  },
-
-  card: {
-    width: '100%',
-    maxWidth: 390,
-    backgroundColor: 'rgba(26,31,39,0.88)',
-    borderRadius: 30,
-    padding: 28,
-
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-
-    shadowColor: '#000',
-    shadowOpacity: 0.4,
-    shadowRadius: 30,
-    shadowOffset: {
-      width: 0,
-      height: 20,
-    },
-
-    elevation: 20,
-  },
-
-  logoContainer: {
-    alignItems: 'center',
-    marginBottom: 18,
-  },
-
-  logo: {
-    width: 78,
-    height: 78,
-  },
-
-  title: {
-    fontSize: 30,
-    fontWeight: '700',
-    color: '#F5F7FA',
-    textAlign: 'center',
-  },
-
-  subtitle: {
-    marginTop: 10,
-    fontSize: 15,
-    lineHeight: 22,
-    color: '#A8B0BD',
-    textAlign: 'center',
-    marginBottom: 30,
-  },
-
-  fields: {
-    gap: 16,
-  },
-
-  errorText: {
-    marginTop: 8,
-  },
-
-  forgotPassword: {
-    color: '#94A3B8',
-    textAlign: 'right',
-    marginTop: 14,
-    marginBottom: 24,
-    fontSize: 14,
-  },
-
-  buttonGradient: {
-    borderRadius: 18,
-    overflow: 'hidden',
-  },
-
-  button: {
-    backgroundColor: 'transparent',
-  },
-
-  buttonContent: {
-    height: 58,
-  },
-
-  footer: {
-    marginTop: 28,
-    textAlign: 'center',
-    color: '#64748B',
-    fontSize: 13,
-  },
-
-  bottomFooter: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-
-  bottomFooterText: {
-    color: '#475569',
-    fontSize: 12,
-  },
-});

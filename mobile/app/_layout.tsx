@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { PaperProvider } from 'react-native-paper';
 import * as SplashScreen from 'expo-splash-screen';
 import type { Session } from '@supabase/supabase-js';
 import { Redirect, Stack, useSegments } from 'expo-router';
@@ -9,7 +8,7 @@ import { Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@expo-google
 import { supabase } from '@/src/core/config/supabase';
 import { getSession } from '@/src/features/auth/services/auth.service';
 import { useTripStore } from '@/src/features/trips/store/tripStore';
-import { paperTheme } from '@/src/core/theme/theme';
+import { AppThemeProvider } from '@/src/core/theme/ThemeProvider';
 import { AppLoadingScreen } from '@/src/shared/ui/AppLoadingScreen';
 
 void SplashScreen.preventAutoHideAsync();
@@ -105,7 +104,7 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <PaperProvider theme={paperTheme}>
+      <AppThemeProvider>
         {!fontsLoaded || isBootLoading ? (
           <AppLoadingScreen />
         ) : !session && !inAuthGroup ? (
@@ -118,7 +117,7 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" />
           </Stack>
         )}
-      </PaperProvider>
+      </AppThemeProvider>
     </SafeAreaProvider>
   );
 }
