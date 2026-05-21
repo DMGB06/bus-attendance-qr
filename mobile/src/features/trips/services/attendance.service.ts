@@ -71,9 +71,7 @@ export async function registerDropoffAttendance(
     throw new Error("Primero debes registrar la asistencia de entrada del alumno.");
   }
 
-  const hasDropoff = (attendanceRows ?? []).some(
-    (attendance) => attendance.event_type === "bajo",
-  );
+  const hasDropoff = (attendanceRows ?? []).some((attendance) => attendance.event_type === "bajo");
   if (hasDropoff) {
     throw new Error("La salida del alumno ya fue registrada.");
   }

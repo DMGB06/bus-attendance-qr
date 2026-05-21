@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-import type { Database } from "@/src/features/trips/types";
+import type { Database } from "@/src/types/database";
 
 const rawSupabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim();
 const rawSupabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY?.trim();

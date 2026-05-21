@@ -2,7 +2,10 @@ import { supabase } from "@/src/core/config/supabase";
 import { getUser } from "@/src/features/auth/services/auth.service";
 import type { Trip, TripDirection } from "@/src/features/trips/types";
 
-function formatSupabaseError(prefix: string, err: { message: string; details?: string; hint?: string; code?: string }) {
+function formatSupabaseError(
+  prefix: string,
+  err: { message: string; details?: string; hint?: string; code?: string },
+) {
   const parts = [err.message, err.details, err.hint].filter(Boolean);
   return `${prefix}${parts.length ? `: ${parts.join(" — ")}` : ""}${err.code ? ` [${err.code}]` : ""}`;
 }
@@ -85,7 +88,9 @@ export async function startTrip(direction: TripDirection): Promise<Trip> {
 
   if (error || !data) {
     throw new Error(
-      error ? formatSupabaseError("No se pudo iniciar el viaje", error) : "No se pudo iniciar el viaje.",
+      error
+        ? formatSupabaseError("No se pudo iniciar el viaje", error)
+        : "No se pudo iniciar el viaje.",
     );
   }
 
