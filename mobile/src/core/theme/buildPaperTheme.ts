@@ -1,7 +1,7 @@
-import { configureFonts, MD3DarkTheme, MD3LightTheme, type MD3Theme } from 'react-native-paper';
+import { configureFonts, MD3DarkTheme, MD3LightTheme, type MD3Theme } from "react-native-paper";
 
-import type { SemanticColors } from '@/src/core/theme/semanticColors';
-import { fontFamily } from '@/src/core/theme/tokens';
+import type { SemanticColors } from "@/src/core/theme/semanticColors";
+import { fontFamily } from "@/src/core/theme/tokens";
 
 function interTypescale(base: typeof MD3LightTheme.fonts) {
   return configureFonts({
@@ -10,11 +10,16 @@ function interTypescale(base: typeof MD3LightTheme.fonts) {
       ...Object.fromEntries(
         (Object.keys(base) as (keyof typeof base)[]).map((key) => {
           const entry = base[key];
-          const isDisplay = String(key).startsWith('display');
-          const isHeadline = String(key).startsWith('headline');
-          const isTitle = String(key).startsWith('title');
-          const isLabel = String(key).startsWith('label');
-          const family = isDisplay || isHeadline || isTitle ? fontFamily.bold : isLabel ? fontFamily.semiBold : fontFamily.regular;
+          const isDisplay = String(key).startsWith("display");
+          const isHeadline = String(key).startsWith("headline");
+          const isTitle = String(key).startsWith("title");
+          const isLabel = String(key).startsWith("label");
+          const family =
+            isDisplay || isHeadline || isTitle
+              ? fontFamily.bold
+              : isLabel
+                ? fontFamily.semiBold
+                : fontFamily.regular;
           return [key, { ...entry, fontFamily: family }];
         }),
       ),

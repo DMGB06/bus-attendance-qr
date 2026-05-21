@@ -153,7 +153,7 @@ export function LoginForm({
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.root}>
         <AppScrollView
           omitTabBarInset
-          extraBottomInset={88}
+          extraBottomInset={0}
           contentContainerStyle={styles.scrollInner}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -214,10 +214,6 @@ export function LoginForm({
               </Text>
             </Pressable>
 
-            <View style={styles.themeSection}>
-              <ThemeAppearanceControl variant="panel" />
-            </View>
-
             <LinearGradient colors={colors.authCtaGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.buttonGradient}>
               <AppButton
                 variant="authPrimary"
@@ -233,10 +229,6 @@ export function LoginForm({
             <Text style={styles.footer}>Acceso seguro • Municipalidad de Cerro Azul</Text>
           </View>
         </AppScrollView>
-
-        <View style={[styles.bottomFooter, { paddingBottom: tokens.spacing.md + insets.bottom }]}>
-          <Text style={styles.bottomFooterText}>Transporte Escolar Inteligente</Text>
-        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

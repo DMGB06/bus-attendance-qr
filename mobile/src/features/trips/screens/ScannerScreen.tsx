@@ -5,6 +5,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Button, Card, HelperText, Text, TextInput } from 'react-native-paper';
 import { StudentConfirmModal } from '@/src/features/trips/components/StudentConfirmModal';
+import { ManualRegister } from '@/src/features/trips/components/ManualRegister';
 import { registerAttendance } from '@/src/features/trips/services/attendance.service';
 import {
   findStudentByCode,
@@ -35,6 +36,8 @@ export default function ScannerScreen() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const scanLockedRef = useRef(false);
+  const lastScannedRef = useRef<{ value: string; at: number } | null>(null);
+  const [viewMode, setViewMode] = useState<'scanner' | 'manual'>('scanner');
   const cameraHeight = Math.max(220, Math.min(360, screenHeight * 0.34));
 
   const styles = useMemo(
@@ -151,7 +154,7 @@ export default function ScannerScreen() {
         },
         panel: {
           backgroundColor: colors.scannerPanelBg,
-          borderRadius: 30,
+          borderRadius: 15,
           borderWidth: 1,
           borderColor: colors.scannerPanelBorder,
           shadowColor: colors.shadowColor,
@@ -260,6 +263,12 @@ export default function ScannerScreen() {
           gap: 14,
           paddingVertical: 40,
         },
+        toggleRow: {
+          flexDirection: 'row',
+          gap: 8,
+          alignSelf: 'center',
+          marginBottom: 8,
+        },
         permissionTitle: {
           color: colors.textTitle,
           fontSize: tokens.fontSize.xl,
@@ -301,6 +310,8 @@ export default function ScannerScreen() {
         setIsConfirmModalVisible(false);
         setErrorMessage('Alumno no encontrado');
         scanLockedRef.current = false;
+        // evitar volver a procesar inmediatamente el mismo QR
+        lastScannedRef.current = { value: normalizedValue, at: Date.now() };
         return;
       }
 
@@ -315,10 +326,18 @@ export default function ScannerScreen() {
   }
 
   function handleBarcodeScanned({ data }: { data: string }) {
+    if (viewMode !== 'scanner') return;
+
     if (scanLockedRef.current || isSearching || isRegistering || student) {
       return;
     }
 
+    const now = Date.now();
+    if (lastScannedRef.current?.value === data && now - lastScannedRef.current.at < 800) {
+      return;
+    }
+
+    lastScannedRef.current = { value: data, at: now };
     scanLockedRef.current = true;
     void resolveStudentByCode(data);
   }
@@ -412,12 +431,16 @@ export default function ScannerScreen() {
     try {
       const studentName = student.nombre_alumno;
       await registerAttendance(activeTrip.id, student.id, 'subio');
-      clearStudentSelection(false);
+      clearStudentSelection(true);
       setSuccessMessage(`Asistencia registrada para ${studentName}.`);
     } catch (error: unknown) {
       setErrorMessage(error instanceof Error ? error.message : 'No se pudo registrar la asistencia.');
+      // Asegurar que el scanner se libere ante errores
+      scanLockedRef.current = false;
     } finally {
       setIsRegistering(false);
+      // Garantizar liberación del lock al finalizar
+      scanLockedRef.current = false;
     }
   }
 
@@ -478,26 +501,49 @@ export default function ScannerScreen() {
     <SafeAreaView edges={['bottom', 'left', 'right']} style={styles.safeArea}>
       <View style={containerStyle}>
         <View style={styles.badge}>
-          <MaterialCommunityIcons name="qrcode-scan" size={16} color={colors.primary} />
-          <Text style={styles.badgeText}>ESCANER ACTIVO</Text>
+          <MaterialCommunityIcons
+            name={viewMode === 'scanner' ? 'qrcode-scan' : 'account-search'}
+            size={16}
+            color={colors.primary}
+          />
+          <Text style={styles.badgeText}>{viewMode === 'scanner' ? 'ESCANER ACTIVO' : 'REGISTRO MANUAL'}</Text>
         </View>
 
-        <View style={[styles.cameraFrame, { height: cameraHeight }]}>
-          <CameraView
-            style={styles.camera}
-            facing="back"
-            barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
-            onBarcodeScanned={handleBarcodeScanned}
-          />
-          <View style={styles.overlay} pointerEvents="none">
-            <View style={[styles.corner, styles.topLeft]} />
-            <View style={[styles.corner, styles.topRight]} />
-            <View style={[styles.corner, styles.bottomLeft]} />
-            <View style={[styles.corner, styles.bottomRight]} />
-            <View style={styles.scanLine} />
-            <Text style={styles.overlayHint}>Apunta el QR dentro del marco</Text>
-          </View>
+        <View style={styles.toggleRow}>
+          <Button
+            mode={viewMode === 'scanner' ? 'contained' : 'outlined'}
+            onPress={() => setViewMode('scanner')}
+            disabled={isRegistering}
+          >
+            Escáner
+          </Button>
+          <Button
+            mode={viewMode === 'manual' ? 'contained' : 'outlined'}
+            onPress={() => setViewMode('manual')}
+            disabled={isRegistering}
+          >
+            Manual
+          </Button>
         </View>
+
+        {viewMode === 'scanner' ? (
+          <View style={[styles.cameraFrame, { height: cameraHeight }]}>
+            <CameraView
+              style={styles.camera}
+              facing="back"
+              barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+              onBarcodeScanned={handleBarcodeScanned}
+            />
+            <View style={styles.overlay} pointerEvents="none">
+              <View style={[styles.corner, styles.topLeft]} />
+              <View style={[styles.corner, styles.topRight]} />
+              <View style={[styles.corner, styles.bottomLeft]} />
+              <View style={[styles.corner, styles.bottomRight]} />
+              <View style={styles.scanLine} />
+              <Text style={styles.overlayHint}>Apunta el QR dentro del marco</Text>
+            </View>
+          </View>
+        ) : null}
         <AppScrollView
           style={styles.panelScroll}
           contentContainerStyle={styles.panelScrollContent}
@@ -507,33 +553,30 @@ export default function ScannerScreen() {
           <View style={styles.panelFill}>
             <Card mode="outlined" style={styles.panel}>
               <Card.Content style={styles.panelContent}>
-                <Text style={styles.panelTitle}>Escaneo y confirmación</Text>
+                <Text style={styles.panelTitle}>{viewMode === 'scanner' ? 'Escaneo y confirmación' : 'Registro manual'}</Text>
                 <Text style={styles.panelBody}>
-                  Escanea el QR o busca al alumno por nombre para registrarlo manualmente.
+                  {viewMode === 'scanner'
+                    ? 'Escanea el QR o busca al alumno por nombre para registrarlo manualmente.'
+                    : 'Busca al alumno por nombre y confirma su registro manualmente.'}
                 </Text>
 
-                <View style={styles.manualBlock}>
-                  <TextInput
-                    mode="outlined"
-                    label="Nombre del alumno"
-                    value={manualName}
-                    onChangeText={(value) => {
-                      setManualName(value);
+                {viewMode === 'manual' ? (
+                  <ManualRegister
+                    manualName={manualName}
+                    setManualName={(v) => {
+                      setManualName(v);
                       setErrorMessage(null);
                       setInfoMessage(null);
                     }}
-                    autoCapitalize="words"
-                    autoCorrect={false}
-                    editable={!isSearching && !isRegistering}
-                    returnKeyType="search"
-                    onSubmitEditing={() => {
-                      void handleManualSearch();
-                    }}
+                    manualCandidates={manualCandidates}
+                    isSearching={isSearching}
+                    isRegistering={isRegistering}
+                    errorMessage={errorMessage}
+                    infoMessage={infoMessage}
+                    onSearch={handleManualSearch}
+                    onSelectCandidate={handleSelectManualStudent}
                   />
-                  <Button mode="contained" onPress={handleManualSearch} loading={isSearching} disabled={isRegistering}>
-                    Buscar por nombre
-                  </Button>
-                </View>
+                ) : null}
 
                 {manualCandidates.length > 1 ? (
                   <View style={styles.matchesBlock}>
@@ -573,11 +616,17 @@ export default function ScannerScreen() {
                 <View style={styles.actions}>
                   <Button
                     mode="contained-tonal"
-                    icon="qrcode"
+                    icon={viewMode === 'scanner' ? 'qrcode' : 'account-search'}
                     onPress={handleResetScanner}
                     disabled={isSearching || isRegistering}
                   >
-                    {student ? 'Limpiar y escanear otro' : 'Reiniciar escaneo'}
+                    {viewMode === 'scanner'
+                      ? student
+                        ? 'Limpiar y escanear otro'
+                        : 'Reiniciar escaneo'
+                      : student
+                        ? 'Limpiar y nuevo registro'
+                        : 'Limpiar búsqueda'}
                   </Button>
                 </View>
               </Card.Content>

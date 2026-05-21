@@ -57,9 +57,6 @@ export default function TabsLayout() {
           paddingVertical: tokens.spacing.sm,
           minHeight: tokens.layout.appearanceNavbarHeight,
           borderRadius: tokens.radius.lg,
-          backgroundColor: colors.navLogoutPillBg,
-          borderWidth: 1,
-          borderColor: colors.navLogoutPillBorder,
         },
         logoutText: {
           ...tokens.typography.bodyStrong,
@@ -72,11 +69,7 @@ export default function TabsLayout() {
           alignItems: 'center',
           justifyContent: 'center',
         },
-        tabIconContainerActive: {
-          backgroundColor: colors.navTabRingActiveBg,
-          borderWidth: 1,
-          borderColor: colors.navTabRingActiveBorder,
-        },
+
       }),
     [colors, tokens],
   );
@@ -100,11 +93,11 @@ export default function TabsLayout() {
       ),
       headerLeft: () => (
         <View style={styles.headerLeft}>
-          <View style={styles.logoContainer}>
-            <MaterialCommunityIcons name="bus-school" size={18} color={colors.navBusIcon} />
-          </View>
+
+          <MaterialCommunityIcons name="bus" size={25} color={colors.navBusIcon} />
+
           <View>
-            <Text style={styles.headerTitle}>Bus Attendance</Text>
+            <Text style={styles.headerTitle}>Bus Escolar</Text>
             <Text style={styles.headerSubtitle}>Transporte Inteligente</Text>
           </View>
         </View>
@@ -114,7 +107,6 @@ export default function TabsLayout() {
           <ThemeAppearanceControl />
           <TouchableOpacity onPress={handleLogout} style={styles.logoutPill} activeOpacity={0.8}>
             <MaterialCommunityIcons name="logout" size={18} color={colors.navLogoutIcon} />
-            <Text style={styles.logoutText}>Salir</Text>
           </TouchableOpacity>
         </View>
       ),
@@ -152,8 +144,8 @@ export default function TabsLayout() {
         options={{
           title: 'Iniciar Viaje',
           tabBarLabel: 'VIAJE',
-          tabBarIcon: ({ color, focused }) => (
-            <View style={[styles.tabIconContainer, focused && styles.tabIconContainerActive]}>
+          tabBarIcon: ({ color }) => (
+            <View style={[styles.tabIconContainer]}>
               <MaterialCommunityIcons name="bus-clock" size={22} color={color} />
             </View>
           ),
@@ -164,8 +156,8 @@ export default function TabsLayout() {
         options={{
           title: 'Escanear QR',
           tabBarLabel: 'SCAN',
-          tabBarIcon: ({ color, focused }) => (
-            <View style={[styles.tabIconContainer, focused && styles.tabIconContainerActive]}>
+          tabBarIcon: ({ color }) => (
+            <View style={[styles.tabIconContainer]}>
               <MaterialCommunityIcons name="qrcode-scan" size={22} color={color} />
             </View>
           ),
@@ -176,8 +168,8 @@ export default function TabsLayout() {
         options={{
           title: 'Lista',
           tabBarLabel: 'LISTA',
-          tabBarIcon: ({ color, focused }) => (
-            <View style={[styles.tabIconContainer, focused && styles.tabIconContainerActive]}>
+          tabBarIcon: ({ color }) => (
+            <View style={[styles.tabIconContainer]}>
               <MaterialCommunityIcons name="format-list-bulleted" size={22} color={color} />
             </View>
           ),
