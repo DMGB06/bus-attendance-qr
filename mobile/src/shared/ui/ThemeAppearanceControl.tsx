@@ -1,12 +1,11 @@
 import { useEffect, useMemo } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { useAppTheme } from '@/src/core/theme/ThemeProvider';
 
-const SPRING = { damping: 18, stiffness: 260, mass: 0.35 };
+// compact control: no reanimated spring needed
 
 type ThemeAppearanceControlProps = {
   /** `navbar`: compacto alineado con acciones del header. `panel`: fila con etiqueta para formularios. */
@@ -21,15 +20,7 @@ export function ThemeAppearanceControl({ variant = 'navbar' }: ThemeAppearanceCo
   const pad = 4;
   const travel = trackW - knobSize - pad * 2;
 
-  const knobX = useSharedValue(isDark ? 1 : 0);
-
-  useEffect(() => {
-    knobX.value = withSpring(isDark ? 1 : 0, SPRING);
-  }, [isDark, knobX]);
-
-  const knobAnimated = useAnimatedStyle(() => ({
-    transform: [{ translateX: pad + knobX.value * travel }],
-  }));
+  // no animated knob — simple compact icon button
 
   const styles = useMemo(
     () =>
@@ -47,45 +38,15 @@ export function ThemeAppearanceControl({ variant = 'navbar' }: ThemeAppearanceCo
           color: colors.textBody,
           flex: 1,
         },
-        track: {
-          width: trackW,
-          height: trackH,
-          borderRadius: tokens.radius.full,
-          backgroundColor: colors.appearanceControlBg,
-          borderWidth: 1,
-          borderColor: colors.appearanceControlBorder,
-          justifyContent: 'center',
-          overflow: 'hidden',
-          position: 'relative',
-        },
-        trackLarge: {
-          width: trackW + 8,
-          height: trackH + 4,
-        },
-        iconsLayer: {
-          ...StyleSheet.absoluteFillObject,
-          flexDirection: 'row',
+        // compact circular button styles
+        compactButton: {
+          width: 36,
+          height: 36,
+          borderRadius: 18,
           alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingHorizontal: 10,
-          pointerEvents: 'none',
-          zIndex: 1,
-        },
-        knob: {
-          position: 'absolute',
-          top: (trackH - knobSize) / 2,
-          left: 0,
-          width: knobSize,
-          height: knobSize,
-          borderRadius: tokens.radius.full,
-          backgroundColor: colors.appearanceControlKnob,
-          borderWidth: 1,
-          borderColor: colors.appearanceControlKnobBorder,
-          shadowColor: colors.shadowColor,
-          shadowOpacity: 0.12,
-          shadowRadius: 6,
-          shadowOffset: { width: 0, height: 2 },
-          elevation: 3,
+          justifyContent: 'center',
+          backgroundColor: 'transparent',
+          borderWidth: 0,
         },
       }),
     [colors, tokens, trackH, trackW, knobSize],
@@ -98,32 +59,18 @@ export function ThemeAppearanceControl({ variant = 'navbar' }: ThemeAppearanceCo
     toggleScheme();
   }
 
-  const trackStyle = [styles.track, variant === 'panel' && styles.trackLarge];
-
   const control = (
     <Pressable
-      accessibilityRole="switch"
+      accessibilityRole="button"
       accessibilityLabel="Tema de la aplicación"
-      accessibilityHint="Alterna entre apariencia clara y oscura"
-      accessibilityState={{ checked: isDark }}
       onPress={handlePress}
-      style={({ pressed }) => [pressed && { opacity: 0.92 }]}
+      style={({ pressed }) => [pressed && { opacity: 0.9 }, styles.compactButton]}
     >
-      <View style={trackStyle}>
-        <Animated.View style={[styles.knob, knobAnimated]} />
-        <View style={styles.iconsLayer}>
-          <MaterialCommunityIcons
-            name="white-balance-sunny"
-            size={15}
-            color={isDark ? colors.appearanceControlIconMuted : colors.appearanceControlIconActive}
-          />
-          <MaterialCommunityIcons
-            name="moon-waning-crescent"
-            size={15}
-            color={isDark ? colors.appearanceControlIconActive : colors.appearanceControlIconMuted}
-          />
-        </View>
-      </View>
+      <MaterialCommunityIcons
+        name={isDark ? 'moon-waning-crescent' : 'white-balance-sunny'}
+        size={18}
+        color={colors.appearanceControlIconActive}
+      />
     </Pressable>
   );
 

@@ -105,6 +105,15 @@ export default function TabsLayout() {
       headerRight: () => (
         <View style={styles.headerRight}>
           <ThemeAppearanceControl />
+          <TouchableOpacity
+            onPress={() => router.push('/(tabs)/profile')}
+            style={{ padding: 8, borderRadius: 8 }}
+            activeOpacity={0.8}
+            accessibilityLabel="Abrir perfil"
+          >
+            <MaterialCommunityIcons name="account-circle" size={20} color={colors.navLogoutIcon} />
+          </TouchableOpacity>
+
           <TouchableOpacity onPress={handleLogout} style={styles.logoutPill} activeOpacity={0.8}>
             <MaterialCommunityIcons name="logout" size={18} color={colors.navLogoutIcon} />
           </TouchableOpacity>
