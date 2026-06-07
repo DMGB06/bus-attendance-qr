@@ -116,11 +116,3 @@ export async function closeTrip(tripId: string): Promise<void> {
   }
 }
 
-// Compatibilidad temporal para imports existentes
-export async function StartTrip(direction: TripDirection): Promise<Trip> {
-  return startTrip(direction);
-}
-
-export async function getActiveTrip(): Promise<Trip | null> {
-  return getActiveTripByOperator();
-}

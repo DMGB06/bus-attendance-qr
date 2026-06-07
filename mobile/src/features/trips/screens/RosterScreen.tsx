@@ -1,64 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, StyleSheet, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Button, Card, HelperText, Searchbar, Text } from 'react-native-paper';
-import { useRouter } from 'expo-router';
-import { formatTripDirectionLabel } from '@/src/features/trips/components/TripHeader';
-import { RosterStudentRow } from '@/src/features/trips/components/roster/RosterStudentRow';
-import {
-  getTripRoster,
-  markStudentExit,
-  markStudentManually,
-  type TripRosterItem,
-} from '@/src/features/trips/services/trip-roster.service';
-import { useTripStore } from '@/src/features/trips/store/tripStore';
-import { useAppTheme } from '@/src/core/theme/ThemeProvider';
-import { useScrollBottomPadding } from '@/src/core/theme/useScrollBottomPadding';
-type RosterViewMode = 'all' | 'attended';
+import { useMemo } from "react";
+import { ActivityIndicator, FlatList, StyleSheet, View } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { Button, Card, HelperText, Searchbar, Text } from "react-native-paper";
+import { useRouter } from "expo-router";
 
-function confirmManualAttendance(studentName: string) {
-  return new Promise<boolean>((resolve) => {
-    Alert.alert(
-      'Confirmar registro manual',
-      `¿Registrar manualmente a ${studentName}?\n\nEsta acción no se puede deshacer desde esta pantalla.`,
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel',
-          onPress: () => resolve(false),
-        },
-        {
-          text: 'Confirmar',
-          style: 'default',
-          onPress: () => resolve(true),
-        },
-      ],
-      { cancelable: false },
-    );
-  });
-}
-
-function confirmStudentDropoff(studentName: string) {
-  return new Promise<boolean>((resolve) => {
-    Alert.alert(
-      'Confirmar salida',
-      `¿Registrar salida para ${studentName}?`,
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel',
-          onPress: () => resolve(false),
-        },
-        {
-          text: 'Confirmar',
-          style: 'default',
-          onPress: () => resolve(true),
-        },
-      ],
-      { cancelable: false },
-    );
-  });
-}
+import { formatTripDirectionLabel } from "@/src/features/trips/components/TripHeader";
+import { RosterStudentRow } from "@/src/features/trips/components/roster/RosterStudentRow";
+import { useTripRoster } from "@/src/features/trips/hooks/useTripRoster";
+import { useTripStore } from "@/src/features/trips/store/tripStore";
+import { useAppTheme } from "@/src/core/theme/ThemeProvider";
+import { useScrollBottomPadding } from "@/src/core/theme/useScrollBottomPadding";
 
 export default function RosterScreen() {
   const router = useRouter();
@@ -66,128 +17,7 @@ export default function RosterScreen() {
   const { colors, tokens } = useAppTheme();
   const scrollBottom = useScrollBottomPadding(tokens.spacing.md);
   const { activeTrip } = useTripStore();
-  const [viewMode, setViewMode] = useState<RosterViewMode>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [items, setItems] = useState<TripRosterItem[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [infoMessage, setInfoMessage] = useState<string | null>(null);
-  const [isMarkingStudentId, setIsMarkingStudentId] = useState<string | null>(null);
-
-  const loadRoster = useCallback(async () => {
-    if (!activeTrip) {
-      setItems([]);
-      return;
-    }
-
-    setIsLoading(true);
-    setErrorMessage(null);
-
-    try {
-      const rosterItems = await getTripRoster(activeTrip.id);
-      setItems(rosterItems);
-    } catch (error: unknown) {
-      setErrorMessage(error instanceof Error ? error.message : 'No se pudo cargar la lista de asistencia.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [activeTrip]);
-
-  useEffect(() => {
-    void loadRoster();
-  }, [loadRoster]);
-
-  const handleManualMark = useCallback(
-    async (studentId: string) => {
-      if (!activeTrip || isMarkingStudentId) {
-        return;
-      }
-
-      const selectedStudent = items.find((item) => item.student.id === studentId)?.student;
-      if (!selectedStudent) {
-        setErrorMessage('No se encontró el alumno seleccionado.');
-        return;
-      }
-
-      const isConfirmed = await confirmManualAttendance(selectedStudent.nombre_alumno);
-      if (!isConfirmed) {
-        return;
-      }
-
-      setIsMarkingStudentId(studentId);
-      setErrorMessage(null);
-      setInfoMessage(null);
-
-      try {
-        await markStudentManually(activeTrip.id, studentId);
-        setInfoMessage('Registro manual guardado.');
-        await loadRoster();
-      } catch (error: unknown) {
-        setErrorMessage(error instanceof Error ? error.message : 'No se pudo registrar manualmente.');
-      } finally {
-        setIsMarkingStudentId(null);
-      }
-    },
-    [activeTrip, isMarkingStudentId, items, loadRoster],
-  );
-
-  const handleExitMark = useCallback(
-    async (studentId: string) => {
-      if (!activeTrip || isMarkingStudentId) {
-        return;
-      }
-
-      const selectedStudent = items.find((item) => item.student.id === studentId)?.student;
-      if (!selectedStudent) {
-        setErrorMessage('No se encontró el alumno seleccionado.');
-        return;
-      }
-
-      const isConfirmed = await confirmStudentDropoff(selectedStudent.nombre_alumno);
-      if (!isConfirmed) {
-        return;
-      }
-
-      setIsMarkingStudentId(studentId);
-      setErrorMessage(null);
-      setInfoMessage(null);
-
-      try {
-        await markStudentExit(activeTrip.id, studentId);
-        setInfoMessage('Salida registrada correctamente.');
-        await loadRoster();
-      } catch (error: unknown) {
-        setErrorMessage(error instanceof Error ? error.message : 'No se pudo registrar la salida.');
-      } finally {
-        setIsMarkingStudentId(null);
-      }
-    },
-    [activeTrip, isMarkingStudentId, items, loadRoster],
-  );
-
-  const filteredItems = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase();
-    const baseItems =
-      viewMode === 'attended'
-        ? items.filter((item) => item.hasAttendance)
-        : items;
-
-    if (!normalizedQuery) {
-      return baseItems;
-    }
-
-    return baseItems.filter((item) => {
-      return (
-        item.student.nombre_alumno.toLowerCase().includes(normalizedQuery) ||
-        item.student.id.toLowerCase().includes(normalizedQuery) ||
-        (item.student.codigo ?? '').toLowerCase().includes(normalizedQuery)
-      );
-    });
-  }, [items, searchQuery, viewMode]);
-
-  const attendedCount = items.filter((item) => item.hasAttendance).length;
-  const onboardCount = items.filter((item) => item.status === 'onboard').length;
-  const pendingCount = items.filter((item) => item.status === 'pending').length;
+  const roster = useTripRoster(activeTrip?.id);
 
   const styles = useMemo(
     () =>
@@ -205,7 +35,7 @@ export default function RosterScreen() {
         },
         centerFill: {
           flex: 1,
-          justifyContent: 'center',
+          justifyContent: "center",
           minHeight: 120,
         },
         header: {
@@ -214,7 +44,7 @@ export default function RosterScreen() {
         title: {
           color: colors.textTitle,
           fontSize: 28,
-          fontWeight: '700',
+          fontWeight: "700",
         },
         subtitle: {
           color: colors.textMuted,
@@ -229,11 +59,11 @@ export default function RosterScreen() {
           minHeight: 0,
         },
         filterRow: {
-          flexDirection: 'row',
+          flexDirection: "row",
           gap: tokens.spacing.sm,
         },
         summaryRow: {
-          flexDirection: 'row',
+          flexDirection: "row",
           gap: tokens.spacing.sm,
         },
         summaryCard: {
@@ -242,13 +72,13 @@ export default function RosterScreen() {
           borderColor: colors.borderDefault,
         },
         summaryContent: {
-          alignItems: 'center',
+          alignItems: "center",
           gap: 4,
         },
         summaryValue: {
           color: colors.textTitle,
           fontSize: 24,
-          fontWeight: '700',
+          fontWeight: "700",
         },
         summaryLabel: {
           color: colors.textMuted,
@@ -265,18 +95,18 @@ export default function RosterScreen() {
           borderColor: colors.borderDefault,
         },
         emptyContent: {
-          alignItems: 'center',
+          alignItems: "center",
           gap: tokens.spacing.sm,
           paddingVertical: tokens.spacing.xl,
         },
         emptyTitle: {
           color: colors.textTitle,
           fontSize: 18,
-          fontWeight: '700',
+          fontWeight: "700",
         },
         emptyBody: {
           color: colors.textMuted,
-          textAlign: 'center',
+          textAlign: "center",
           lineHeight: 20,
         },
         separator: {
@@ -288,12 +118,15 @@ export default function RosterScreen() {
 
   if (!activeTrip) {
     return (
-      <SafeAreaView edges={['bottom', 'left', 'right']} style={[styles.container, { paddingBottom: insets.bottom + 16 }]}>
+      <SafeAreaView
+        edges={["bottom", "left", "right"]}
+        style={[styles.container, { paddingBottom: insets.bottom + 16 }]}
+      >
         <Card mode="outlined" style={styles.emptyStateCard}>
           <Card.Content style={styles.emptyContent}>
             <Text style={styles.emptyTitle}>Sin viaje activo</Text>
             <Text style={styles.emptyBody}>Inicia un viaje para ver la lista de asistencia.</Text>
-            <Button mode="contained" onPress={() => router.replace('/(tabs)/trip')}>
+            <Button mode="contained" onPress={() => router.replace("/(tabs)/trip")}>
               Ir a inicio
             </Button>
           </Card.Content>
@@ -303,12 +136,15 @@ export default function RosterScreen() {
   }
 
   const emptyBody =
-    viewMode === 'attended'
-      ? 'Aún no hay estudiantes con asistencia registrada.'
-      : 'No encontramos alumnos con ese filtro.';
+    roster.viewMode === "attended"
+      ? "Aún no hay estudiantes con asistencia registrada."
+      : "No encontramos alumnos con ese filtro.";
 
   return (
-    <SafeAreaView edges={['bottom', 'left', 'right']} style={[styles.container, { paddingBottom: insets.bottom + tokens.spacing.sm }]}>
+    <SafeAreaView
+      edges={["bottom", "left", "right"]}
+      style={[styles.container, { paddingBottom: insets.bottom + tokens.spacing.sm }]}
+    >
       <View style={styles.header}>
         <Text style={styles.title}>Lista de Asistencia</Text>
         <Text style={styles.subtitle}>Viaje {formatTripDirectionLabel(activeTrip.direction)}</Text>
@@ -316,19 +152,22 @@ export default function RosterScreen() {
 
       <Searchbar
         placeholder="Buscar por nombre, código o ID..."
-        value={searchQuery}
-        onChangeText={setSearchQuery}
+        value={roster.searchQuery}
+        onChangeText={roster.setSearchQuery}
         style={styles.search}
         inputStyle={styles.searchInput}
       />
 
       <View style={styles.filterRow}>
-        <Button mode={viewMode === 'all' ? 'contained' : 'outlined'} onPress={() => setViewMode('all')}>
+        <Button
+          mode={roster.viewMode === "all" ? "contained" : "outlined"}
+          onPress={() => roster.setViewMode("all")}
+        >
           Todos
         </Button>
         <Button
-          mode={viewMode === 'attended' ? 'contained' : 'outlined'}
-          onPress={() => setViewMode('attended')}
+          mode={roster.viewMode === "attended" ? "contained" : "outlined"}
+          onPress={() => roster.setViewMode("attended")}
         >
           Asistieron
         </Button>
@@ -337,33 +176,33 @@ export default function RosterScreen() {
       <View style={styles.summaryRow}>
         <Card mode="outlined" style={styles.summaryCard}>
           <Card.Content style={styles.summaryContent}>
-            <Text style={styles.summaryValue}>{attendedCount}</Text>
+            <Text style={styles.summaryValue}>{roster.stats.attendedCount}</Text>
             <Text style={styles.summaryLabel}>Asistieron</Text>
           </Card.Content>
         </Card>
         <Card mode="outlined" style={styles.summaryCard}>
           <Card.Content style={styles.summaryContent}>
-            <Text style={styles.summaryValue}>{onboardCount}</Text>
+            <Text style={styles.summaryValue}>{roster.stats.onboardCount}</Text>
             <Text style={styles.summaryLabel}>En bus</Text>
           </Card.Content>
         </Card>
         <Card mode="outlined" style={styles.summaryCard}>
           <Card.Content style={styles.summaryContent}>
-            <Text style={styles.summaryValue}>{pendingCount}</Text>
+            <Text style={styles.summaryValue}>{roster.stats.pendingCount}</Text>
             <Text style={styles.summaryLabel}>Pendientes</Text>
           </Card.Content>
         </Card>
       </View>
 
-      {errorMessage ? <HelperText type="error">{errorMessage}</HelperText> : null}
-      {infoMessage ? <HelperText type="info">{infoMessage}</HelperText> : null}
+      {roster.errorMessage ? <HelperText type="error">{roster.errorMessage}</HelperText> : null}
+      {roster.infoMessage ? <HelperText type="info">{roster.infoMessage}</HelperText> : null}
 
       <View style={styles.listWrap}>
-        {isLoading && items.length === 0 ? (
+        {roster.isLoading && roster.items.length === 0 ? (
           <View style={styles.centerFill}>
             <ActivityIndicator color={colors.primary} size="large" />
           </View>
-        ) : !isLoading && filteredItems.length === 0 ? (
+        ) : !roster.isLoading && roster.filteredItems.length === 0 ? (
           <View style={styles.centerFill}>
             <Card mode="outlined" style={styles.emptyStateCard}>
               <Card.Content style={styles.emptyContent}>
@@ -374,21 +213,21 @@ export default function RosterScreen() {
           </View>
         ) : (
           <FlatList
-            data={filteredItems}
+            data={roster.filteredItems}
             keyExtractor={(item) => item.student.id}
             renderItem={({ item }) => (
               <RosterStudentRow
                 item={item}
-                onMarkManual={handleManualMark}
-                onMarkExit={handleExitMark}
-                isMarkingManual={isMarkingStudentId === item.student.id}
-                isMarkingExit={isMarkingStudentId === item.student.id}
+                onMarkManual={roster.handleManualMark}
+                onMarkExit={roster.handleExitMark}
+                isMarkingManual={roster.isMarkingStudentId === item.student.id}
+                isMarkingExit={roster.isMarkingStudentId === item.student.id}
               />
             )}
             contentContainerStyle={[styles.list, { paddingBottom: scrollBottom }]}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
-            refreshing={isLoading}
-            onRefresh={() => void loadRoster()}
+            refreshing={roster.isLoading}
+            onRefresh={() => void roster.loadRoster()}
             style={styles.listView}
           />
         )}

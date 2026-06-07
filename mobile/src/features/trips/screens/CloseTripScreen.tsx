@@ -1,42 +1,20 @@
-import { useMemo, useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { Button, Card, HelperText, Surface, Text } from 'react-native-paper';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useMemo } from "react";
+import { StyleSheet, View } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
+import { Button, Card, HelperText, Surface, Text } from "react-native-paper";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-import { TripHeader } from '@/src/features/trips/components/TripHeader';
-import { getPendingDropoffStudents } from '@/src/features/trips/services/attendance.service';
-import { closeTrip } from '@/src/features/trips/services/trips.service';
-import { useTripStore } from '@/src/features/trips/store/tripStore';
-import { useAppTheme } from '@/src/core/theme/ThemeProvider';
-import { AppScrollView } from '@/src/shared/ui/AppScrollView';
-
-function confirmCloseWithPendingStudents(studentNames: string[], totalPending: number) {
-  const hasMoreStudents = totalPending > studentNames.length;
-  const shownList = studentNames.join(', ');
-  const summaryLine = hasMoreStudents ? `${shownList} y ${totalPending - studentNames.length} más` : shownList;
-
-  return new Promise<boolean>((resolve) => {
-    Alert.alert(
-      'Hay alumnos sin bajada',
-      `Aún hay ${totalPending} alumno(s) con abordo sin registro de bajada.\n\n${summaryLine}\n\n¿Deseas cerrar el viaje de todas formas?`,
-      [
-        { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
-        { text: 'Cerrar viaje', style: 'destructive', onPress: () => resolve(true) },
-      ],
-      { cancelable: false },
-    );
-  });
-}
+import { TripHeader } from "@/src/features/trips/components/TripHeader";
+import { useCloseTrip } from "@/src/features/trips/hooks/useCloseTrip";
+import { useAppTheme } from "@/src/core/theme/ThemeProvider";
+import { AppScrollView } from "@/src/shared/ui/AppScrollView";
 
 export default function CloseTripScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { activeTrip, clearActiveTrip } = useTripStore();
+  const { activeTrip, isClosing, errorMessage, handleCloseTrip } = useCloseTrip();
   const { colors } = useAppTheme();
-  const [isClosing, setIsClosing] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const styles = useMemo(
     () =>
@@ -51,7 +29,7 @@ export default function CloseTripScreen() {
           gap: 18,
         },
         header: {
-          alignItems: 'center',
+          alignItems: "center",
           gap: 10,
           marginBottom: 6,
         },
@@ -60,8 +38,8 @@ export default function CloseTripScreen() {
           height: 72,
           borderRadius: 36,
           backgroundColor: colors.primaryPressed,
-          alignItems: 'center',
-          justifyContent: 'center',
+          alignItems: "center",
+          justifyContent: "center",
           shadowColor: colors.primaryPressed,
           shadowOpacity: 0.35,
           shadowRadius: 18,
@@ -71,14 +49,14 @@ export default function CloseTripScreen() {
         title: {
           color: colors.textTitle,
           fontSize: 30,
-          fontWeight: '700',
-          textAlign: 'center',
+          fontWeight: "700",
+          textAlign: "center",
         },
         subtitle: {
           color: colors.textMuted,
           fontSize: 15,
           lineHeight: 22,
-          textAlign: 'center',
+          textAlign: "center",
           paddingHorizontal: 8,
         },
         warningCard: {
@@ -90,8 +68,8 @@ export default function CloseTripScreen() {
           gap: 14,
         },
         warningTop: {
-          flexDirection: 'row',
-          alignItems: 'center',
+          flexDirection: "row",
+          alignItems: "center",
           gap: 12,
         },
         warningIcon: {
@@ -99,13 +77,13 @@ export default function CloseTripScreen() {
           height: 38,
           borderRadius: 19,
           backgroundColor: colors.feedbackWarningIconCircle,
-          alignItems: 'center',
-          justifyContent: 'center',
+          alignItems: "center",
+          justifyContent: "center",
         },
         warningTitle: {
           color: colors.feedbackWarningTitle,
           fontSize: 16,
-          fontWeight: '700',
+          fontWeight: "700",
         },
         warningBody: {
           color: colors.feedbackWarningBody,
@@ -117,7 +95,7 @@ export default function CloseTripScreen() {
           borderRadius: 26,
           borderWidth: 1,
           borderColor: colors.surfaceCardBorder,
-          overflow: 'hidden',
+          overflow: "hidden",
         },
         content: {
           gap: 14,
@@ -135,24 +113,24 @@ export default function CloseTripScreen() {
         },
         closeLabel: {
           fontSize: 15,
-          fontWeight: '700',
+          fontWeight: "700",
           color: colors.textOnPrimary,
         },
         backLabel: {
           fontSize: 15,
-          fontWeight: '600',
+          fontWeight: "600",
           color: colors.textBody,
         },
         emptyContainer: {
           flex: 1,
-          justifyContent: 'center',
+          justifyContent: "center",
           paddingHorizontal: 22,
         },
         emptyCard: {
           backgroundColor: colors.surfaceCard,
           borderRadius: 30,
           padding: 28,
-          alignItems: 'center',
+          alignItems: "center",
           gap: 16,
           borderWidth: 1,
           borderColor: colors.surfaceCardBorder,
@@ -160,11 +138,11 @@ export default function CloseTripScreen() {
         emptyTitle: {
           color: colors.textTitle,
           fontSize: 24,
-          fontWeight: '700',
+          fontWeight: "700",
         },
         emptyBody: {
           color: colors.textMuted,
-          textAlign: 'center',
+          textAlign: "center",
           lineHeight: 22,
           fontSize: 14,
         },
@@ -172,46 +150,15 @@ export default function CloseTripScreen() {
           marginTop: 8,
           borderRadius: 18,
           backgroundColor: colors.primaryPressed,
-          width: '100%',
+          width: "100%",
         },
       }),
     [colors],
   );
 
-  async function handleCloseTrip() {
-    if (!activeTrip) {
-      setErrorMessage('No hay viaje activo para cerrar.');
-      return;
-    }
-
-    setIsClosing(true);
-    setErrorMessage(null);
-
-    try {
-      const pendingDropoffStudents = await getPendingDropoffStudents(activeTrip.id);
-
-      if (pendingDropoffStudents.length > 0) {
-        const firstStudents = pendingDropoffStudents.slice(0, 5).map((student) => student.nombre_alumno);
-        const shouldClose = await confirmCloseWithPendingStudents(firstStudents, pendingDropoffStudents.length);
-
-        if (!shouldClose) {
-          return;
-        }
-      }
-
-      await closeTrip(activeTrip.id);
-      clearActiveTrip();
-      router.replace('/(tabs)/trip');
-    } catch (error: unknown) {
-      setErrorMessage(error instanceof Error ? error.message : 'No se pudo cerrar el viaje.');
-    } finally {
-      setIsClosing(false);
-    }
-  }
-
   if (!activeTrip) {
     return (
-      <SafeAreaView edges={['bottom', 'left', 'right']} style={styles.safeArea}>
+      <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>
         <View style={[styles.emptyContainer, { paddingBottom: insets.bottom + 18 }]}>
           <Surface style={styles.emptyCard}>
             <MaterialCommunityIcons name="bus-stop" size={54} color={colors.textMuted} />
@@ -219,7 +166,7 @@ export default function CloseTripScreen() {
             <Text style={styles.emptyBody}>No existe un viaje en curso para cerrar.</Text>
             <Button
               mode="contained"
-              onPress={() => router.replace('/(tabs)/trip')}
+              onPress={() => router.replace("/(tabs)/trip")}
               style={styles.homeButton}
               contentStyle={styles.buttonContent}
             >
@@ -232,7 +179,7 @@ export default function CloseTripScreen() {
   }
 
   return (
-    <SafeAreaView edges={['bottom', 'left', 'right']} style={styles.safeArea}>
+    <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>
       <AppScrollView
         extraBottomInset={24}
         contentContainerStyle={styles.container}
@@ -243,7 +190,9 @@ export default function CloseTripScreen() {
             <MaterialCommunityIcons name="bus-alert" size={26} color={colors.primaryIconContrast} />
           </View>
           <Text style={styles.title}>Cerrar viaje</Text>
-          <Text style={styles.subtitle}>Revisa toda la información antes de finalizar el recorrido.</Text>
+          <Text style={styles.subtitle}>
+            Revisa toda la información antes de finalizar el recorrido.
+          </Text>
         </View>
 
         <TripHeader trip={activeTrip} />
@@ -266,7 +215,7 @@ export default function CloseTripScreen() {
 
             <Button
               mode="contained"
-              onPress={handleCloseTrip}
+              onPress={() => void handleCloseTrip()}
               loading={isClosing}
               disabled={isClosing}
               style={styles.closeButton}

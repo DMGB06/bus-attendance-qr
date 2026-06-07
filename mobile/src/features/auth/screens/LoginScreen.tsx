@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { login, requestPasswordReset } from '@/src/features/auth/services/auth.service';
 import { hasSupabaseConfig } from '@/src/core/config/supabase';
 import { LoginForm } from '@/src/features/auth/components/LoginForm';
+import { getErrorMessage } from '@/src/shared/utils/errors';
 
 function getFriendlyLoginError(error: unknown) {
-  if (!(error instanceof Error)) {
+  const normalizedMessage = getErrorMessage(error, '').toLowerCase();
+
+  if (!normalizedMessage) {
     return 'No se pudo iniciar sesión. Intenta nuevamente.';
   }
-
-  const normalizedMessage = error.message.toLowerCase();
 
   if (normalizedMessage.includes('invalid login credentials')) {
     return 'Credenciales incorrectas. Verifica tu correo y contraseña.';
@@ -22,11 +23,11 @@ function getFriendlyLoginError(error: unknown) {
 }
 
 function getFriendlyResetError(error: unknown) {
-  if (!(error instanceof Error)) {
+  const normalizedMessage = getErrorMessage(error, '').toLowerCase();
+
+  if (!normalizedMessage) {
     return 'No se pudo enviar el enlace de recuperación.';
   }
-
-  const normalizedMessage = error.message.toLowerCase();
 
   if (normalizedMessage.includes('email not confirmed')) {
     return 'Tu correo aún no está confirmado.';

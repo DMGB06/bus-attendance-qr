@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { TripHeader } from '@/src/features/trips/components/TripHeader';
 import { startTrip } from '@/src/features/trips/services/trips.service';
 import { useTripStore } from '@/src/features/trips/store/tripStore';
+import { getErrorMessage } from '@/src/shared/utils/errors';
 import type { TripDirection } from '@/src/features/trips/types';
 import { useAppTheme } from '@/src/core/theme/ThemeProvider';
 import { AppScrollView } from '@/src/shared/ui/AppScrollView';
@@ -175,7 +176,7 @@ export default function TripScreen() {
       const trip = await startTrip(direction);
       setActiveTrip(trip);
     } catch (error: unknown) {
-      setErrorMessage(error instanceof Error ? error.message : 'No se pudo iniciar el viaje.');
+      setErrorMessage(getErrorMessage(error, 'No se pudo iniciar el viaje.'));
     } finally {
       setIsStartingTrip(false);
     }

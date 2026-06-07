@@ -1,0 +1,234 @@
+import { useCallback, useRef, useState } from "react";
+
+import { getErrorMessage } from "@/src/shared/utils/errors";
+import { registerAttendance } from "@/src/features/trips/services/attendance.service";
+import {
+  findStudentByCode,
+  searchStudentsByName,
+} from "@/src/features/trips/services/students.service";
+import type { Student } from "@/src/features/trips/types";
+
+export type LookupState = "idle" | "searching" | "found" | "not_found";
+export type ScannerViewMode = "scanner" | "manual";
+
+const SCAN_DEBOUNCE_MS = 800;
+
+export function useStudentAttendance(tripId: string | undefined) {
+  const [lookupState, setLookupState] = useState<LookupState>("idle");
+  const [viewMode, setViewMode] = useState<ScannerViewMode>("scanner");
+  const [scannedValue, setScannedValue] = useState("");
+  const [manualName, setManualName] = useState("");
+  const [manualCandidates, setManualCandidates] = useState<Student[]>([]);
+  const [student, setStudent] = useState<Student | null>(null);
+  const [isConfirmModalVisible, setIsConfirmModalVisible] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
+
+  const scanLockedRef = useRef(false);
+  const lastScannedRef = useRef<{ value: string; at: number } | null>(null);
+
+  const isSearching = lookupState === "searching";
+
+  const releaseScanLock = useCallback(() => {
+    scanLockedRef.current = false;
+  }, []);
+
+  const lockScan = useCallback(() => {
+    scanLockedRef.current = true;
+  }, []);
+
+  const clearStudentSelection = useCallback(
+    (clearManual: boolean) => {
+      releaseScanLock();
+      setLookupState("idle");
+      setScannedValue("");
+      setStudent(null);
+      setManualCandidates([]);
+      setIsConfirmModalVisible(false);
+      setErrorMessage(null);
+      setInfoMessage(null);
+
+      if (clearManual) {
+        setManualName("");
+        setSuccessMessage(null);
+      }
+    },
+    [releaseScanLock],
+  );
+
+  const selectStudent = useCallback(
+    (foundStudent: Student) => {
+      setErrorMessage(null);
+      setInfoMessage(null);
+      setManualCandidates([]);
+      setStudent(foundStudent);
+      setLookupState("found");
+      setIsConfirmModalVisible(true);
+      lockScan();
+    },
+    [lockScan],
+  );
+
+  const resolveStudentByCode = useCallback(
+    async (value: string) => {
+      const normalizedValue = value.trim();
+
+      if (!normalizedValue) {
+        setErrorMessage("Ingresa un código válido.");
+        return;
+      }
+
+      setLookupState("searching");
+      setErrorMessage(null);
+      setSuccessMessage(null);
+      setInfoMessage(null);
+      setStudent(null);
+      setManualCandidates([]);
+      setScannedValue(normalizedValue);
+
+      try {
+        const foundStudent = await findStudentByCode(normalizedValue);
+
+        if (!foundStudent) {
+          setLookupState("not_found");
+          setIsConfirmModalVisible(false);
+          setErrorMessage("Alumno no encontrado");
+          releaseScanLock();
+          lastScannedRef.current = { value: normalizedValue, at: Date.now() };
+          return;
+        }
+
+        selectStudent(foundStudent);
+      } catch (error: unknown) {
+        setLookupState("idle");
+        setErrorMessage(getErrorMessage(error, "No se pudo buscar al alumno."));
+        releaseScanLock();
+      }
+    },
+    [releaseScanLock, selectStudent],
+  );
+
+  const handleBarcodeScanned = useCallback(
+    ({ data }: { data: string }) => {
+      if (viewMode !== "scanner") {
+        return;
+      }
+
+      if (scanLockedRef.current || isSearching || isRegistering || student) {
+        return;
+      }
+
+      const now = Date.now();
+      if (
+        lastScannedRef.current?.value === data &&
+        now - lastScannedRef.current.at < SCAN_DEBOUNCE_MS
+      ) {
+        return;
+      }
+
+      lastScannedRef.current = { value: data, at: now };
+      lockScan();
+      void resolveStudentByCode(data);
+    },
+    [viewMode, isSearching, isRegistering, student, lockScan, resolveStudentByCode],
+  );
+
+  const handleManualSearch = useCallback(async () => {
+    if (isSearching || isRegistering) {
+      return;
+    }
+
+    const normalizedName = manualName.trim();
+    if (!normalizedName) {
+      setErrorMessage("Ingresa el nombre del alumno.");
+      return;
+    }
+
+    setLookupState("searching");
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    setInfoMessage(null);
+    setStudent(null);
+    setManualCandidates([]);
+    setScannedValue("");
+    lockScan();
+
+    try {
+      const candidates = await searchStudentsByName(normalizedName);
+
+      if (!candidates.length) {
+        setLookupState("not_found");
+        setErrorMessage("Alumno no encontrado");
+        releaseScanLock();
+        return;
+      }
+
+      if (candidates.length === 1) {
+        selectStudent(candidates[0]);
+        return;
+      }
+
+      setLookupState("idle");
+      setManualCandidates(candidates);
+      setInfoMessage(`Se encontraron ${candidates.length} alumnos. Selecciona uno.`);
+      releaseScanLock();
+    } catch (error: unknown) {
+      setLookupState("idle");
+      setErrorMessage(getErrorMessage(error, "No se pudo buscar al alumno."));
+      releaseScanLock();
+    }
+  }, [isSearching, isRegistering, manualName, lockScan, releaseScanLock, selectStudent]);
+
+  const handleConfirmAttendance = useCallback(async () => {
+    if (!tripId || !student) {
+      return;
+    }
+
+    setIsRegistering(true);
+    setErrorMessage(null);
+
+    try {
+      const studentName = student.nombre_alumno;
+      await registerAttendance(tripId, student.id, "subio");
+      clearStudentSelection(true);
+      setSuccessMessage(`Asistencia registrada para ${studentName}.`);
+    } catch (error: unknown) {
+      setErrorMessage(getErrorMessage(error, "No se pudo registrar la asistencia."));
+      releaseScanLock();
+    } finally {
+      setIsRegistering(false);
+      releaseScanLock();
+    }
+  }, [tripId, student, clearStudentSelection, releaseScanLock]);
+
+  const handleManualNameChange = useCallback((value: string) => {
+    setManualName(value);
+    setErrorMessage(null);
+    setInfoMessage(null);
+  }, []);
+
+  return {
+    viewMode,
+    setViewMode,
+    isSearching,
+    scannedValue,
+    manualName,
+    manualCandidates,
+    student,
+    isConfirmModalVisible,
+    isRegistering,
+    errorMessage,
+    successMessage,
+    infoMessage,
+    handleBarcodeScanned,
+    handleManualSearch,
+    handleSelectManualStudent: selectStudent,
+    handleConfirmAttendance,
+    clearStudentSelection,
+    handleManualNameChange,
+    openConfirmModal: () => setIsConfirmModalVisible(true),
+    closeConfirmModal: () => setIsConfirmModalVisible(false),
+  };
+}
