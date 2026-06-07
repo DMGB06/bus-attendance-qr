@@ -173,7 +173,7 @@ export default function CloseTripScreen() {
   return (
     <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>
       <AppScrollView
-        extraBottomInset={tokens.spacing.xl}
+        extraBottomInset={tokens.spacing.lg}
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
       >

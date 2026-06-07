@@ -3,7 +3,7 @@ import { useCallback, useRef, useState } from "react";
 import { getErrorMessage } from "@/src/shared/utils/errors";
 import { registerAttendance } from "@/src/features/trips/services/attendance.service";
 import {
-  findStudentByCode,
+  findStudentByLookup,
   searchStudentsByName,
 } from "@/src/features/trips/services/students.service";
 import type { Student } from "@/src/features/trips/types";
@@ -89,12 +89,14 @@ export function useStudentAttendance(tripId: string | undefined) {
       setScannedValue(normalizedValue);
 
       try {
-        const foundStudent = await findStudentByCode(normalizedValue);
+        const foundStudent = await findStudentByLookup(normalizedValue);
 
         if (!foundStudent) {
           setLookupState("not_found");
           setIsConfirmModalVisible(false);
-          setErrorMessage("Alumno no encontrado");
+          setErrorMessage(
+            "No encontramos a este alumno en el padrón oficial. Verifica el QR o regístralo manualmente.",
+          );
           releaseScanLock();
           lastScannedRef.current = { value: normalizedValue, at: Date.now() };
           return;
@@ -160,7 +162,9 @@ export function useStudentAttendance(tripId: string | undefined) {
 
       if (!candidates.length) {
         setLookupState("not_found");
-        setErrorMessage("Alumno no encontrado");
+        setErrorMessage(
+          "No encontramos coincidencias en el padrón oficial. Revisa el nombre e intenta de nuevo.",
+        );
         releaseScanLock();
         return;
       }

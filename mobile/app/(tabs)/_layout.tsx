@@ -119,9 +119,6 @@ export default function TabsLayout() {
         options={{
           href: null,
           title: "Cerrar viaje",
-          tabBarStyle: {
-            display: "none",
-          },
         }}
       />
     </Tabs>

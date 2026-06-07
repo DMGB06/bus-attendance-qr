@@ -1,8 +1,15 @@
 import { supabase } from "@/src/core/config/supabase";
 import type { Student } from "@/src/features/trips/types";
 
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 function normalizeLookup(value: string) {
   return value.trim();
+}
+
+function isUuid(value: string) {
+  return UUID_REGEX.test(value);
 }
 
 export async function findStudentByCode(code: string): Promise<Student | null> {
@@ -21,11 +28,45 @@ export async function findStudentByCode(code: string): Promise<Student | null> {
     throw new Error("No se pudo consultar la base de alumnos.");
   }
 
-  return data;
+  if (data) {
+    return data;
+  }
+
+  const upperCode = normalizedCode.toUpperCase();
+  if (upperCode !== normalizedCode) {
+    const { data: upperData, error: upperError } = await supabase
+      .from("social_bus_escolar")
+      .select("*")
+      .eq("codigo", upperCode)
+      .maybeSingle();
+
+    if (upperError) {
+      throw new Error("No se pudo consultar la base de alumnos.");
+    }
+
+    return upperData;
+  }
+
+  return null;
 }
 
+/** Busca por código BU00xx o por UUID (QR legacy). */
 export async function findStudentByLookup(value: string): Promise<Student | null> {
-  return findStudentByCode(value);
+  const normalized = normalizeLookup(value);
+  if (!normalized) {
+    return null;
+  }
+
+  const byCode = await findStudentByCode(normalized);
+  if (byCode) {
+    return byCode;
+  }
+
+  if (isUuid(normalized)) {
+    return getStudentById(normalized);
+  }
+
+  return null;
 }
 
 export async function searchStudentsByName(name: string, limit = 8): Promise<Student[]> {

@@ -77,7 +77,9 @@ export default function ScannerScreen() {
 
   const containerStyle = [
     styles.screenContainer,
-    { paddingBottom: Math.max(insets.bottom, tokens.spacing.md) },
+    {
+      paddingBottom: insets.bottom + tokens.layout.scrollBottomInset,
+    },
   ];
 
   if (!activeTrip) {
