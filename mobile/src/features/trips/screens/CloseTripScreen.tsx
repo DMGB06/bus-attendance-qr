@@ -14,7 +14,7 @@ export default function CloseTripScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { activeTrip, isClosing, errorMessage, handleCloseTrip } = useCloseTrip();
-  const { colors } = useAppTheme();
+  const { colors, tokens } = useAppTheme();
 
   const styles = useMemo(
     () =>
@@ -24,144 +24,136 @@ export default function CloseTripScreen() {
           backgroundColor: colors.screenSolid,
         },
         container: {
-          paddingHorizontal: 22,
-          paddingTop: 18,
-          gap: 18,
+          paddingHorizontal: tokens.spacing.xl,
+          paddingTop: tokens.radius.lg,
+          gap: tokens.radius.lg,
         },
         header: {
           alignItems: "center",
-          gap: 10,
-          marginBottom: 6,
+          gap: tokens.spacing.sm,
+          marginBottom: tokens.spacing.xs,
         },
         iconBox: {
-          width: 72,
-          height: 72,
-          borderRadius: 36,
+          width: tokens.layout.iconLg,
+          height: tokens.layout.iconLg,
+          borderRadius: tokens.radius.full,
           backgroundColor: colors.primaryPressed,
           alignItems: "center",
           justifyContent: "center",
           shadowColor: colors.primaryPressed,
           shadowOpacity: 0.35,
-          shadowRadius: 18,
-          shadowOffset: { width: 0, height: 10 },
+          shadowRadius: tokens.radius.lg,
+          shadowOffset: { width: 0, height: tokens.spacing.sm },
           elevation: 8,
         },
         title: {
+          ...tokens.typography.title1,
           color: colors.textTitle,
-          fontSize: 30,
-          fontWeight: "700",
           textAlign: "center",
         },
         subtitle: {
+          ...tokens.typography.body,
           color: colors.textMuted,
-          fontSize: 15,
-          lineHeight: 22,
           textAlign: "center",
-          paddingHorizontal: 8,
+          paddingHorizontal: tokens.spacing.sm,
         },
         warningCard: {
           backgroundColor: colors.feedbackWarningBg,
-          borderRadius: 24,
-          padding: 18,
+          borderRadius: tokens.radius["2xl"],
+          padding: tokens.radius.lg,
           borderWidth: 1,
           borderColor: colors.feedbackWarningBorder,
-          gap: 14,
+          gap: tokens.spacing.md,
         },
         warningTop: {
           flexDirection: "row",
           alignItems: "center",
-          gap: 12,
+          gap: tokens.spacing.md,
         },
         warningIcon: {
-          width: 38,
-          height: 38,
-          borderRadius: 19,
+          width: tokens.layout.iconSm,
+          height: tokens.layout.iconSm,
+          borderRadius: tokens.radius.full,
           backgroundColor: colors.feedbackWarningIconCircle,
           alignItems: "center",
           justifyContent: "center",
         },
         warningTitle: {
+          ...tokens.typography.headline,
           color: colors.feedbackWarningTitle,
-          fontSize: 16,
-          fontWeight: "700",
         },
         warningBody: {
+          ...tokens.typography.body,
           color: colors.feedbackWarningBody,
-          fontSize: 14,
-          lineHeight: 22,
         },
         actionCard: {
           backgroundColor: colors.surfaceCard,
-          borderRadius: 26,
+          borderRadius: tokens.radius["2xl"],
           borderWidth: 1,
           borderColor: colors.surfaceCardBorder,
           overflow: "hidden",
         },
         content: {
-          gap: 14,
+          gap: tokens.spacing.md,
         },
         closeButton: {
-          borderRadius: 18,
+          borderRadius: tokens.radius.lg,
           backgroundColor: colors.primaryPressed,
         },
         backButton: {
-          borderRadius: 18,
+          borderRadius: tokens.radius.lg,
           borderColor: colors.borderMuted,
         },
         buttonContent: {
-          height: 56,
+          height: tokens.layout.buttonHeight,
         },
         closeLabel: {
-          fontSize: 15,
-          fontWeight: "700",
+          ...tokens.typography.bodyStrong,
           color: colors.textOnPrimary,
         },
         backLabel: {
-          fontSize: 15,
-          fontWeight: "600",
+          ...tokens.typography.bodyStrong,
           color: colors.textBody,
         },
         emptyContainer: {
           flex: 1,
           justifyContent: "center",
-          paddingHorizontal: 22,
+          paddingHorizontal: tokens.spacing.xl,
         },
         emptyCard: {
           backgroundColor: colors.surfaceCard,
-          borderRadius: 30,
-          padding: 28,
+          borderRadius: tokens.radius["2xl"],
+          padding: tokens.radius["2xl"],
           alignItems: "center",
-          gap: 16,
+          gap: tokens.spacing.lg,
           borderWidth: 1,
           borderColor: colors.surfaceCardBorder,
         },
         emptyTitle: {
+          ...tokens.typography.title2,
           color: colors.textTitle,
-          fontSize: 24,
-          fontWeight: "700",
         },
         emptyBody: {
+          ...tokens.typography.body,
           color: colors.textMuted,
           textAlign: "center",
-          lineHeight: 22,
-          fontSize: 14,
         },
         homeButton: {
-          marginTop: 8,
-          borderRadius: 18,
+          marginTop: tokens.spacing.sm,
+          borderRadius: tokens.radius.lg,
           backgroundColor: colors.primaryPressed,
           width: "100%",
         },
       }),
-    [colors],
+    [colors, tokens],
   );
 
   if (!activeTrip) {
     return (
       <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>
-        <View style={[styles.emptyContainer, { paddingBottom: insets.bottom + 18 }]}>
+        <View style={[styles.emptyContainer, { paddingBottom: insets.bottom + tokens.radius.lg }]}>
           <Surface style={styles.emptyCard}>
-            <MaterialCommunityIcons name="bus-stop" size={54} color={colors.textMuted} />
+            <MaterialCommunityIcons name="bus-stop" size={tokens.layout.iconEmptyState} color={colors.textMuted} />
             <Text style={styles.emptyTitle}>Sin viaje activo</Text>
             <Text style={styles.emptyBody}>No existe un viaje en curso para cerrar.</Text>
             <Button
@@ -181,13 +173,13 @@ export default function CloseTripScreen() {
   return (
     <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>
       <AppScrollView
-        extraBottomInset={24}
+        extraBottomInset={tokens.spacing.xl}
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
           <View style={styles.iconBox}>
-            <MaterialCommunityIcons name="bus-alert" size={26} color={colors.primaryIconContrast} />
+            <MaterialCommunityIcons name="bus-alert" size={tokens.fontSize["3xl"]} color={colors.primaryIconContrast} />
           </View>
           <Text style={styles.title}>Cerrar viaje</Text>
           <Text style={styles.subtitle}>
@@ -200,7 +192,7 @@ export default function CloseTripScreen() {
         <Surface style={styles.warningCard}>
           <View style={styles.warningTop}>
             <View style={styles.warningIcon}>
-              <MaterialCommunityIcons name="alert-outline" size={18} color={colors.feedbackWarningGlyph} />
+              <MaterialCommunityIcons name="alert-outline" size={tokens.fontSize.lg} color={colors.feedbackWarningGlyph} />
             </View>
             <Text style={styles.warningTitle}>Validación previa</Text>
           </View>

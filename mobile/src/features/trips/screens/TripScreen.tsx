@@ -149,7 +149,7 @@ export default function TripScreen() {
         },
         warningText: {
           flex: 1,
-          gap: 6,
+          gap: tokens.spacing.xs,
         },
         warningTitle: {
           ...tokens.typography.label,

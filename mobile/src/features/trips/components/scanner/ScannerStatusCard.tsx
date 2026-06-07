@@ -25,7 +25,7 @@ export function ScannerStatusCard({
   onAction,
   style,
 }: ScannerStatusCardProps) {
-  const { colors } = useAppTheme();
+  const { colors, tokens } = useAppTheme();
 
   const styles = useMemo(
     () =>
@@ -34,35 +34,38 @@ export function ScannerStatusCard({
           flex: 1,
           justifyContent: "center",
           backgroundColor: colors.scannerPanelBg,
-          borderRadius: 28,
+          borderRadius: tokens.radius["2xl"],
           borderWidth: 1,
           borderColor: colors.scannerPanelBorder,
         },
         content: {
           alignItems: "center",
-          gap: 14,
-          paddingVertical: 40,
+          gap: tokens.spacing.md,
+          paddingVertical: tokens.spacing["2xl"],
         },
         title: {
+          ...tokens.typography.title3,
           color: colors.textTitle,
-          fontSize: 20,
-          fontWeight: "700",
           textAlign: "center",
         },
         body: {
+          ...tokens.typography.body,
           color: colors.textMuted,
           textAlign: "center",
-          lineHeight: 22,
         },
       }),
-    [colors],
+    [colors, tokens],
   );
 
   return (
     <View style={style}>
       <Card mode="outlined" style={styles.card}>
         <Card.Content style={styles.content}>
-          <MaterialCommunityIcons name={icon} size={actionLabel ? 42 : 38} color={actionLabel ? colors.primary : colors.textMuted} />
+          <MaterialCommunityIcons
+            name={icon}
+            size={actionLabel ? tokens.fontSize["2xl"] : tokens.fontSize["3xl"]}
+            color={actionLabel ? colors.primary : colors.textMuted}
+          />
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.body}>{body}</Text>
           {actionLabel && onAction ? (

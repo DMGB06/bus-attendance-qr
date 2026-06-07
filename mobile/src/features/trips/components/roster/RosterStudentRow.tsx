@@ -1,10 +1,10 @@
-import { useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { Avatar, Button, Text } from 'react-native-paper';
+import { useMemo } from "react";
+import { StyleSheet, View } from "react-native";
+import { Avatar, Button, Text } from "react-native-paper";
 
-import { AttendanceBadge } from '@/src/features/trips/components/AttendanceBadge';
-import type { TripRosterItem } from '@/src/features/trips/services/trip-roster.service';
-import { useAppTheme } from '@/src/core/theme/ThemeProvider';
+import { AttendanceBadge } from "@/src/features/trips/components/AttendanceBadge";
+import type { TripRosterItem } from "@/src/features/trips/services/trip-roster.service";
+import { useAppTheme } from "@/src/core/theme/ThemeProvider";
 
 interface RosterStudentRowProps {
   item: TripRosterItem;
@@ -15,31 +15,31 @@ interface RosterStudentRowProps {
 }
 
 function getBadgeLabel(item: TripRosterItem) {
-  if (item.status === 'pending') {
-    return 'PENDIENTE';
+  if (item.status === "pending") {
+    return "PENDIENTE";
   }
 
-  if (item.status === 'completed') {
-    return 'SALIDA';
+  if (item.status === "completed") {
+    return "SALIDA";
   }
 
   if (!item.attendance) {
-    return 'ABORDO';
+    return "ABORDO";
   }
 
-  if (item.attendance.event_type === 'ausente') {
-    return 'AUSENTE';
+  if (item.attendance.event_type === "ausente") {
+    return "AUSENTE";
   }
 
-  if (item.attendance.event_type === 'manual') {
-    return 'MANUAL';
+  if (item.attendance.event_type === "manual") {
+    return "MANUAL";
   }
 
-  if (item.attendance.event_type === 'subio') {
-    return 'ABORDO';
+  if (item.attendance.event_type === "subio") {
+    return "ABORDO";
   }
 
-  return 'ABORDO';
+  return "ABORDO";
 }
 
 export function RosterStudentRow({
@@ -55,8 +55,8 @@ export function RosterStudentRow({
     () =>
       StyleSheet.create({
         row: {
-          flexDirection: 'row',
-          alignItems: 'center',
+          flexDirection: "row",
+          alignItems: "center",
           gap: tokens.spacing.sm,
           backgroundColor: colors.surfaceListItem,
           borderRadius: tokens.radius.md,
@@ -69,45 +69,47 @@ export function RosterStudentRow({
         },
         body: {
           flex: 1,
-          gap: 2,
+          gap: tokens.spacing.xs,
         },
         name: {
+          ...tokens.typography.bodyStrong,
           color: colors.textTitle,
-          fontSize: 15,
-          fontWeight: '700',
         },
         stop: {
+          ...tokens.typography.caption,
           color: colors.textMuted,
-          fontSize: 12,
         },
         meta: {
+          ...tokens.typography.overline,
           color: colors.textMuted,
-          fontSize: 11,
+          letterSpacing: 0.4,
         },
         rightColumn: {
-          alignItems: 'flex-end',
+          alignItems: "flex-end",
           gap: tokens.spacing.xs,
         },
       }),
-    [colors, tokens.spacing.sm, tokens.spacing.xs, tokens.radius.md],
+    [colors, tokens],
   );
 
   const initials = item.student.nombre_alumno
-    .split(' ')
+    .split(" ")
     .filter(Boolean)
     .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('');
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
 
   return (
     <View style={styles.row}>
-      <Avatar.Text size={44} label={initials || 'AL'} style={styles.avatar} />
+      <Avatar.Text size={tokens.layout.iconMd} label={initials || "AL"} style={styles.avatar} />
 
       <View style={styles.body}>
         <Text style={styles.name}>{item.student.nombre_alumno}</Text>
-        <Text style={styles.stop}>{item.student.direccion ?? 'Sin dirección registrada'}</Text>
+        <Text style={styles.stop}>{item.student.direccion ?? "Sin dirección registrada"}</Text>
         {item.attendance?.scanned_at ? (
-          <Text style={styles.meta}>Escaneado: {new Date(item.attendance.scanned_at).toLocaleTimeString()}</Text>
+          <Text style={styles.meta}>
+            Escaneado: {new Date(item.attendance.scanned_at).toLocaleTimeString()}
+          </Text>
         ) : null}
       </View>
 

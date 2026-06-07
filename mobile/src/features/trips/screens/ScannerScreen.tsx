@@ -20,7 +20,10 @@ export default function ScannerScreen() {
   const { height: screenHeight } = useWindowDimensions();
   const { colors, tokens } = useAppTheme();
   const [permission, requestPermission] = useCameraPermissions();
-  const cameraHeight = Math.max(220, Math.min(360, screenHeight * 0.34));
+  const cameraHeight = Math.max(
+    tokens.layout.cameraMinHeight,
+    Math.min(tokens.layout.cameraMaxHeight, screenHeight * tokens.layout.cameraHeightRatio),
+  );
 
   const attendance = useStudentAttendance(activeTrip?.id);
 
@@ -34,41 +37,39 @@ export default function ScannerScreen() {
         screenContainer: {
           flex: 1,
           backgroundColor: colors.scannerScreenContainerBg,
-          paddingHorizontal: 20,
-          paddingTop: 14,
-          gap: 20,
+          paddingHorizontal: tokens.spacing.xl,
+          paddingTop: tokens.spacing.md,
+          gap: tokens.spacing.xl,
         },
         panelScroll: {
           flex: 1,
           minHeight: 0,
         },
         panelScrollContent: {
-          paddingBottom: 14,
+          paddingBottom: tokens.spacing.md,
         },
         panelFill: {
-          minHeight: 120,
+          minHeight: tokens.layout.emptyStateMinHeight,
         },
         badge: {
           alignSelf: "center",
           flexDirection: "row",
           alignItems: "center",
-          gap: 8,
+          gap: tokens.spacing.sm,
           backgroundColor: colors.scannerBadgeBg,
-          borderRadius: 999,
-          paddingHorizontal: 16,
-          paddingVertical: 10,
+          borderRadius: tokens.radius.full,
+          paddingHorizontal: tokens.spacing.lg,
+          paddingVertical: tokens.spacing.sm,
         },
         badgeText: {
+          ...tokens.typography.overline,
           color: colors.scannerBadgeText,
-          fontSize: tokens.fontSize.sm,
-          fontWeight: "700",
-          letterSpacing: 1.1,
         },
         toggleRow: {
           flexDirection: "row",
-          gap: 8,
+          gap: tokens.spacing.sm,
           alignSelf: "center",
-          marginBottom: 8,
+          marginBottom: tokens.spacing.sm,
         },
       }),
     [colors, tokens],
@@ -125,7 +126,7 @@ export default function ScannerScreen() {
         <View style={styles.badge}>
           <MaterialCommunityIcons
             name={isScannerMode ? "qrcode-scan" : "account-search"}
-            size={16}
+            size={tokens.fontSize.md}
             color={colors.primary}
           />
           <Text style={styles.badgeText}>

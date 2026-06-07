@@ -1,10 +1,10 @@
-import { useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { Text } from 'react-native-paper';
+import { useMemo } from "react";
+import { StyleSheet, View } from "react-native";
+import { Text } from "react-native-paper";
 
-import { useAppTheme } from '@/src/core/theme/ThemeProvider';
+import { useAppTheme } from "@/src/core/theme/ThemeProvider";
 
-export type AttendanceBadgeStatus = 'pending' | 'onboard' | 'completed';
+export type AttendanceBadgeStatus = "pending" | "onboard" | "completed";
 
 interface AttendanceBadgeProps {
   status: AttendanceBadgeStatus;
@@ -12,17 +12,17 @@ interface AttendanceBadgeProps {
 }
 
 export function AttendanceBadge({ status, label }: AttendanceBadgeProps) {
-  const { colors } = useAppTheme();
+  const { colors, tokens } = useAppTheme();
 
   const styles = useMemo(
     () =>
       StyleSheet.create({
         badge: {
           minWidth: 88,
-          borderRadius: 999,
-          paddingHorizontal: 10,
-          paddingVertical: 6,
-          alignItems: 'center',
+          borderRadius: tokens.radius.full,
+          paddingHorizontal: tokens.spacing.sm,
+          paddingVertical: tokens.spacing.xs,
+          alignItems: "center",
         },
         badgeOnboard: {
           backgroundColor: colors.attendanceOnboard,
@@ -34,19 +34,22 @@ export function AttendanceBadge({ status, label }: AttendanceBadgeProps) {
           backgroundColor: colors.attendancePending,
         },
         badgeText: {
+          ...tokens.typography.overline,
           color: colors.attendanceLabel,
-          fontSize: 11,
-          fontWeight: '700',
         },
       }),
-    [colors],
+    [colors, tokens],
   );
 
   const variantStyle =
-    status === 'completed' ? styles.badgeCompleted : status === 'onboard' ? styles.badgeOnboard : styles.badgePending;
+    status === "completed"
+      ? styles.badgeCompleted
+      : status === "onboard"
+        ? styles.badgeOnboard
+        : styles.badgePending;
 
   const defaultLabel =
-    status === 'completed' ? 'SALIDA' : status === 'onboard' ? 'ABORDO' : 'PENDIENTE';
+    status === "completed" ? "SALIDA" : status === "onboard" ? "ABORDO" : "PENDIENTE";
 
   return (
     <View style={[styles.badge, variantStyle]}>

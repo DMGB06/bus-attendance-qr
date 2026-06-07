@@ -36,19 +36,18 @@ export default function RosterScreen() {
         centerFill: {
           flex: 1,
           justifyContent: "center",
-          minHeight: 120,
+          minHeight: tokens.layout.emptyStateMinHeight,
         },
         header: {
-          gap: 2,
+          gap: tokens.spacing.xs,
         },
         title: {
+          ...tokens.typography.title1,
           color: colors.textTitle,
-          fontSize: 28,
-          fontWeight: "700",
         },
         subtitle: {
+          ...tokens.typography.caption,
           color: colors.textMuted,
-          fontSize: 13,
         },
         search: {
           backgroundColor: colors.surfaceCard,
@@ -73,16 +72,15 @@ export default function RosterScreen() {
         },
         summaryContent: {
           alignItems: "center",
-          gap: 4,
+          gap: tokens.spacing.xs,
         },
         summaryValue: {
+          ...tokens.typography.title2,
           color: colors.textTitle,
-          fontSize: 24,
-          fontWeight: "700",
         },
         summaryLabel: {
+          ...tokens.typography.caption,
           color: colors.textMuted,
-          fontSize: 12,
         },
         list: {
           paddingBottom: tokens.spacing.md,
@@ -100,14 +98,13 @@ export default function RosterScreen() {
           paddingVertical: tokens.spacing.xl,
         },
         emptyTitle: {
+          ...tokens.typography.headline,
           color: colors.textTitle,
-          fontSize: 18,
-          fontWeight: "700",
         },
         emptyBody: {
+          ...tokens.typography.body,
           color: colors.textMuted,
           textAlign: "center",
-          lineHeight: 20,
         },
         separator: {
           height: tokens.spacing.sm,
@@ -120,7 +117,7 @@ export default function RosterScreen() {
     return (
       <SafeAreaView
         edges={["bottom", "left", "right"]}
-        style={[styles.container, { paddingBottom: insets.bottom + 16 }]}
+        style={[styles.container, { paddingBottom: insets.bottom + tokens.spacing.lg }]}
       >
         <Card mode="outlined" style={styles.emptyStateCard}>
           <Card.Content style={styles.emptyContent}>

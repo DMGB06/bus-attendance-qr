@@ -47,6 +47,22 @@ export const layout = {
   /** Control de apariencia en navbar */
   appearanceNavbarWidth: 58,
   appearanceNavbarHeight: 36,
+  /** Altura estándar de botones principales */
+  buttonHeight: 56,
+  /** Altura mínima de bloques vacíos / placeholders */
+  emptyStateMinHeight: 120,
+  /** Tamaños de iconos en contenedores circulares */
+  iconSm: 38,
+  iconMd: 46,
+  iconLg: 72,
+  /** Iconos decorativos en estados vacíos */
+  iconEmptyState: 54,
+  /** Avatar de perfil */
+  avatarProfileSize: 120,
+  /** Marco de cámara del escáner */
+  cameraMinHeight: 220,
+  cameraMaxHeight: 360,
+  cameraHeightRatio: 0.34,
 } as const;
 
 /**

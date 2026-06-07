@@ -17,32 +17,31 @@ export function StudentCandidateList({ candidates, onSelect }: StudentCandidateL
     () =>
       StyleSheet.create({
         container: {
-          gap: 12,
+          gap: tokens.spacing.md,
           backgroundColor: colors.scannerMatchContainerBg,
-          borderRadius: 22,
-          padding: 12,
+          borderRadius: tokens.radius.xl,
+          padding: tokens.spacing.md,
         },
         item: {
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "space-between",
-          gap: 12,
+          gap: tokens.spacing.md,
           backgroundColor: colors.scannerMatchItemBg,
-          borderRadius: 20,
-          padding: 14,
+          borderRadius: tokens.spacing.xl,
+          padding: tokens.spacing.md,
         },
         textBlock: {
           flex: 1,
-          gap: 4,
+          gap: tokens.spacing.xs,
         },
         name: {
+          ...tokens.typography.headline,
           color: colors.textTitle,
-          fontSize: tokens.fontSize.lg,
-          fontWeight: "700",
         },
         meta: {
+          ...tokens.typography.body,
           color: colors.textMuted,
-          fontSize: tokens.fontSize.md,
         },
       }),
     [colors, tokens],

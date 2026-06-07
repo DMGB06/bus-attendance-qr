@@ -32,12 +32,12 @@ export default function ProfileScreen() {
           marginBottom: tokens.spacing.md,
         },
         avatarRing: {
-          width: 120,
-          height: 120,
-          borderRadius: 60,
+          width: tokens.layout.avatarProfileSize,
+          height: tokens.layout.avatarProfileSize,
+          borderRadius: tokens.radius.full,
           alignItems: "center",
           justifyContent: "center",
-          borderWidth: 4,
+          borderWidth: tokens.spacing.xs,
           borderColor: colors.primary,
           marginBottom: tokens.spacing.sm,
         },
@@ -47,7 +47,7 @@ export default function ProfileScreen() {
         editPhotoButton: {
           flexDirection: "row",
           alignItems: "center",
-          gap: 8,
+          gap: tokens.spacing.sm,
         },
         editPhotoLabel: {
           color: colors.primary,
@@ -57,7 +57,7 @@ export default function ProfileScreen() {
           ...tokens.typography.title2,
           color: colors.textHero,
           marginTop: tokens.spacing.md,
-          marginBottom: 6,
+          marginBottom: tokens.spacing.xs,
         },
         subtitle: {
           ...tokens.typography.body,
@@ -118,14 +118,18 @@ export default function ProfileScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.hero}>
         <View style={styles.avatarRing}>
-          <Avatar.Text size={100} label={profileState.initials} style={styles.avatar} />
+          <Avatar.Text
+            size={tokens.layout.avatarProfileSize - tokens.spacing.lg}
+            label={profileState.initials}
+            style={styles.avatar}
+          />
         </View>
 
         <TouchableOpacity
           onPress={() => profileState.setEditing(true)}
           style={styles.editPhotoButton}
         >
-          <MaterialCommunityIcons name="camera-outline" size={18} color={colors.primary} />
+          <MaterialCommunityIcons name="camera-outline" size={tokens.fontSize.lg} color={colors.primary} />
           <Text style={styles.editPhotoLabel}>Editar foto</Text>
         </TouchableOpacity>
 

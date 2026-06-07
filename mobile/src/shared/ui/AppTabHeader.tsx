@@ -36,8 +36,8 @@ export function useAppTabHeader(onLogout: () => void) {
           marginRight: tokens.spacing.lg,
         },
         profileButton: {
-          padding: 8,
-          borderRadius: 8,
+          padding: tokens.spacing.sm,
+          borderRadius: tokens.radius.sm,
         },
         logoutPill: {
           flexDirection: "row",

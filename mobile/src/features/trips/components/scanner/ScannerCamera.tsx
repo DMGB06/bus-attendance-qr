@@ -11,13 +11,13 @@ type ScannerCameraProps = {
 };
 
 export function ScannerCamera({ height, onBarcodeScanned }: ScannerCameraProps) {
-  const { colors } = useAppTheme();
+  const { colors, tokens } = useAppTheme();
 
   const styles = useMemo(
     () =>
       StyleSheet.create({
         frame: {
-          borderRadius: 32,
+          borderRadius: tokens.spacing["2xl"],
           overflow: "hidden",
           backgroundColor: colors.scannerCameraBg,
           borderWidth: 1,
@@ -25,8 +25,8 @@ export function ScannerCamera({ height, onBarcodeScanned }: ScannerCameraProps) 
           position: "relative",
           shadowColor: colors.scannerCameraShadow,
           shadowOpacity: 0.18,
-          shadowRadius: 30,
-          shadowOffset: { width: 0, height: 12 },
+          shadowRadius: tokens.spacing.xl,
+          shadowOffset: { width: 0, height: tokens.spacing.md },
           elevation: 10,
         },
         camera: {
@@ -40,56 +40,55 @@ export function ScannerCamera({ height, onBarcodeScanned }: ScannerCameraProps) 
         },
         corner: {
           position: "absolute",
-          width: 34,
-          height: 34,
+          width: tokens.spacing.xl,
+          height: tokens.spacing.xl,
           borderColor: colors.scannerCorner,
           borderWidth: 3,
         },
         topLeft: {
-          top: 24,
-          left: 24,
+          top: tokens.spacing.xl,
+          left: tokens.spacing.xl,
           borderRightWidth: 0,
           borderBottomWidth: 0,
         },
         topRight: {
-          top: 24,
-          right: 24,
+          top: tokens.spacing.xl,
+          right: tokens.spacing.xl,
           borderLeftWidth: 0,
           borderBottomWidth: 0,
         },
         bottomLeft: {
-          bottom: 24,
-          left: 24,
+          bottom: tokens.spacing.xl,
+          left: tokens.spacing.xl,
           borderRightWidth: 0,
           borderTopWidth: 0,
         },
         bottomRight: {
-          bottom: 24,
-          right: 24,
+          bottom: tokens.spacing.xl,
+          right: tokens.spacing.xl,
           borderLeftWidth: 0,
           borderTopWidth: 0,
         },
         scanLine: {
           width: "82%",
-          height: 4,
-          borderRadius: 999,
+          height: tokens.spacing.xs,
+          borderRadius: tokens.radius.full,
           backgroundColor: colors.scannerScanLine,
           opacity: 0.95,
         },
         hint: {
           position: "absolute",
-          bottom: 22,
+          bottom: tokens.radius.xl,
+          ...tokens.typography.bodyStrong,
           color: colors.scannerHintText,
-          fontSize: 14,
-          fontWeight: "600",
           backgroundColor: colors.scannerHintPillBg,
-          paddingHorizontal: 14,
-          paddingVertical: 8,
-          borderRadius: 999,
+          paddingHorizontal: tokens.spacing.md,
+          paddingVertical: tokens.spacing.sm,
+          borderRadius: tokens.radius.full,
           overflow: "hidden",
         },
       }),
-    [colors],
+    [colors, tokens],
   );
 
   return (

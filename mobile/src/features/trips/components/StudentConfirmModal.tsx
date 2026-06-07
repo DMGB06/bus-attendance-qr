@@ -1,12 +1,12 @@
-import { useMemo } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
-import { Button, HelperText, Modal, Portal, Text } from 'react-native-paper';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useMemo } from "react";
+import { ScrollView, StyleSheet, View } from "react-native";
+import { Button, HelperText, Modal, Portal, Text } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-import { StudentCard } from '@/src/features/trips/components/StudentCard';
-import type { Student } from '@/src/features/trips/types';
-import { useAppTheme } from '@/src/core/theme/ThemeProvider';
+import { StudentCard } from "@/src/features/trips/components/StudentCard";
+import type { Student } from "@/src/features/trips/types";
+import { useAppTheme } from "@/src/core/theme/ThemeProvider";
 
 interface StudentConfirmModalProps {
   visible: boolean;
@@ -26,119 +26,120 @@ export function StudentConfirmModal({
   onConfirm,
 }: StudentConfirmModalProps) {
   const insets = useSafeAreaInsets();
-  const { colors } = useAppTheme();
+  const { colors, tokens } = useAppTheme();
 
   const styles = useMemo(
     () =>
       StyleSheet.create({
         modalContainer: {
-          justifyContent: 'flex-end',
+          justifyContent: "flex-end",
           margin: 0,
           flex: 1,
         },
         sheet: {
           backgroundColor: colors.modalSheetBg,
-          borderTopLeftRadius: 32,
-          borderTopRightRadius: 32,
+          borderTopLeftRadius: tokens.spacing["2xl"],
+          borderTopRightRadius: tokens.spacing["2xl"],
           borderWidth: 1,
           borderColor: colors.modalSheetBorder,
           borderBottomWidth: 0,
-          paddingTop: 12,
-          paddingHorizontal: 20,
-          maxHeight: '90%',
+          paddingTop: tokens.spacing.md,
+          paddingHorizontal: tokens.spacing.xl,
+          maxHeight: "90%",
           shadowColor: colors.shadowColor,
           shadowOpacity: 0.35,
-          shadowRadius: 30,
-          shadowOffset: { width: 0, height: -8 },
+          shadowRadius: tokens.spacing.xl,
+          shadowOffset: { width: 0, height: -tokens.spacing.sm },
           elevation: 16,
         },
         handle: {
-          width: 40,
-          height: 4,
-          borderRadius: 2,
+          width: tokens.spacing["2xl"],
+          height: tokens.spacing.xs,
+          borderRadius: tokens.radius.xs,
           backgroundColor: colors.modalHandle,
-          alignSelf: 'center',
-          marginBottom: 20,
+          alignSelf: "center",
+          marginBottom: tokens.spacing.xl,
         },
         scrollContent: {
-          gap: 20,
-          paddingBottom: 8,
+          gap: tokens.spacing.xl,
+          paddingBottom: tokens.spacing.sm,
         },
         title: {
+          ...tokens.typography.title2,
           color: colors.modalTitle,
-          fontSize: 24,
-          fontWeight: '700',
-          textAlign: 'center',
+          textAlign: "center",
         },
         subtitle: {
+          ...tokens.typography.body,
           color: colors.modalSubtitle,
-          fontSize: 14,
-          lineHeight: 22,
-          textAlign: 'center',
-          marginTop: -8,
+          textAlign: "center",
+          marginTop: -tokens.spacing.sm,
         },
         studentHeader: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 16,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: tokens.spacing.lg,
           backgroundColor: colors.modalStudentBannerBg,
-          borderRadius: 22,
-          padding: 18,
+          borderRadius: tokens.radius.xl,
+          padding: tokens.radius.lg,
         },
         studentAvatar: {
-          width: 58,
-          height: 58,
-          borderRadius: 29,
+          width: tokens.layout.iconLg - tokens.spacing.md,
+          height: tokens.layout.iconLg - tokens.spacing.md,
+          borderRadius: tokens.radius.full,
           backgroundColor: colors.modalAvatarBg,
-          alignItems: 'center',
-          justifyContent: 'center',
+          alignItems: "center",
+          justifyContent: "center",
         },
         studentHeaderInfo: {
           flex: 1,
-          gap: 6,
+          gap: tokens.spacing.xs,
         },
         studentName: {
+          ...tokens.typography.headline,
           color: colors.modalName,
-          fontSize: 18,
-          fontWeight: '700',
         },
         studentStatus: {
+          ...tokens.typography.caption,
           color: colors.modalStatus,
-          fontSize: 13,
-          fontWeight: '600',
+          fontWeight: "600",
         },
         errorText: {
-          marginTop: -8,
+          marginTop: -tokens.spacing.sm,
         },
         actions: {
-          gap: 12,
-          marginTop: 4,
+          gap: tokens.spacing.md,
+          marginTop: tokens.spacing.xs,
         },
         btnContent: {
-          paddingVertical: 6,
+          paddingVertical: tokens.spacing.xs,
         },
         btnConfirm: {
-          borderRadius: 14,
+          borderRadius: tokens.radius.md,
         },
         btnCancel: {
-          borderRadius: 14,
+          borderRadius: tokens.radius.md,
         },
       }),
-    [colors],
+    [colors, tokens],
   );
 
-  if (!student) return null;
+  if (!student) {
+    return null;
+  }
 
   return (
     <Portal>
       <Modal
         visible={visible}
         onDismiss={() => {
-          if (!isSubmitting) onDismiss();
+          if (!isSubmitting) {
+            onDismiss();
+          }
         }}
         contentContainerStyle={styles.modalContainer}
       >
-        <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 24) }]}>
+        <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, tokens.spacing.xl) }]}>
           <View style={styles.handle} />
 
           <ScrollView
@@ -147,11 +148,17 @@ export function StudentConfirmModal({
             showsVerticalScrollIndicator={false}
           >
             <Text style={styles.title}>Confirmar asistencia</Text>
-            <Text style={styles.subtitle}>Verifica los datos del alumno antes de registrar el abordo.</Text>
+            <Text style={styles.subtitle}>
+              Verifica los datos del alumno antes de registrar el abordo.
+            </Text>
 
             <View style={styles.studentHeader}>
               <View style={styles.studentAvatar}>
-                <MaterialCommunityIcons name="account" size={30} color={colors.primaryIconContrast} />
+                <MaterialCommunityIcons
+                  name="account"
+                  size={tokens.fontSize["3xl"]}
+                  color={colors.primaryIconContrast}
+                />
               </View>
               <View style={styles.studentHeaderInfo}>
                 <Text style={styles.studentName}>{student.nombre_alumno}</Text>
@@ -179,7 +186,13 @@ export function StudentConfirmModal({
               >
                 Confirmar asistencia
               </Button>
-              <Button mode="outlined" onPress={onDismiss} disabled={isSubmitting} contentStyle={styles.btnContent} style={styles.btnCancel}>
+              <Button
+                mode="outlined"
+                onPress={onDismiss}
+                disabled={isSubmitting}
+                contentStyle={styles.btnContent}
+                style={styles.btnCancel}
+              >
                 Cancelar
               </Button>
             </View>
