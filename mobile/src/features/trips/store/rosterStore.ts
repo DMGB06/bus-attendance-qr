@@ -196,6 +196,10 @@ export function useRosterStore(): RosterStoreState {
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
+export function getRosterSnapshot(): RosterStoreState {
+  return getSnapshot();
+}
+
 export const rosterStoreActions = {
   hydrateTripRoster,
   refreshTripRoster,

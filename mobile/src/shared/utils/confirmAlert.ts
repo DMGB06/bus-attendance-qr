@@ -1,4 +1,4 @@
-import { Alert } from "react-native";
+import { Alert, Platform } from "react-native";
 
 type ConfirmAlertOptions = {
   title: string;
@@ -13,8 +13,15 @@ export function confirmAlert({
   message,
   confirmLabel = "Confirmar",
   cancelLabel = "Cancelar",
-  destructive = false,
 }: ConfirmAlertOptions): Promise<boolean> {
+  if (Platform.OS === "web") {
+    if (typeof window !== "undefined" && typeof window.confirm === "function") {
+      const prompt = `${title}\n\n${message}\n\nPulsa Aceptar para "${confirmLabel}" o Cancelar para "${cancelLabel}".`;
+      return Promise.resolve(window.confirm(prompt));
+    }
+    return Promise.resolve(false);
+  }
+
   return new Promise((resolve) => {
     Alert.alert(
       title,
@@ -23,7 +30,7 @@ export function confirmAlert({
         { text: cancelLabel, style: "cancel", onPress: () => resolve(false) },
         {
           text: confirmLabel,
-          style: destructive ? "destructive" : "default",
+          style: "default",
           onPress: () => resolve(true),
         },
       ],

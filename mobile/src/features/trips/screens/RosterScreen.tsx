@@ -45,6 +45,7 @@ export default function RosterScreen() {
         listWrap: {
           flex: 1,
           minHeight: 0,
+          paddingTop: tokens.spacing.sm,
         },
         centerFill: {
           flex: 1,
