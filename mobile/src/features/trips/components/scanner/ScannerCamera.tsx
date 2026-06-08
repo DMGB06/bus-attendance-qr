@@ -7,10 +7,15 @@ import { useAppTheme } from "@/src/core/theme/ThemeProvider";
 
 type ScannerCameraProps = {
   height: number;
+  scanningEnabled?: boolean;
   onBarcodeScanned: (event: { data: string }) => void;
 };
 
-export function ScannerCamera({ height, onBarcodeScanned }: ScannerCameraProps) {
+export function ScannerCamera({
+  height,
+  scanningEnabled = true,
+  onBarcodeScanned,
+}: ScannerCameraProps) {
   const { colors, tokens } = useAppTheme();
 
   const styles = useMemo(
@@ -97,7 +102,7 @@ export function ScannerCamera({ height, onBarcodeScanned }: ScannerCameraProps) 
         style={styles.camera}
         facing="back"
         barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
-        onBarcodeScanned={onBarcodeScanned}
+        onBarcodeScanned={scanningEnabled ? onBarcodeScanned : undefined}
       />
       <View style={styles.overlay} pointerEvents="none">
         <View style={[styles.corner, styles.topLeft]} />

@@ -12,6 +12,13 @@ export type LookupState = "idle" | "searching" | "found" | "not_found";
 export type ScannerViewMode = "scanner" | "manual";
 
 const SCAN_DEBOUNCE_MS = 800;
+const CANCEL_RESCAN_SUPPRESS_MS = 3000;
+
+type ScanRecord = {
+  value: string;
+  at: number;
+  suppressMs: number;
+};
 
 export function useStudentAttendance(tripId: string | undefined) {
   const [lookupState, setLookupState] = useState<LookupState>("idle");
@@ -27,7 +34,12 @@ export function useStudentAttendance(tripId: string | undefined) {
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
   const scanLockedRef = useRef(false);
-  const lastScannedRef = useRef<{ value: string; at: number } | null>(null);
+  const lastScannedRef = useRef<ScanRecord | null>(null);
+  const confirmModalOpenRef = useRef(false);
+  const studentRef = useRef<Student | null>(null);
+
+  confirmModalOpenRef.current = isConfirmModalVisible;
+  studentRef.current = student;
 
   const isSearching = lookupState === "searching";
 
@@ -39,9 +51,13 @@ export function useStudentAttendance(tripId: string | undefined) {
     scanLockedRef.current = true;
   }, []);
 
-  const clearStudentSelection = useCallback(
-    (clearManual: boolean) => {
+  const resetLookupSession = useCallback(
+    (options?: { clearManual?: boolean; clearSuccess?: boolean }) => {
+      const clearManual = options?.clearManual ?? false;
+      const clearSuccess = options?.clearSuccess ?? false;
+
       releaseScanLock();
+      lastScannedRef.current = null;
       setLookupState("idle");
       setScannedValue("");
       setStudent(null);
@@ -52,11 +68,43 @@ export function useStudentAttendance(tripId: string | undefined) {
 
       if (clearManual) {
         setManualName("");
+      }
+
+      if (clearSuccess) {
         setSuccessMessage(null);
       }
     },
     [releaseScanLock],
   );
+
+  const clearStudentSelection = useCallback(
+    (clearManual: boolean) => {
+      resetLookupSession({ clearManual, clearSuccess: clearManual });
+    },
+    [resetLookupSession],
+  );
+
+  const cancelStudentConfirmation = useCallback(() => {
+    if (isRegistering) {
+      return;
+    }
+
+    const suppressedValue =
+      scannedValue.trim() || studentRef.current?.codigo?.trim() || studentRef.current?.id || "";
+
+    resetLookupSession({
+      clearManual: viewMode === "manual",
+      clearSuccess: false,
+    });
+
+    if (suppressedValue) {
+      lastScannedRef.current = {
+        value: suppressedValue,
+        at: Date.now(),
+        suppressMs: CANCEL_RESCAN_SUPPRESS_MS,
+      };
+    }
+  }, [isRegistering, resetLookupSession, scannedValue, viewMode]);
 
   const selectStudent = useCallback(
     (foundStudent: Student) => {
@@ -98,7 +146,11 @@ export function useStudentAttendance(tripId: string | undefined) {
             "No encontramos a este alumno en el padrón oficial. Verifica el QR o regístralo manualmente.",
           );
           releaseScanLock();
-          lastScannedRef.current = { value: normalizedValue, at: Date.now() };
+          lastScannedRef.current = {
+            value: normalizedValue,
+            at: Date.now(),
+            suppressMs: SCAN_DEBOUNCE_MS,
+          };
           return;
         }
 
@@ -118,23 +170,30 @@ export function useStudentAttendance(tripId: string | undefined) {
         return;
       }
 
-      if (scanLockedRef.current || isSearching || isRegistering || student) {
-        return;
-      }
-
-      const now = Date.now();
       if (
-        lastScannedRef.current?.value === data &&
-        now - lastScannedRef.current.at < SCAN_DEBOUNCE_MS
+        confirmModalOpenRef.current ||
+        scanLockedRef.current ||
+        isSearching ||
+        isRegistering ||
+        studentRef.current
       ) {
         return;
       }
 
-      lastScannedRef.current = { value: data, at: now };
+      const now = Date.now();
+      const suppressMs = lastScannedRef.current?.suppressMs ?? SCAN_DEBOUNCE_MS;
+      if (
+        lastScannedRef.current?.value === data &&
+        now - lastScannedRef.current.at < suppressMs
+      ) {
+        return;
+      }
+
+      lastScannedRef.current = { value: data, at: now, suppressMs: SCAN_DEBOUNCE_MS };
       lockScan();
       void resolveStudentByCode(data);
     },
-    [viewMode, isSearching, isRegistering, student, lockScan, resolveStudentByCode],
+    [viewMode, isSearching, isRegistering, lockScan, resolveStudentByCode],
   );
 
   const handleManualSearch = useCallback(async () => {
@@ -231,8 +290,8 @@ export function useStudentAttendance(tripId: string | undefined) {
     handleSelectManualStudent: selectStudent,
     handleConfirmAttendance,
     clearStudentSelection,
+    cancelStudentConfirmation,
     handleManualNameChange,
     openConfirmModal: () => setIsConfirmModalVisible(true),
-    closeConfirmModal: () => setIsConfirmModalVisible(false),
   };
 }

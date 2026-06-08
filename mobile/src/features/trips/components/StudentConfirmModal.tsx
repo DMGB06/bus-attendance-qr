@@ -124,14 +124,10 @@ export function StudentConfirmModal({
     [colors, tokens],
   );
 
-  if (!student) {
-    return null;
-  }
-
   return (
     <Portal>
       <Modal
-        visible={visible}
+        visible={visible && Boolean(student)}
         onDismiss={() => {
           if (!isSubmitting) {
             onDismiss();
@@ -140,6 +136,8 @@ export function StudentConfirmModal({
         contentContainerStyle={styles.modalContainer}
       >
         <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, tokens.spacing.xl) }]}>
+          {student ? (
+            <>
           <View style={styles.handle} />
 
           <ScrollView
@@ -188,7 +186,11 @@ export function StudentConfirmModal({
               </Button>
               <Button
                 mode="outlined"
-                onPress={onDismiss}
+                onPress={() => {
+                  if (!isSubmitting) {
+                    onDismiss();
+                  }
+                }}
                 disabled={isSubmitting}
                 contentStyle={styles.btnContent}
                 style={styles.btnCancel}
@@ -197,6 +199,8 @@ export function StudentConfirmModal({
               </Button>
             </View>
           </ScrollView>
+            </>
+          ) : null}
         </View>
       </Modal>
     </Portal>

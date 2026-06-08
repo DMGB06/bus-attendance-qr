@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { StyleSheet, useWindowDimensions, View } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useCameraPermissions } from "expo-camera";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Button, Text } from "react-native-paper";
@@ -15,7 +15,6 @@ import { useAppTheme } from "@/src/core/theme/ThemeProvider";
 import { AppScrollView } from "@/src/shared/ui/AppScrollView";
 
 export default function ScannerScreen() {
-  const insets = useSafeAreaInsets();
   const { activeTrip } = useTripStore();
   const { height: screenHeight } = useWindowDimensions();
   const { colors, tokens } = useAppTheme();
@@ -26,6 +25,12 @@ export default function ScannerScreen() {
   );
 
   const attendance = useStudentAttendance(activeTrip?.id);
+  const isScannerMode = attendance.viewMode === "scanner";
+  const isCameraScanningEnabled =
+    isScannerMode &&
+    !attendance.isConfirmModalVisible &&
+    !attendance.isSearching &&
+    !attendance.isRegistering;
 
   const styles = useMemo(
     () =>
@@ -39,17 +44,18 @@ export default function ScannerScreen() {
           backgroundColor: colors.scannerScreenContainerBg,
           paddingHorizontal: tokens.spacing.xl,
           paddingTop: tokens.spacing.md,
-          gap: tokens.spacing.xl,
+          paddingBottom: tokens.layout.scrollBottomInset,
+          gap: tokens.spacing.lg,
         },
         panelScroll: {
           flex: 1,
           minHeight: 0,
         },
         panelScrollContent: {
-          paddingBottom: tokens.spacing.md,
+          flexGrow: 1,
         },
         panelFill: {
-          minHeight: tokens.layout.emptyStateMinHeight,
+          flexGrow: 1,
         },
         badge: {
           alignSelf: "center",
@@ -69,22 +75,19 @@ export default function ScannerScreen() {
           flexDirection: "row",
           gap: tokens.spacing.sm,
           alignSelf: "center",
-          marginBottom: tokens.spacing.sm,
         },
       }),
     [colors, tokens],
   );
 
-  const containerStyle = [
+  const statusContainerStyle = [
     styles.screenContainer,
-    {
-      paddingBottom: insets.bottom + tokens.layout.scrollBottomInset,
-    },
+    { paddingBottom: tokens.layout.scrollBottomInset },
   ];
 
   if (!activeTrip) {
     return (
-      <SafeAreaView edges={["bottom", "left", "right"]} style={containerStyle}>
+      <SafeAreaView edges={["left", "right"]} style={statusContainerStyle}>
         <ScannerStatusCard
           icon="lock-outline"
           title="Scanner bloqueado"
@@ -96,7 +99,7 @@ export default function ScannerScreen() {
 
   if (!permission) {
     return (
-      <View style={containerStyle}>
+      <View style={statusContainerStyle}>
         <ScannerStatusCard
           icon="camera-outline"
           title="Preparando cámara"
@@ -108,7 +111,7 @@ export default function ScannerScreen() {
 
   if (!permission.granted) {
     return (
-      <View style={containerStyle}>
+      <View style={statusContainerStyle}>
         <ScannerStatusCard
           icon="camera-off-outline"
           title="Permiso de cámara requerido"
@@ -120,11 +123,9 @@ export default function ScannerScreen() {
     );
   }
 
-  const isScannerMode = attendance.viewMode === "scanner";
-
   return (
-    <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>
-      <View style={containerStyle}>
+    <SafeAreaView edges={["left", "right"]} style={styles.safeArea}>
+      <View style={styles.screenContainer}>
         <View style={styles.badge}>
           <MaterialCommunityIcons
             name={isScannerMode ? "qrcode-scan" : "account-search"}
@@ -156,6 +157,7 @@ export default function ScannerScreen() {
         {isScannerMode ? (
           <ScannerCamera
             height={cameraHeight}
+            scanningEnabled={isCameraScanningEnabled}
             onBarcodeScanned={attendance.handleBarcodeScanned}
           />
         ) : null}
@@ -163,7 +165,8 @@ export default function ScannerScreen() {
         <AppScrollView
           style={styles.panelScroll}
           contentContainerStyle={styles.panelScrollContent}
-          contentGrow={false}
+          contentGrow
+          omitTabBarInset
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.panelFill}>
@@ -192,7 +195,7 @@ export default function ScannerScreen() {
           student={attendance.student}
           isSubmitting={attendance.isRegistering}
           errorMessage={attendance.errorMessage}
-          onDismiss={attendance.closeConfirmModal}
+          onDismiss={attendance.cancelStudentConfirmation}
           onConfirm={() => {
             void attendance.handleConfirmAttendance();
           }}
