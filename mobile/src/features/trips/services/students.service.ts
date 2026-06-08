@@ -1,4 +1,8 @@
 import { supabase } from "@/src/core/config/supabase";
+import {
+  findStudentInCache,
+  searchStudentsInCache,
+} from "@/src/features/trips/services/students-cache.service";
 import type { Student } from "@/src/features/trips/types";
 
 const UUID_REGEX =
@@ -25,6 +29,10 @@ export async function findStudentByCode(code: string): Promise<Student | null> {
     .maybeSingle();
 
   if (error) {
+    const cached = await findStudentInCache(normalizedCode);
+    if (cached) {
+      return cached;
+    }
     throw new Error("No se pudo consultar la base de alumnos.");
   }
 
@@ -41,13 +49,17 @@ export async function findStudentByCode(code: string): Promise<Student | null> {
       .maybeSingle();
 
     if (upperError) {
+      const cached = await findStudentInCache(normalizedCode);
+      if (cached) {
+        return cached;
+      }
       throw new Error("No se pudo consultar la base de alumnos.");
     }
 
     return upperData;
   }
 
-  return null;
+  return findStudentInCache(normalizedCode);
 }
 
 /** Busca por código BU00xx o por UUID (QR legacy). */
@@ -83,7 +95,7 @@ export async function searchStudentsByName(name: string, limit = 8): Promise<Stu
     .limit(limit);
 
   if (error) {
-    throw new Error("No se pudo consultar la base de alumnos.");
+    return searchStudentsInCache(normalizedName, limit);
   }
 
   return data ?? [];
@@ -102,7 +114,7 @@ export async function getStudentById(id: string): Promise<Student | null> {
     .maybeSingle();
 
   if (error) {
-    throw new Error("No se pudo consultar la base de alumnos.");
+    return findStudentInCache(normalizedId);
   }
 
   return data;

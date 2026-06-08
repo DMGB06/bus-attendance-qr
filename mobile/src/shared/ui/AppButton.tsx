@@ -19,25 +19,16 @@ export function AppButton({ variant = 'primary', style, labelStyle, ...props }: 
       StyleSheet.create({
         base: {
           borderRadius: tokens.radius.md,
-          paddingVertical: 6,
         },
         authPrimary: {
-          borderRadius: 28,
           backgroundColor: colors.authCtaSolid,
-          shadowColor: colors.authCtaSolid,
-          shadowOpacity: 0.35,
-          shadowRadius: 16,
-          shadowOffset: { width: 0, height: 6 },
-          elevation: 10,
         },
         authPrimaryLabel: {
+          ...tokens.typography.bodyStrong,
           color: colors.authCtaText,
-          fontSize: 16,
-          fontWeight: '600',
-          letterSpacing: 0.3,
         },
       }),
-    [colors, tokens.radius.md],
+    [colors, tokens],
   );
 
   return (

@@ -44,10 +44,11 @@ CARD_W_PX = 1012
 CARD_H_PX = 638
 DPI = 300
 
-# Colores institucionales
-COLOR_NAVY = (11, 61, 110)
-COLOR_NAVY_DARK = (7, 42, 78)
-COLOR_GOLD = (201, 162, 55)
+# Colores institucionales (alineados con mobile/src/core/theme/semanticColors.ts)
+COLOR_NAVY = (28, 50, 132)       # #1C3284
+COLOR_NAVY_DARK = (21, 39, 102)  # #152766
+COLOR_GOLD = (255, 204, 0)       # #FFCC00
+COLOR_SKY = (93, 184, 229)       # #5DB8E5
 COLOR_WHITE = (255, 255, 255)
 COLOR_OFF_WHITE = (248, 250, 252)
 COLOR_TEXT = (26, 32, 44)
@@ -359,7 +360,7 @@ def render_carnet(student: CarnetStudent, logo: Image.Image | None) -> Image.Ima
     brand_x = 150
     draw.text((brand_x, 42), "MUNICIPALIDAD DISTRITAL", fill=COLOR_WHITE, font=font_brand)
     draw.text((brand_x, 68), "DE CERRO AZUL", fill=COLOR_WHITE, font=font_brand)
-    draw.text((brand_x, 102), "TRANSPORTE ESCOLAR", fill=COLOR_GOLD, font=font_brand_sub)
+    draw.text((brand_x, 102), "TRANSPORTE ESCOLAR", fill=COLOR_SKY, font=font_brand_sub)
 
     # QR
     qr_size = 250

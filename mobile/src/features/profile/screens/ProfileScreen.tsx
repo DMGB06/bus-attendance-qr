@@ -6,6 +6,8 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useProfile } from "@/src/features/profile/hooks/useProfile";
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
 import { AppButton } from "@/src/shared/ui/AppButton";
+import { HighContrastToggle } from "@/src/shared/ui/HighContrastToggle";
+import { ThemeAppearanceControl } from "@/src/shared/ui/ThemeAppearanceControl";
 
 export default function ProfileScreen() {
   const { colors, tokens } = useAppTheme();
@@ -157,6 +159,16 @@ export default function ProfileScreen() {
             <Text style={styles.label}>Rol</Text>
             <Text style={styles.value}>{profileState.profile?.role ?? "-"}</Text>
           </View>
+        </View>
+      </Surface>
+
+      <Surface style={styles.card}>
+        <Text style={styles.cardTitle}>Apariencia</Text>
+        <View style={styles.cardDivider} />
+        <View style={styles.cardBody}>
+          <ThemeAppearanceControl variant="panel" />
+          <Divider />
+          <HighContrastToggle />
         </View>
       </Surface>
 

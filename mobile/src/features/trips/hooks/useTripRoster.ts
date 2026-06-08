@@ -1,88 +1,46 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { getErrorMessage } from "@/src/shared/utils/errors";
-import {
-  getTripRoster,
-  markStudentExit,
-  markStudentManually,
-  type TripRosterItem,
-} from "@/src/features/trips/services/trip-roster.service";
-import {
-  confirmManualAttendance,
-  confirmStudentDropoff,
-} from "@/src/features/trips/utils/rosterConfirmations";
+import type { TripRosterItem } from "@/src/features/trips/services/trip-roster.service";
+import { rosterStoreActions, useRosterStore } from "@/src/features/trips/store/rosterStore";
+import { confirmStudentDropoff } from "@/src/features/trips/utils/rosterConfirmations";
 
-export type RosterViewMode = "all" | "attended";
+export type RosterViewMode = "all" | "pending" | "onboard" | "attended";
+
+const STATUS_SORT_ORDER: Record<TripRosterItem["status"], number> = {
+  pending: 0,
+  onboard: 1,
+  completed: 2,
+};
 
 export function useTripRoster(tripId: string | undefined) {
+  const rosterState = useRosterStore();
   const [viewMode, setViewMode] = useState<RosterViewMode>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [items, setItems] = useState<TripRosterItem[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [isMarkingStudentId, setIsMarkingStudentId] = useState<string | null>(null);
 
-  const loadRoster = useCallback(async () => {
+  useEffect(() => {
     if (!tripId) {
-      setItems([]);
+      rosterStoreActions.clearRosterStore();
       return;
     }
 
-    setIsLoading(true);
-    setErrorMessage(null);
-
-    try {
-      const rosterItems = await getTripRoster(tripId);
-      setItems(rosterItems);
-    } catch (error: unknown) {
-      setErrorMessage(getErrorMessage(error, "No se pudo cargar la lista de asistencia."));
-    } finally {
-      setIsLoading(false);
-    }
+    void rosterStoreActions.hydrateTripRoster(tripId);
   }, [tripId]);
 
-  useEffect(() => {
-    void loadRoster();
-  }, [loadRoster]);
+  const items = rosterState.tripId === tripId ? rosterState.items : [];
+
+  const loadRoster = useCallback(async () => {
+    if (!tripId) {
+      return;
+    }
+    await rosterStoreActions.refreshTripRoster(tripId);
+  }, [tripId]);
 
   const findStudentName = useCallback(
     (studentId: string) => items.find((item) => item.student.id === studentId)?.student,
     [items],
-  );
-
-  const handleManualMark = useCallback(
-    async (studentId: string) => {
-      if (!tripId || isMarkingStudentId) {
-        return;
-      }
-
-      const selectedStudent = findStudentName(studentId);
-      if (!selectedStudent) {
-        setErrorMessage("No se encontró el alumno seleccionado.");
-        return;
-      }
-
-      const isConfirmed = await confirmManualAttendance(selectedStudent.nombre_alumno);
-      if (!isConfirmed) {
-        return;
-      }
-
-      setIsMarkingStudentId(studentId);
-      setErrorMessage(null);
-      setInfoMessage(null);
-
-      try {
-        await markStudentManually(tripId, studentId);
-        setInfoMessage("Registro manual guardado.");
-        await loadRoster();
-      } catch (error: unknown) {
-        setErrorMessage(getErrorMessage(error, "No se pudo registrar manualmente."));
-      } finally {
-        setIsMarkingStudentId(null);
-      }
-    },
-    [tripId, isMarkingStudentId, findStudentName, loadRoster],
   );
 
   const handleExitMark = useCallback(
@@ -93,7 +51,6 @@ export function useTripRoster(tripId: string | undefined) {
 
       const selectedStudent = findStudentName(studentId);
       if (!selectedStudent) {
-        setErrorMessage("No se encontró el alumno seleccionado.");
         return;
       }
 
@@ -103,36 +60,71 @@ export function useTripRoster(tripId: string | undefined) {
       }
 
       setIsMarkingStudentId(studentId);
-      setErrorMessage(null);
       setInfoMessage(null);
 
       try {
-        await markStudentExit(tripId, studentId);
-        setInfoMessage("Salida registrada correctamente.");
-        await loadRoster();
+        const result = await rosterStoreActions.registerStudentAttendance(tripId, studentId, "bajo");
+        if (result.queued) {
+          setInfoMessage("Salida guardada localmente. Se sincronizará al recuperar señal.");
+        } else {
+          setInfoMessage("Salida registrada correctamente.");
+        }
       } catch (error: unknown) {
-        setErrorMessage(getErrorMessage(error, "No se pudo registrar la salida."));
+        setInfoMessage(getErrorMessage(error, "No se pudo registrar la salida."));
       } finally {
         setIsMarkingStudentId(null);
       }
     },
-    [tripId, isMarkingStudentId, findStudentName, loadRoster],
+    [tripId, isMarkingStudentId, findStudentName],
   );
 
   const filteredItems = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
-    const baseItems = viewMode === "attended" ? items.filter((item) => item.hasAttendance) : items;
 
-    if (!normalizedQuery) {
-      return baseItems;
+    let baseItems = items;
+    switch (viewMode) {
+      case "pending":
+        baseItems = items.filter((item) => item.status === "pending");
+        break;
+      case "onboard":
+        baseItems = items.filter((item) => item.status === "onboard");
+        break;
+      case "attended":
+        baseItems = items.filter((item) => item.hasAttendance);
+        break;
+      default:
+        baseItems = items;
     }
 
-    return baseItems.filter(
-      (item) =>
-        item.student.nombre_alumno.toLowerCase().includes(normalizedQuery) ||
-        item.student.id.toLowerCase().includes(normalizedQuery) ||
-        (item.student.codigo ?? "").toLowerCase().includes(normalizedQuery),
-    );
+    const matchesQuery = (item: TripRosterItem) =>
+      item.student.nombre_alumno.toLowerCase().includes(normalizedQuery) ||
+      item.student.id.toLowerCase().includes(normalizedQuery) ||
+      (item.student.codigo ?? "").toLowerCase().includes(normalizedQuery);
+
+    const result = normalizedQuery ? baseItems.filter(matchesQuery) : baseItems;
+    const sorted = [...result];
+
+    if (viewMode === "all") {
+      sorted.sort((a, b) => {
+        const statusDiff = STATUS_SORT_ORDER[a.status] - STATUS_SORT_ORDER[b.status];
+        if (statusDiff !== 0) {
+          return statusDiff;
+        }
+        return a.student.nombre_alumno.localeCompare(b.student.nombre_alumno, "es");
+      });
+    } else if (viewMode === "attended") {
+      sorted.sort((a, b) => {
+        const aTime = a.attendance?.scanned_at ? new Date(a.attendance.scanned_at).getTime() : 0;
+        const bTime = b.attendance?.scanned_at ? new Date(b.attendance.scanned_at).getTime() : 0;
+        return bTime - aTime;
+      });
+    } else {
+      sorted.sort((a, b) =>
+        a.student.nombre_alumno.localeCompare(b.student.nombre_alumno, "es"),
+      );
+    }
+
+    return sorted;
   }, [items, searchQuery, viewMode]);
 
   const stats = useMemo(
@@ -151,13 +143,16 @@ export function useTripRoster(tripId: string | undefined) {
     setSearchQuery,
     items,
     filteredItems,
-    isLoading,
-    errorMessage,
+    isLoading: rosterState.isHydrating && items.length === 0,
+    isRefreshing: rosterState.isRefreshing,
+    isShowingCache: rosterState.isShowingCache,
+    cacheSavedAt: rosterState.cacheSavedAt,
+    pendingSyncCount: rosterState.pendingSyncCount,
+    errorMessage: rosterState.errorMessage,
     infoMessage,
     isMarkingStudentId,
     stats,
     loadRoster,
-    handleManualMark,
     handleExitMark,
   };
 }

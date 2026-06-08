@@ -1,13 +1,11 @@
 import { useCallback, useMemo } from "react";
-import { StyleSheet, View } from "react-native";
 import { Tabs, useRouter } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { logout } from "@/src/features/auth/services/auth.service";
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
-import { useAppTabHeader } from "@/src/shared/ui/AppTabHeader";
+import { AppTabHeaderBar } from "@/src/shared/ui/AppTabHeaderBar";
 
 export default function TabsLayout() {
   const router = useRouter();
@@ -19,20 +17,17 @@ export default function TabsLayout() {
     router.replace("/(auth)/login");
   }, [router]);
 
-  const { headerLeft, headerRight } = useAppTabHeader(handleLogout);
+  const renderHeader = useCallback(
+    () => <AppTabHeaderBar onLogout={handleLogout} />,
+    [handleLogout],
+  );
 
-  const styles = useMemo(
-    () =>
-      StyleSheet.create({
-        tabIconContainer: {
-          width: 42,
-          height: 42,
-          borderRadius: tokens.radius.full,
-          alignItems: "center",
-          justifyContent: "center",
-        },
-      }),
-    [tokens.radius.full],
+  const tabLabelStyle = useMemo(
+    () => ({
+      ...tokens.typography.label,
+      marginTop: 2,
+    }),
+    [tokens.typography.label],
   );
 
   const screenOptions = useMemo(
@@ -41,15 +36,7 @@ export default function TabsLayout() {
         backgroundColor: colors.screenSolid,
       },
       headerShadowVisible: false,
-      headerStyle: {
-        backgroundColor: colors.screenSolid,
-      },
-      headerBackground: () => (
-        <LinearGradient colors={colors.headerGradient} style={StyleSheet.absoluteFill} />
-      ),
-      headerLeft: () => headerLeft,
-      headerRight: () => headerRight,
-      headerTitle: () => null,
+      header: renderHeader,
       tabBarHideOnKeyboard: true,
       tabBarActiveTintColor: colors.tabBarActive,
       tabBarInactiveTintColor: colors.tabBarInactive,
@@ -58,22 +45,18 @@ export default function TabsLayout() {
         backgroundColor: colors.tabBarBg,
         borderTopWidth: 1,
         borderTopColor: colors.tabBarBorder,
-        height: 60 + insets.bottom,
-        paddingTop: 6,
+        height: tokens.layout.tabBarBaseHeight + insets.bottom,
+        paddingTop: tokens.spacing.xs,
         paddingBottom: insets.bottom,
         elevation: 0,
+        shadowOpacity: 0,
       },
-      tabBarLabelStyle: {
-        fontSize: 11,
-        fontWeight: "700" as const,
-        letterSpacing: 0.8,
-        marginTop: -2,
-      },
+      tabBarLabelStyle: tabLabelStyle,
       tabBarItemStyle: {
-        paddingVertical: 4,
+        paddingVertical: tokens.spacing.xs,
       },
     }),
-    [colors, insets.bottom, headerLeft, headerRight],
+    [colors, insets.bottom, renderHeader, tabLabelStyle, tokens],
   );
 
   return (
@@ -82,11 +65,13 @@ export default function TabsLayout() {
         name="trip"
         options={{
           title: "Iniciar Viaje",
-          tabBarLabel: "VIAJE",
-          tabBarIcon: ({ color }) => (
-            <View style={styles.tabIconContainer}>
-              <MaterialCommunityIcons name="bus-clock" size={22} color={color} />
-            </View>
+          tabBarLabel: "Viaje",
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialCommunityIcons
+              name="bus-clock"
+              size={24}
+              color={focused ? colors.tabBarActive : color}
+            />
           ),
         }}
       />
@@ -94,11 +79,13 @@ export default function TabsLayout() {
         name="scanner"
         options={{
           title: "Escanear QR",
-          tabBarLabel: "SCAN",
-          tabBarIcon: ({ color }) => (
-            <View style={styles.tabIconContainer}>
-              <MaterialCommunityIcons name="qrcode-scan" size={22} color={color} />
-            </View>
+          tabBarLabel: "Escanear",
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialCommunityIcons
+              name={focused ? "qrcode-scan" : "qrcode"}
+              size={24}
+              color={focused ? colors.tabBarActive : color}
+            />
           ),
         }}
       />
@@ -106,12 +93,21 @@ export default function TabsLayout() {
         name="roster"
         options={{
           title: "Lista",
-          tabBarLabel: "LISTA",
-          tabBarIcon: ({ color }) => (
-            <View style={styles.tabIconContainer}>
-              <MaterialCommunityIcons name="format-list-bulleted" size={22} color={color} />
-            </View>
+          tabBarLabel: "Lista",
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialCommunityIcons
+              name={focused ? "format-list-bulleted" : "format-list-bulleted-square"}
+              size={24}
+              color={focused ? colors.tabBarActive : color}
+            />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          href: null,
+          title: "Perfil",
         }}
       />
       <Tabs.Screen

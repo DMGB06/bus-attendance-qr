@@ -9,25 +9,27 @@ export const spacing = {
   '2xl': 32,
 } as const;
 
+/** Radios más contenidos — interfaz operativa, no decorativa. */
 export const radius = {
-  xs: 6,
-  sm: 10,
-  md: 14,
-  lg: 18,
-  xl: 22,
-  '2xl': 28,
+  xs: 4,
+  sm: 8,
+  md: 10,
+  lg: 14,
+  xl: 18,
+  '2xl': 22,
   full: 9999,
 } as const;
 
+/** Escala legible en campo (bus, sol directo). */
 export const fontSize = {
   xs: 11,
   sm: 13,
   md: 15,
   lg: 17,
   xl: 20,
-  '2xl': 24,
-  '3xl': 28,
-  '4xl': 34,
+  '2xl': 22,
+  '3xl': 26,
+  '4xl': 30,
 } as const;
 
 export const fontFamily = {
@@ -38,103 +40,93 @@ export const fontFamily = {
 
 /** Espaciado global y chrome de navegación (tab bar flotante). */
 export const layout = {
-  /** Altura visual útil de la barra de pestañas (sin safe area). */
-  tabBarBaseHeight: 56,
-  /** Padding inferior extra en scroll para no quedar tapado por tabs + margen. */
-  scrollBottomInset: 80,
-  /** Altura mínima táctil recomendada (WCAG). */
-  minTouchTarget: 44,
-  /** Control de apariencia en navbar */
+  tabBarBaseHeight: 58,
+  scrollBottomInset: 82,
+  minTouchTarget: 48,
   appearanceNavbarWidth: 58,
-  appearanceNavbarHeight: 36,
-  /** Altura estándar de botones principales */
+  appearanceNavbarHeight: 40,
   buttonHeight: 56,
-  /** Altura mínima de bloques vacíos / placeholders */
+  /** Ancho del área lateral del header para centrar el título */
+  headerSideWidth: 96,
   emptyStateMinHeight: 120,
-  /** Tamaños de iconos en contenedores circulares */
-  iconSm: 38,
-  iconMd: 46,
-  iconLg: 72,
-  /** Iconos decorativos en estados vacíos */
-  iconEmptyState: 54,
-  /** Avatar de perfil */
-  avatarProfileSize: 120,
-  /** Marco de cámara del escáner */
+  iconSm: 36,
+  iconMd: 42,
+  iconLg: 64,
+  iconEmptyState: 48,
+  avatarProfileSize: 108,
   cameraMinHeight: 220,
   cameraMaxHeight: 360,
-  cameraHeightRatio: 0.34,
+  cameraHeightRatio: 0.38,
 } as const;
 
 /**
- * Escala tipográfica única: títulos, cuerpo, labels.
- * Usar con `color` desde el tema semántico.
+ * Escala tipográfica compacta. Usar con `color` desde el tema semántico.
  */
 export const typography = {
   display: {
     fontFamily: fontFamily.bold,
     fontSize: fontSize['4xl'],
-    lineHeight: 40,
-    letterSpacing: -0.6,
+    lineHeight: 36,
+    letterSpacing: -0.2,
     fontWeight: '700' as TextStyle['fontWeight'],
   },
   title1: {
     fontFamily: fontFamily.bold,
     fontSize: fontSize['3xl'],
-    lineHeight: 34,
-    letterSpacing: -0.35,
+    lineHeight: 32,
+    letterSpacing: -0.15,
     fontWeight: '700' as TextStyle['fontWeight'],
   },
   title2: {
     fontFamily: fontFamily.semiBold,
     fontSize: fontSize['2xl'],
-    lineHeight: 30,
-    letterSpacing: -0.2,
+    lineHeight: 26,
+    letterSpacing: -0.1,
     fontWeight: '600' as TextStyle['fontWeight'],
   },
   title3: {
     fontFamily: fontFamily.semiBold,
     fontSize: fontSize.xl,
-    lineHeight: 26,
-    letterSpacing: -0.1,
+    lineHeight: 24,
     fontWeight: '600' as TextStyle['fontWeight'],
   },
   headline: {
     fontFamily: fontFamily.semiBold,
     fontSize: fontSize.lg,
-    lineHeight: 24,
+    lineHeight: 22,
     fontWeight: '600' as TextStyle['fontWeight'],
   },
   body: {
     fontFamily: fontFamily.regular,
     fontSize: fontSize.md,
-    lineHeight: 22,
+    lineHeight: 20,
     fontWeight: '400' as TextStyle['fontWeight'],
   },
   bodyStrong: {
     fontFamily: fontFamily.semiBold,
     fontSize: fontSize.md,
-    lineHeight: 22,
+    lineHeight: 20,
     fontWeight: '600' as TextStyle['fontWeight'],
   },
   caption: {
     fontFamily: fontFamily.regular,
     fontSize: fontSize.sm,
-    lineHeight: 18,
-    letterSpacing: 0.15,
+    lineHeight: 16,
+    letterSpacing: 0.1,
     fontWeight: '400' as TextStyle['fontWeight'],
   },
   label: {
     fontFamily: fontFamily.semiBold,
     fontSize: fontSize.sm,
-    lineHeight: 18,
-    letterSpacing: 0.35,
+    lineHeight: 16,
+    letterSpacing: 0.25,
     fontWeight: '600' as TextStyle['fontWeight'],
   },
   overline: {
     fontFamily: fontFamily.semiBold,
     fontSize: fontSize.xs,
-    lineHeight: 14,
-    letterSpacing: 1.1,
+    lineHeight: 13,
+    letterSpacing: 0.8,
     fontWeight: '600' as TextStyle['fontWeight'],
   },
 } as const satisfies Record<string, TextStyle>;

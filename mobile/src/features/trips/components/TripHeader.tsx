@@ -42,29 +42,31 @@ export function TripHeader({ trip }: TripHeaderProps) {
       StyleSheet.create({
         card: {
           backgroundColor: colors.surfaceCard,
-          borderRadius: tokens.radius["2xl"],
-          padding: tokens.spacing.xl,
+          borderRadius: tokens.radius.md,
+          padding: tokens.spacing.lg,
           borderWidth: 1,
           borderColor: colors.surfaceCardBorder,
+          borderTopWidth: 4,
+          borderTopColor: colors.accent,
         },
         topRow: {
           flexDirection: "row",
           alignItems: "center",
         },
         iconContainer: {
-          width: tokens.layout.iconMd,
-          height: tokens.layout.iconMd,
-          borderRadius: tokens.radius.full,
+          width: tokens.layout.iconSm,
+          height: tokens.layout.iconSm,
+          borderRadius: tokens.radius.sm,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: colors.primaryPressed,
+          backgroundColor: colors.primary,
         },
         titleContainer: {
           flex: 1,
           marginLeft: tokens.spacing.md,
         },
         title: {
-          ...tokens.typography.headline,
+          ...tokens.typography.title3,
           color: colors.textTitle,
         },
         subtitle: {
@@ -105,6 +107,7 @@ export function TripHeader({ trip }: TripHeaderProps) {
         infoText: {
           ...tokens.typography.body,
           color: colors.textBody,
+          fontSize: tokens.fontSize.md,
         },
       }),
     [colors, tokens],

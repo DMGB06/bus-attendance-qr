@@ -1,11 +1,12 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getErrorMessage } from "@/src/shared/utils/errors";
-import { registerAttendance } from "@/src/features/trips/services/attendance.service";
+import { notifyScanSuccess } from "@/src/shared/utils/haptics";
 import {
   findStudentByLookup,
   searchStudentsByName,
 } from "@/src/features/trips/services/students.service";
+import { rosterStoreActions } from "@/src/features/trips/store/rosterStore";
 import type { Student } from "@/src/features/trips/types";
 
 export type LookupState = "idle" | "searching" | "found" | "not_found";
@@ -42,6 +43,13 @@ export function useStudentAttendance(tripId: string | undefined) {
   studentRef.current = student;
 
   const isSearching = lookupState === "searching";
+
+  useEffect(() => {
+    if (!tripId) {
+      return;
+    }
+    void rosterStoreActions.hydrateTripRoster(tripId);
+  }, [tripId]);
 
   const releaseScanLock = useCallback(() => {
     scanLockedRef.current = false;
@@ -106,8 +114,24 @@ export function useStudentAttendance(tripId: string | undefined) {
     }
   }, [isRegistering, resetLookupSession, scannedValue, viewMode]);
 
+  const guardDuplicateRegistration = useCallback((studentId: string) => {
+    const duplicateMessage = rosterStoreActions.getRegistrationValidationError(studentId, "subio");
+    if (duplicateMessage) {
+      setErrorMessage(duplicateMessage);
+      setLookupState("idle");
+      setIsConfirmModalVisible(false);
+      releaseScanLock();
+      return true;
+    }
+    return false;
+  }, [releaseScanLock]);
+
   const selectStudent = useCallback(
     (foundStudent: Student) => {
+      if (guardDuplicateRegistration(foundStudent.id)) {
+        return;
+      }
+
       setErrorMessage(null);
       setInfoMessage(null);
       setManualCandidates([]);
@@ -116,7 +140,7 @@ export function useStudentAttendance(tripId: string | undefined) {
       setIsConfirmModalVisible(true);
       lockScan();
     },
-    [lockScan],
+    [guardDuplicateRegistration, lockScan],
   );
 
   const resolveStudentByCode = useCallback(
@@ -154,6 +178,7 @@ export function useStudentAttendance(tripId: string | undefined) {
           return;
         }
 
+        void notifyScanSuccess();
         selectStudent(foundStudent);
       } catch (error: unknown) {
         setLookupState("idle");
@@ -249,15 +274,41 @@ export function useStudentAttendance(tripId: string | undefined) {
       return;
     }
 
+    const duplicateMessage = rosterStoreActions.getRegistrationValidationError(student.id, "subio");
+    if (duplicateMessage) {
+      setErrorMessage(duplicateMessage);
+      return;
+    }
+
+    const studentToRegister = student;
+    const studentName = studentToRegister.nombre_alumno;
+
     setIsRegistering(true);
     setErrorMessage(null);
 
+    clearStudentSelection(true);
+    setSuccessMessage(`Asistencia registrada para ${studentName}.`);
+
     try {
-      const studentName = student.nombre_alumno;
-      await registerAttendance(tripId, student.id, "subio");
-      clearStudentSelection(true);
-      setSuccessMessage(`Asistencia registrada para ${studentName}.`);
+      const result = await rosterStoreActions.registerStudentAttendance(
+        tripId,
+        studentToRegister.id,
+        "subio",
+      );
+
+      if (result.duplicate) {
+        setSuccessMessage(null);
+        setErrorMessage("Ya registrado");
+        return;
+      }
+
+      if (result.queued) {
+        setSuccessMessage(
+          `Asistencia registrada para ${studentName}. Se sincronizará al recuperar señal.`,
+        );
+      }
     } catch (error: unknown) {
+      setSuccessMessage(null);
       setErrorMessage(getErrorMessage(error, "No se pudo registrar la asistencia."));
       releaseScanLock();
     } finally {

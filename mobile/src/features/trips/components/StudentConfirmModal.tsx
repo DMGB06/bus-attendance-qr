@@ -38,78 +38,69 @@ export function StudentConfirmModal({
         },
         sheet: {
           backgroundColor: colors.modalSheetBg,
-          borderTopLeftRadius: tokens.spacing["2xl"],
-          borderTopRightRadius: tokens.spacing["2xl"],
+          borderTopLeftRadius: tokens.radius.xl,
+          borderTopRightRadius: tokens.radius.xl,
           borderWidth: 1,
           borderColor: colors.modalSheetBorder,
           borderBottomWidth: 0,
+          overflow: "hidden",
+        },
+        sheetHeader: {
+          backgroundColor: colors.modalStudentBannerBg,
+          paddingHorizontal: tokens.spacing.lg,
           paddingTop: tokens.spacing.md,
-          paddingHorizontal: tokens.spacing.xl,
-          maxHeight: "90%",
-          shadowColor: colors.shadowColor,
-          shadowOpacity: 0.35,
-          shadowRadius: tokens.spacing.xl,
-          shadowOffset: { width: 0, height: -tokens.spacing.sm },
-          elevation: 16,
+          paddingBottom: tokens.spacing.lg,
+          gap: tokens.spacing.sm,
         },
         handle: {
-          width: tokens.spacing["2xl"],
-          height: tokens.spacing.xs,
+          width: tokens.spacing.xl,
+          height: 3,
           borderRadius: tokens.radius.xs,
           backgroundColor: colors.modalHandle,
           alignSelf: "center",
-          marginBottom: tokens.spacing.xl,
         },
-        scrollContent: {
-          gap: tokens.spacing.xl,
-          paddingBottom: tokens.spacing.sm,
-        },
-        title: {
-          ...tokens.typography.title2,
-          color: colors.modalTitle,
-          textAlign: "center",
-        },
-        subtitle: {
-          ...tokens.typography.body,
-          color: colors.modalSubtitle,
-          textAlign: "center",
-          marginTop: -tokens.spacing.sm,
-        },
-        studentHeader: {
+        studentRow: {
           flexDirection: "row",
           alignItems: "center",
-          gap: tokens.spacing.lg,
-          backgroundColor: colors.modalStudentBannerBg,
-          borderRadius: tokens.radius.xl,
-          padding: tokens.radius.lg,
+          gap: tokens.spacing.md,
         },
         studentAvatar: {
-          width: tokens.layout.iconLg - tokens.spacing.md,
-          height: tokens.layout.iconLg - tokens.spacing.md,
+          width: tokens.layout.iconMd,
+          height: tokens.layout.iconMd,
           borderRadius: tokens.radius.full,
           backgroundColor: colors.modalAvatarBg,
+          borderWidth: 2,
+          borderColor: colors.accent,
           alignItems: "center",
           justifyContent: "center",
         },
         studentHeaderInfo: {
           flex: 1,
-          gap: tokens.spacing.xs,
+          gap: 2,
         },
         studentName: {
           ...tokens.typography.headline,
           color: colors.modalName,
         },
-        studentStatus: {
+        studentCode: {
           ...tokens.typography.caption,
           color: colors.modalStatus,
-          fontWeight: "600",
+        },
+        body: {
+          paddingHorizontal: tokens.spacing.lg,
+          paddingTop: tokens.spacing.lg,
+          gap: tokens.spacing.md,
+        },
+        subtitle: {
+          ...tokens.typography.caption,
+          color: colors.modalSubtitle,
         },
         errorText: {
           marginTop: -tokens.spacing.sm,
         },
         actions: {
-          gap: tokens.spacing.md,
-          marginTop: tokens.spacing.xs,
+          gap: tokens.spacing.sm,
+          paddingTop: tokens.spacing.xs,
         },
         btnContent: {
           paddingVertical: tokens.spacing.xs,
@@ -135,70 +126,73 @@ export function StudentConfirmModal({
         }}
         contentContainerStyle={styles.modalContainer}
       >
-        <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, tokens.spacing.xl) }]}>
+        <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, tokens.spacing.lg) }]}>
           {student ? (
             <>
-          <View style={styles.handle} />
-
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            <Text style={styles.title}>Confirmar asistencia</Text>
-            <Text style={styles.subtitle}>
-              Verifica los datos del alumno antes de registrar el abordo.
-            </Text>
-
-            <View style={styles.studentHeader}>
-              <View style={styles.studentAvatar}>
-                <MaterialCommunityIcons
-                  name="account"
-                  size={tokens.fontSize["3xl"]}
-                  color={colors.primaryIconContrast}
-                />
+              <View style={styles.sheetHeader}>
+                <View style={styles.handle} />
+                <View style={styles.studentRow}>
+                  <View style={styles.studentAvatar}>
+                    <MaterialCommunityIcons
+                      name="account"
+                      size={tokens.fontSize.xl}
+                      color={colors.primaryIconContrast}
+                    />
+                  </View>
+                  <View style={styles.studentHeaderInfo}>
+                    <Text style={styles.studentName}>{student.nombre_alumno}</Text>
+                    <Text style={styles.studentCode}>
+                      {student.codigo ? `Código ${student.codigo}` : "Confirmar abordo"}
+                    </Text>
+                  </View>
+                </View>
               </View>
-              <View style={styles.studentHeaderInfo}>
-                <Text style={styles.studentName}>{student.nombre_alumno}</Text>
-                <Text style={styles.studentStatus}>Pendiente de confirmación</Text>
-              </View>
-            </View>
 
-            <StudentCard student={student} statusLabel="Pendiente de confirmación" />
-
-            {errorMessage ? (
-              <HelperText type="error" style={styles.errorText}>
-                {errorMessage}
-              </HelperText>
-            ) : null}
-
-            <View style={styles.actions}>
-              <Button
-                mode="contained"
-                onPress={onConfirm}
-                loading={isSubmitting}
-                disabled={isSubmitting}
-                contentStyle={styles.btnContent}
-                style={styles.btnConfirm}
-                buttonColor={colors.primaryPressed}
+              <ScrollView
+                contentContainerStyle={styles.body}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
               >
-                Confirmar asistencia
-              </Button>
-              <Button
-                mode="outlined"
-                onPress={() => {
-                  if (!isSubmitting) {
-                    onDismiss();
-                  }
-                }}
-                disabled={isSubmitting}
-                contentStyle={styles.btnContent}
-                style={styles.btnCancel}
-              >
-                Cancelar
-              </Button>
-            </View>
-          </ScrollView>
+                <Text style={styles.subtitle}>
+                  Verifica los datos antes de registrar la asistencia.
+                </Text>
+
+                <StudentCard student={student} />
+
+                {errorMessage ? (
+                  <HelperText type="error" style={styles.errorText}>
+                    {errorMessage}
+                  </HelperText>
+                ) : null}
+
+                <View style={styles.actions}>
+                  <Button
+                    mode="contained"
+                    onPress={onConfirm}
+                    loading={isSubmitting}
+                    disabled={isSubmitting}
+                    contentStyle={styles.btnContent}
+                    style={styles.btnConfirm}
+                    buttonColor={colors.primary}
+                  >
+                    Confirmar asistencia
+                  </Button>
+                  <Button
+                    mode="outlined"
+                    textColor={colors.primary}
+                    onPress={() => {
+                      if (!isSubmitting) {
+                        onDismiss();
+                      }
+                    }}
+                    disabled={isSubmitting}
+                    contentStyle={styles.btnContent}
+                    style={styles.btnCancel}
+                  >
+                    Cancelar
+                  </Button>
+                </View>
+              </ScrollView>
             </>
           ) : null}
         </View>

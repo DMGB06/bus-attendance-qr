@@ -26,11 +26,8 @@ export default function RootLayout() {
 
   useEffect(() => {
     let isMounted = true;
-    const minLoaderPromise = new Promise<void>((resolve) => {
-      setTimeout(resolve, 2000);
-    });
 
-    const sessionPromise = getSession()
+    void getSession()
       .then((activeSession) => {
         if (!isMounted) {
           return;
@@ -42,14 +39,13 @@ export default function RootLayout() {
           return;
         }
         setSession(null);
+      })
+      .finally(() => {
+        if (!isMounted) {
+          return;
+        }
+        setIsBootLoading(false);
       });
-
-    void Promise.all([sessionPromise, minLoaderPromise]).finally(() => {
-      if (!isMounted) {
-        return;
-      }
-      setIsBootLoading(false);
-    });
 
     const {
       data: { subscription },

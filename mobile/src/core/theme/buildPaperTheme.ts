@@ -52,6 +52,6 @@ export function buildPaperTheme(colors: SemanticColors, isDark: boolean): MD3The
       onBackground: colors.textBody,
       elevation: base.colors.elevation,
     },
-    roundness: 14,
+    roundness: 10,
   };
 }

@@ -10,7 +10,7 @@ import {
 import { PaperProvider, type MD3Theme } from 'react-native-paper';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
-import { Platform } from 'react-native';
+import { Platform, type TextStyle } from 'react-native';
 
 import { buildPaperTheme } from '@/src/core/theme/buildPaperTheme';
 import {
@@ -18,22 +18,28 @@ import {
   type ColorSchemeId,
   type SemanticColors,
 } from '@/src/core/theme/semanticColors';
+import {
+  loadHighContrastEnabled,
+  persistHighContrastEnabled,
+} from '@/src/core/theme/highContrastStorage';
 import { fontFamily, fontSize, layout, radius, spacing, typography } from '@/src/core/theme/tokens';
 import { loadStoredColorScheme, persistColorScheme } from '@/src/core/theme/themeStorage';
 
 type DesignTokens = {
   spacing: typeof spacing;
   radius: typeof radius;
-  fontSize: typeof fontSize;
+  fontSize: Record<keyof typeof fontSize, number>;
   fontFamily: typeof fontFamily;
   layout: typeof layout;
-  typography: typeof typography;
+  typography: Record<keyof typeof typography, TextStyle>;
 };
 
 export type AppThemeContextValue = {
   scheme: ColorSchemeId;
   setScheme: (next: ColorSchemeId) => void;
   toggleScheme: () => void;
+  highContrastEnabled: boolean;
+  setHighContrastEnabled: (enabled: boolean) => void;
   colors: SemanticColors;
   isDark: boolean;
   paperTheme: MD3Theme;
@@ -58,14 +64,21 @@ type AppThemeProviderProps = {
 
 export function AppThemeProvider({ children }: AppThemeProviderProps) {
   const [scheme, setSchemeState] = useState<ColorSchemeId>('light');
+  const [highContrastEnabled, setHighContrastState] = useState(false);
   const [isThemeReady, setIsThemeReady] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const stored = await loadStoredColorScheme();
-      if (!cancelled && stored) {
-        setSchemeState(stored);
+      const [storedScheme, storedHighContrast] = await Promise.all([
+        loadStoredColorScheme(),
+        loadHighContrastEnabled(),
+      ]);
+      if (!cancelled && storedScheme) {
+        setSchemeState(storedScheme);
+      }
+      if (!cancelled) {
+        setHighContrastState(storedHighContrast);
       }
       if (!cancelled) {
         setIsThemeReady(true);
@@ -89,9 +102,39 @@ export function AppThemeProvider({ children }: AppThemeProviderProps) {
     });
   }, []);
 
+  const setHighContrastEnabled = useCallback((enabled: boolean) => {
+    setHighContrastState(enabled);
+    void persistHighContrastEnabled(enabled);
+  }, []);
+
   const isDark = scheme === 'dark';
-  const colors = useMemo(() => getSemanticColors(scheme), [scheme]);
+  const colors = useMemo(
+    () => getSemanticColors(scheme, highContrastEnabled && !isDark),
+    [scheme, highContrastEnabled, isDark],
+  );
   const paperTheme = useMemo(() => buildPaperTheme(colors, isDark), [colors, isDark]);
+
+  const activeTokens = useMemo<DesignTokens>(() => {
+    if (!highContrastEnabled || isDark) {
+      return defaultTokens;
+    }
+
+    return {
+      ...defaultTokens,
+      fontSize: {
+        ...fontSize,
+        sm: fontSize.sm + 1,
+        md: fontSize.md + 1,
+        lg: fontSize.lg + 1,
+      },
+      typography: {
+        ...typography,
+        body: { ...typography.body, fontSize: fontSize.md + 1, lineHeight: 24 },
+        label: { ...typography.label, fontSize: fontSize.sm + 1, lineHeight: 20 },
+        caption: { ...typography.caption, fontSize: fontSize.sm + 1, lineHeight: 18 },
+      },
+    };
+  }, [highContrastEnabled, isDark]);
 
   useEffect(() => {
     void SystemUI.setBackgroundColorAsync(colors.screenSolid);
@@ -112,13 +155,26 @@ export function AppThemeProvider({ children }: AppThemeProviderProps) {
       scheme,
       setScheme,
       toggleScheme,
+      highContrastEnabled,
+      setHighContrastEnabled,
       colors,
       isDark,
       paperTheme,
-      tokens: defaultTokens,
+      tokens: activeTokens,
       isThemeReady,
     }),
-    [scheme, setScheme, toggleScheme, colors, isDark, paperTheme, isThemeReady],
+    [
+      scheme,
+      setScheme,
+      toggleScheme,
+      highContrastEnabled,
+      setHighContrastEnabled,
+      colors,
+      isDark,
+      paperTheme,
+      activeTokens,
+      isThemeReady,
+    ],
   );
 
   return (

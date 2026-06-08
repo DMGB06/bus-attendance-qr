@@ -1,87 +1,51 @@
 import { useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Image, StyleSheet, View } from 'react-native';
+import { ActivityIndicator } from 'react-native-paper';
 
 import { useAppTheme } from '@/src/core/theme/ThemeProvider';
-import BusControlLogo from '../../../assets/images/bus_logo.svg';
+
+const ESCUDO = require('../../../assets/images/escudo_MDCA.png');
 
 export function AppLoadingScreen() {
-  const { colors } = useAppTheme();
+  const { colors, tokens } = useAppTheme();
 
   const styles = useMemo(
     () =>
       StyleSheet.create({
         root: {
           flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-          overflow: 'hidden',
           backgroundColor: colors.loadingBg,
         },
-        glowBlue: {
-          position: 'absolute',
-          width: 320,
-          height: 320,
-          borderRadius: 160,
-          backgroundColor: colors.loadingGlowBlue,
-          top: -120,
-          right: -100,
-        },
-        glowPurple: {
-          position: 'absolute',
-          width: 240,
-          height: 240,
-          borderRadius: 120,
-          backgroundColor: colors.loadingGlowPurple,
-          bottom: -40,
-          left: -60,
-        },
-        centerContent: {
-          alignItems: 'center',
-          paddingHorizontal: 32,
-        },
-        logoWrapper: {
-          marginBottom: 26,
-        },
-        loaderContainer: {
-          flexDirection: 'row',
-          marginTop: 30,
-          gap: 10,
-        },
-        dot: {
-          width: 8,
+        navyBand: {
           height: 8,
-          borderRadius: 999,
-          backgroundColor: colors.loadingDot,
-          opacity: 0.5,
+          backgroundColor: colors.primary,
         },
-        dot1: {
-          opacity: 1,
+        accentStripe: {
+          height: 4,
+          backgroundColor: colors.accent,
         },
-        dot2: {
-          opacity: 0.7,
+        content: {
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          paddingHorizontal: tokens.spacing.xl,
         },
-        dot3: {
-          opacity: 0.4,
+        escudo: {
+          width: 80,
+          height: 80,
+          marginBottom: tokens.spacing.lg,
         },
       }),
-    [colors],
+    [colors, tokens.spacing.xl, tokens.spacing.lg],
   );
 
   return (
     <View style={styles.root}>
-      <LinearGradient colors={colors.loadingGradient} style={StyleSheet.absoluteFill} />
-      <View style={styles.glowBlue} />
-      <View style={styles.glowPurple} />
-      <View style={styles.centerContent}>
-        <View style={styles.logoWrapper}>
-          <BusControlLogo width={350} height={350} />
-        </View>
-        <View style={styles.loaderContainer}>
-          <View style={[styles.dot, styles.dot1]} />
-          <View style={[styles.dot, styles.dot2]} />
-          <View style={[styles.dot, styles.dot3]} />
-        </View>
+      <View style={styles.navyBand} />
+      <View style={styles.accentStripe} />
+      <View style={styles.content}>
+        <Image source={ESCUDO} style={styles.escudo} resizeMode="contain" accessibilityLabel="Escudo municipal" />
+        <ActivityIndicator animating size="small" color={colors.primary} />
       </View>
     </View>
   );

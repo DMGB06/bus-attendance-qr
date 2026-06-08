@@ -3,6 +3,9 @@ import {
   markManualAttendance,
   registerDropoffAttendance,
 } from "@/src/features/trips/services/attendance.service";
+import { buildTripRosterItems } from "@/src/features/trips/domain/trip-roster.builder";
+import { buildRosterItemsFromSources } from "@/src/features/trips/services/attendance-registration.service";
+import { saveCachedStudents, saveCachedTripAttendance } from "@/src/features/trips/storage/roster-cache.storage";
 import type { AttendanceRecord, Student } from "@/src/features/trips/types";
 
 export type TripRosterStatus = "pending" | "onboard" | "completed";
@@ -16,7 +19,10 @@ export type TripRosterItem = {
   canMarkExit: boolean;
 };
 
-export async function getTripRoster(tripId: string): Promise<TripRosterItem[]> {
+export async function getTripRosterRaw(tripId: string): Promise<{
+  students: Student[];
+  attendanceRecords: AttendanceRecord[];
+}> {
   const [studentsResult, attendanceResult] = await Promise.all([
     supabase.from("social_bus_escolar").select("*").order("nombre_alumno"),
     supabase
@@ -34,38 +40,17 @@ export async function getTripRoster(tripId: string): Promise<TripRosterItem[]> {
     throw new Error("No se pudo cargar la asistencia del viaje.");
   }
 
-  const attendanceByStudent = new Map<string, AttendanceRecord[]>();
-  for (const attendance of attendanceResult.data ?? []) {
-    const history = attendanceByStudent.get(attendance.student_id) ?? [];
-    history.push(attendance);
-    attendanceByStudent.set(attendance.student_id, history);
-  }
+  return {
+    students: studentsResult.data ?? [],
+    attendanceRecords: attendanceResult.data ?? [],
+  };
+}
 
-  return (studentsResult.data ?? []).map((student) => {
-    const history = attendanceByStudent.get(student.id) ?? [];
-    const attendance = history.length > 0 ? history[history.length - 1] : null;
-
-    const hasBoarding = history.some(
-      (record) => record.event_type === "subio" || record.event_type === "manual",
-    );
-    const hasDropoff = history.some((record) => record.event_type === "bajo");
-
-    let status: TripRosterStatus = "pending";
-    if (hasDropoff) {
-      status = "completed";
-    } else if (hasBoarding) {
-      status = "onboard";
-    }
-
-    return {
-      student,
-      attendance,
-      status,
-      hasAttendance: history.length > 0,
-      canMarkManual: status === "pending",
-      canMarkExit: status === "onboard",
-    };
-  });
+export async function getTripRoster(tripId: string): Promise<TripRosterItem[]> {
+  const { students, attendanceRecords } = await getTripRosterRaw(tripId);
+  await saveCachedStudents(students);
+  await saveCachedTripAttendance(tripId, attendanceRecords);
+  return buildRosterItemsFromSources(tripId, students, attendanceRecords);
 }
 
 export async function markStudentManually(tripId: string, studentId: string): Promise<void> {
@@ -75,3 +60,5 @@ export async function markStudentManually(tripId: string, studentId: string): Pr
 export async function markStudentExit(tripId: string, studentId: string): Promise<void> {
   await registerDropoffAttendance(tripId, studentId);
 }
+
+export { buildTripRosterItems };
