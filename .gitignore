@@ -1,0 +1,19 @@
+# Solo publicar mobile — lo demás queda local
+docs/
+scripts/
+shared/
+index.html
+
+# Datos sensibles / generados (por si acaso)
+*.csv
+scripts/output/
+
+# Entorno
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+.venv/
