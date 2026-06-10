@@ -6,8 +6,9 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
 import { ManualRegister } from "@/src/features/trips/components/ManualRegister";
 import { StudentCandidateList } from "@/src/features/trips/components/scanner/StudentCandidateList";
+import type { ResolvedScannerEvent } from "@/src/features/trips/domain/scanner-event.rules";
 import type { ScannerViewMode } from "@/src/features/trips/hooks/useStudentAttendance";
-import type { Student } from "@/src/features/trips/types";
+import type { Student, TripDirection } from "@/src/features/trips/types";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -28,6 +29,8 @@ function formatScannedLabel(value: string) {
 
 type ScannerControlPanelProps = {
   viewMode: ScannerViewMode;
+  tripDirection: TripDirection;
+  resolvedEvent: Extract<ResolvedScannerEvent, { ok: true }> | null;
   manualName: string;
   manualCandidates: Student[];
   student: Student | null;
@@ -46,6 +49,8 @@ type ScannerControlPanelProps = {
 
 export function ScannerControlPanel({
   viewMode,
+  tripDirection,
+  resolvedEvent,
   manualName,
   manualCandidates,
   student,
@@ -159,12 +164,27 @@ export function ScannerControlPanel({
         primaryAction: {
           borderRadius: tokens.radius.lg,
         },
+        intentBadge: {
+          flexDirection: "row",
+          alignItems: "center",
+          gap: tokens.spacing.sm,
+          backgroundColor: colors.primarySoftBg,
+          borderRadius: tokens.radius.lg,
+          paddingHorizontal: tokens.spacing.md,
+          paddingVertical: tokens.spacing.sm,
+        },
+        intentBadgeText: {
+          ...tokens.typography.label,
+          color: colors.primarySoftText,
+          flex: 1,
+        },
       }),
     [colors, tokens],
   );
 
   const isScannerMode = viewMode === "scanner";
   const scannedLabel = scannedValue ? formatScannedLabel(scannedValue) : null;
+  const dropoffPlace = tripDirection === "recojo" ? "colegio" : "casa";
 
   return (
     <Card mode="outlined" style={styles.panel}>
@@ -175,7 +195,7 @@ export function ScannerControlPanel({
           </Text>
           <Text style={styles.body}>
             {isScannerMode
-              ? "Apunta al carnet del alumno. Si el QR no responde, usa la pestaña Manual o busca por nombre."
+              ? `Apunta al carnet. Si el alumno no ha subido, registra subida; si ya está a bordo, registra bajada en ${dropoffPlace}.`
               : "Escribe el nombre del alumno, elige la coincidencia correcta y confirma el registro."}
           </Text>
         </View>
@@ -215,13 +235,23 @@ export function ScannerControlPanel({
             {student.colegio ? (
               <Text style={styles.selectionMeta}>{student.colegio}</Text>
             ) : null}
+            {resolvedEvent ? (
+              <View style={styles.intentBadge}>
+                <MaterialCommunityIcons
+                  name={resolvedEvent.intent === "dropoff" ? "home-export-outline" : "bus-side"}
+                  size={18}
+                  color={colors.primarySoftText}
+                />
+                <Text style={styles.intentBadgeText}>{resolvedEvent.confirmTitle}</Text>
+              </View>
+            ) : null}
             <Button
               mode="contained"
               onPress={onOpenConfirmModal}
               disabled={isRegistering}
               style={styles.primaryAction}
             >
-              Ver ficha y confirmar
+              {resolvedEvent?.confirmLabel ?? "Ver ficha y confirmar"}
             </Button>
           </View>
         ) : null}

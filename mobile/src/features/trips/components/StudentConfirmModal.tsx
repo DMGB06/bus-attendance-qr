@@ -13,6 +13,9 @@ interface StudentConfirmModalProps {
   student: Student | null;
   isSubmitting: boolean;
   errorMessage?: string | null;
+  confirmLabel?: string;
+  subtitle?: string;
+  statusHint?: string | null;
   onDismiss: () => void;
   onConfirm: () => void;
 }
@@ -22,6 +25,9 @@ export function StudentConfirmModal({
   student,
   isSubmitting,
   errorMessage,
+  confirmLabel = "Confirmar asistencia",
+  subtitle = "Verifica los datos antes de registrar la asistencia.",
+  statusHint = null,
   onDismiss,
   onConfirm,
 }: StudentConfirmModalProps) {
@@ -35,6 +41,9 @@ export function StudentConfirmModal({
           justifyContent: "flex-end",
           margin: 0,
           flex: 1,
+        },
+        modalBackdrop: {
+          backgroundColor: colors.scannerRootBg,
         },
         sheet: {
           backgroundColor: colors.modalSheetBg,
@@ -124,7 +133,7 @@ export function StudentConfirmModal({
             onDismiss();
           }
         }}
-        contentContainerStyle={styles.modalContainer}
+        contentContainerStyle={[styles.modalContainer, styles.modalBackdrop]}
       >
         <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, tokens.spacing.lg) }]}>
           {student ? (
@@ -142,7 +151,7 @@ export function StudentConfirmModal({
                   <View style={styles.studentHeaderInfo}>
                     <Text style={styles.studentName}>{student.nombre_alumno}</Text>
                     <Text style={styles.studentCode}>
-                      {student.codigo ? `Código ${student.codigo}` : "Confirmar abordo"}
+                      {statusHint ?? (student.codigo ? `Código ${student.codigo}` : "Confirmar registro")}
                     </Text>
                   </View>
                 </View>
@@ -153,9 +162,7 @@ export function StudentConfirmModal({
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
               >
-                <Text style={styles.subtitle}>
-                  Verifica los datos antes de registrar la asistencia.
-                </Text>
+                <Text style={styles.subtitle}>{subtitle}</Text>
 
                 <StudentCard student={student} />
 
@@ -175,7 +182,7 @@ export function StudentConfirmModal({
                     style={styles.btnConfirm}
                     buttonColor={colors.primary}
                   >
-                    Confirmar asistencia
+                    {confirmLabel}
                   </Button>
                   <Button
                     mode="outlined"

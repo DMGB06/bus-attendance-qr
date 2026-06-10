@@ -3,8 +3,10 @@
 export type TripDirection = "recojo" | "retorno";
 /** Valores reales en Postgres (constraint en inglés). */
 export type TripStatus = "active" | "completed";
-export type TurnType = "mañana" | "tarde";
+export type TurnType = "mañana" | "tarde_primaria" | "tarde_secundaria" | "tarde_unica" | "tarde";
 export type AttendanceEventType = "subio" | "bajo" | "ausente" | "manual";
+
+export type NivelEducativo = "primaria" | "secundaria";
 
 export type Student = {
   id: string;
@@ -13,6 +15,7 @@ export type Student = {
   edad: number | null;
   sexo: string | null;
   colegio: string | null;
+  nivel_educativo: NivelEducativo | null;
   nombre_apoderado: string | null;
   telefono_apoderado: string | null;
   dni_apoderado: string | null;

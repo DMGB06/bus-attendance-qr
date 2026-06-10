@@ -1,7 +1,10 @@
 import { supabase } from "@/src/core/config/supabase";
+import { perfAsync } from "@/src/shared/utils/perfMark";
 import {
   findStudentInCache,
+  findStudentInStudentList,
   searchStudentsInCache,
+  searchStudentsInStudentList,
 } from "@/src/features/trips/services/students-cache.service";
 import type { Student } from "@/src/features/trips/types";
 
@@ -62,29 +65,62 @@ export async function findStudentByCode(code: string): Promise<Student | null> {
   return findStudentInCache(normalizedCode);
 }
 
-/** Busca por código BU00xx o por UUID (QR legacy). */
-export async function findStudentByLookup(value: string): Promise<Student | null> {
-  const normalized = normalizeLookup(value);
-  if (!normalized) {
-    return null;
-  }
+/** Busca por código BU00xx o por UUID (QR legacy). Prioriza lista local si el roster está hidratado. */
+export async function findStudentByLookup(
+  value: string,
+  localStudents?: Student[],
+): Promise<Student | null> {
+  return perfAsync(
+    "findStudentByLookup",
+    async () => {
+      const normalized = normalizeLookup(value);
+      if (!normalized) {
+        return null;
+      }
 
-  const byCode = await findStudentByCode(normalized);
-  if (byCode) {
-    return byCode;
-  }
+      if (localStudents?.length) {
+        const localMatch = findStudentInStudentList(localStudents, normalized);
+        if (localMatch) {
+          return localMatch;
+        }
+      }
 
-  if (isUuid(normalized)) {
-    return getStudentById(normalized);
-  }
+      const byCode = await findStudentByCode(normalized);
+      if (byCode) {
+        return byCode;
+      }
 
-  return null;
+      if (isUuid(normalized)) {
+        if (localStudents?.length) {
+          const localById = findStudentInStudentList(localStudents, normalized);
+          if (localById) {
+            return localById;
+          }
+        }
+        return getStudentById(normalized);
+      }
+
+      return null;
+    },
+    { lookupLength: value.trim().length, localCount: localStudents?.length ?? 0 },
+  );
 }
 
-export async function searchStudentsByName(name: string, limit = 8): Promise<Student[]> {
+export async function searchStudentsByName(
+  name: string,
+  limit = 8,
+  localStudents?: Student[],
+): Promise<Student[]> {
   const normalizedName = normalizeLookup(name);
   if (!normalizedName) {
     return [];
+  }
+
+  if (localStudents?.length) {
+    const localResults = searchStudentsInStudentList(localStudents, normalizedName, limit);
+    if (localResults.length) {
+      return localResults;
+    }
   }
 
   const { data, error } = await supabase

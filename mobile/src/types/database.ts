@@ -6,6 +6,7 @@ import type {
   TripStatus,
   TurnType,
   AttendanceEventType,
+  NivelEducativo,
 } from "@/src/features/trips/types";
 
 import type { Profile, Role, Area, UpdateProfile } from "@/src/features/profile/types";
@@ -22,6 +23,7 @@ export type Database = {
           edad?: number | null;
           sexo?: string | null;
           colegio?: string | null;
+          nivel_educativo?: NivelEducativo | null;
           nombre_apoderado?: string | null;
           telefono_apoderado?: string | null;
           dni_apoderado?: string | null;
@@ -40,6 +42,7 @@ export type Database = {
           edad?: number | null;
           sexo?: string | null;
           colegio?: string | null;
+          nivel_educativo?: NivelEducativo | null;
           nombre_apoderado?: string | null;
           telefono_apoderado?: string | null;
           dni_apoderado?: string | null;

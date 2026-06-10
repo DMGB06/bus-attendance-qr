@@ -34,20 +34,26 @@ type DesignTokens = {
   typography: Record<keyof typeof typography, TextStyle>;
 };
 
-export type AppThemeContextValue = {
+export type AppThemePreferencesValue = {
   scheme: ColorSchemeId;
   setScheme: (next: ColorSchemeId) => void;
   toggleScheme: () => void;
   highContrastEnabled: boolean;
   setHighContrastEnabled: (enabled: boolean) => void;
+  isThemeReady: boolean;
+};
+
+export type AppThemeVisualValue = {
   colors: SemanticColors;
   isDark: boolean;
   paperTheme: MD3Theme;
   tokens: DesignTokens;
-  isThemeReady: boolean;
 };
 
-const ThemeContext = createContext<AppThemeContextValue | null>(null);
+export type AppThemeContextValue = AppThemePreferencesValue & AppThemeVisualValue;
+
+const ThemePreferencesContext = createContext<AppThemePreferencesValue | null>(null);
+const ThemeVisualContext = createContext<AppThemeVisualValue | null>(null);
 
 const defaultTokens: DesignTokens = {
   spacing,
@@ -150,45 +156,57 @@ export function AppThemeProvider({ children }: AppThemeProviderProps) {
     root.style.setProperty('--app-scrollbar-thumb-hover', colors.primarySoftText);
   }, [colors.surfaceTrack, colors.borderDefault, colors.primarySoftText]);
 
-  const value = useMemo<AppThemeContextValue>(
+  const preferencesValue = useMemo<AppThemePreferencesValue>(
     () => ({
       scheme,
       setScheme,
       toggleScheme,
       highContrastEnabled,
       setHighContrastEnabled,
+      isThemeReady,
+    }),
+    [scheme, setScheme, toggleScheme, highContrastEnabled, setHighContrastEnabled, isThemeReady],
+  );
+
+  const visualValue = useMemo<AppThemeVisualValue>(
+    () => ({
       colors,
       isDark,
       paperTheme,
       tokens: activeTokens,
-      isThemeReady,
     }),
-    [
-      scheme,
-      setScheme,
-      toggleScheme,
-      highContrastEnabled,
-      setHighContrastEnabled,
-      colors,
-      isDark,
-      paperTheme,
-      activeTokens,
-      isThemeReady,
-    ],
+    [colors, isDark, paperTheme, activeTokens],
   );
 
   return (
-    <ThemeContext.Provider value={value}>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
-      <PaperProvider theme={paperTheme}>{children}</PaperProvider>
-    </ThemeContext.Provider>
+    <ThemePreferencesContext.Provider value={preferencesValue}>
+      <ThemeVisualContext.Provider value={visualValue}>
+        <StatusBar style={isDark ? 'light' : 'dark'} />
+        <PaperProvider theme={paperTheme}>{children}</PaperProvider>
+      </ThemeVisualContext.Provider>
+    </ThemePreferencesContext.Provider>
   );
 }
 
-export function useAppTheme(): AppThemeContextValue {
-  const ctx = useContext(ThemeContext);
+export function useAppThemePreferences(): AppThemePreferencesValue {
+  const ctx = useContext(ThemePreferencesContext);
   if (!ctx) {
-    throw new Error('useAppTheme must be used within AppThemeProvider');
+    throw new Error('useAppThemePreferences must be used within AppThemeProvider');
   }
   return ctx;
+}
+
+export function useAppThemeVisual(): AppThemeVisualValue {
+  const ctx = useContext(ThemeVisualContext);
+  if (!ctx) {
+    throw new Error('useAppThemeVisual must be used within AppThemeProvider');
+  }
+  return ctx;
+}
+
+export function useAppTheme(): AppThemeContextValue {
+  return {
+    ...useAppThemePreferences(),
+    ...useAppThemeVisual(),
+  };
 }

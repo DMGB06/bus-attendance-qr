@@ -1,17 +1,46 @@
 import { supabase } from "@/src/core/config/supabase";
+import {
+  loadCachedProfile,
+  saveCachedProfile,
+} from "@/src/features/profile/storage/profile-cache.storage";
 import type { Area, Profile, Role, UpdateProfile } from "../types";
 
-export async function getProfile(email: string): Promise<Profile | null> {
-  const { data, error } = await supabase.from("profiles").select().eq("email", email).single();
+export async function getProfile(
+  email: string,
+  options?: { forceRefresh?: boolean },
+): Promise<Profile | null> {
+  const normalizedEmail = email.trim();
+  if (!normalizedEmail) {
+    return null;
+  }
+
+  if (!options?.forceRefresh) {
+    const cached = await loadCachedProfile(normalizedEmail);
+    if (cached) {
+      return cached;
+    }
+  }
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select()
+    .eq("email", normalizedEmail)
+    .single();
 
   if (error) {
-    // if not found, return null to let caller decide
     if (error.code === "PGRST116" || error.message?.includes("No rows")) {
       return null;
     }
+    const cached = await loadCachedProfile(normalizedEmail);
+    if (cached) {
+      return cached;
+    }
     throw new Error(error.message);
   }
-  return data as Profile;
+
+  const profile = data as Profile;
+  await saveCachedProfile(normalizedEmail, profile);
+  return profile;
 }
 
 export async function getProfileById(id: string): Promise<Profile | null> {
@@ -26,8 +55,6 @@ export async function getProfileById(id: string): Promise<Profile | null> {
 }
 
 export async function updateProfile(id: string, payload: UpdateProfile): Promise<Profile> {
-  // Build a minimal DB payload where fields are either the proper enum values or undefined.
-  // We convert `null` to `undefined` so the Supabase typings (which expect `T | undefined`) accept it.
   const dbPayload: { email?: string; role?: Role; area?: Area } = {};
   if (payload.email !== undefined) dbPayload.email = payload.email;
   if (payload.role !== undefined && payload.role !== null) dbPayload.role = payload.role;
@@ -42,5 +69,10 @@ export async function updateProfile(id: string, payload: UpdateProfile): Promise
   if (error) {
     throw new Error(error.message);
   }
-  return data as Profile;
+
+  const profile = data as Profile;
+  if (profile.email) {
+    await saveCachedProfile(profile.email, profile);
+  }
+  return profile;
 }

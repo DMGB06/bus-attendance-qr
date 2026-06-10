@@ -13,6 +13,14 @@ import { withTimeout } from "@/src/shared/utils/withTimeout";
 
 const PENDING_CHECK_TIMEOUT_MS = 8_000;
 
+export const CLOSE_TRIP_CONNECTIVITY_WARNING =
+  "Revisa tu conexión. Mostramos los datos guardados en el dispositivo.";
+
+export type PendingDropoffResolution = {
+  students: PendingDropoffStudent[];
+  networkTimedOut: boolean;
+};
+
 function getLocalPendingDropoff(tripId: string): PendingDropoffStudent[] {
   const rosterState = getRosterSnapshot();
 
@@ -32,12 +40,24 @@ async function getCachedPendingDropoff(tripId: string): Promise<PendingDropoffSt
 }
 
 /**
- * Fuente de verdad: servidor (solo registros del viaje).
- * Caché/local solo si la red falla — evita falsos "a bordo" por estado optimista.
+ * Alineado con la lista: el roster en memoria ya fusiona servidor + cola offline.
+ * Se sincroniza la cola antes de consultar el servidor como respaldo.
  */
 export async function resolvePendingDropoffStudents(
   tripId: string,
-): Promise<PendingDropoffStudent[]> {
+): Promise<PendingDropoffResolution> {
+  try {
+    await flushAttendanceQueue(tripId);
+  } catch {
+    /* Si la red falla, el roster local sigue siendo la mejor referencia disponible. */
+  }
+
+  const localPending = getLocalPendingDropoff(tripId);
+  const rosterState = getRosterSnapshot();
+  if (rosterState.tripId === tripId && rosterState.items.length > 0) {
+    return { students: localPending, networkTimedOut: false };
+  }
+
   const serverPending = await withTimeout(
     getPendingDropoffStudents(tripId),
     PENDING_CHECK_TIMEOUT_MS,
@@ -45,15 +65,18 @@ export async function resolvePendingDropoffStudents(
   );
 
   if (serverPending !== null) {
-    return serverPending;
+    return { students: serverPending, networkTimedOut: false };
   }
 
-  const localPending = getLocalPendingDropoff(tripId);
   if (localPending.length > 0) {
-    return localPending;
+    return { students: localPending, networkTimedOut: true };
   }
 
-  return getCachedPendingDropoff(tripId);
+  const cachedPending = await getCachedPendingDropoff(tripId);
+  return {
+    students: cachedPending,
+    networkTimedOut: cachedPending.length > 0,
+  };
 }
 
 /** Solo envía la cola offline — sin recargar el padrón completo. */

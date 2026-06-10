@@ -31,7 +31,8 @@ export function AppTabHeaderBar({ onLogout }: AppTabHeaderBarProps) {
           alignItems: 'center',
           justifyContent: 'space-between',
           paddingHorizontal: tokens.spacing.lg,
-          paddingVertical: tokens.spacing.md,
+          paddingTop: tokens.spacing.md,
+          paddingBottom: tokens.spacing.sm,
           gap: tokens.spacing.md,
         },
         brandBlock: {
@@ -41,13 +42,23 @@ export function AppTabHeaderBar({ onLogout }: AppTabHeaderBarProps) {
           gap: tokens.spacing.md,
           minWidth: 0,
         },
+        escudoWrap: {
+          width: 44,
+          height: 44,
+          borderRadius: tokens.radius.full,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: colors.navLogoWrapBg,
+          borderWidth: 1,
+          borderColor: colors.navLogoWrapBorder,
+        },
         escudo: {
-          width: 46,
-          height: 46,
+          width: 38,
+          height: 38,
         },
         brandText: {
           flex: 1,
-          gap: 2,
+          gap: tokens.spacing.xs,
         },
         brandTitle: {
           ...tokens.typography.headline,
@@ -60,21 +71,18 @@ export function AppTabHeaderBar({ onLogout }: AppTabHeaderBarProps) {
         actionsBlock: {
           flexDirection: 'row',
           alignItems: 'center',
-          gap: tokens.spacing.xs,
+          gap: 2,
         },
         iconButton: {
-          minWidth: 40,
-          minHeight: 40,
+          minWidth: 38,
+          minHeight: 38,
+          borderRadius: tokens.radius.full,
           alignItems: 'center',
           justifyContent: 'center',
         },
         accentBar: {
           height: 3,
           backgroundColor: colors.accent,
-        },
-        separatorBar: {
-          height: 1,
-          backgroundColor: colors.borderMuted,
         },
       }),
     [colors, insets.top, tokens],
@@ -84,12 +92,15 @@ export function AppTabHeaderBar({ onLogout }: AppTabHeaderBarProps) {
     <View style={styles.root}>
       <View style={styles.mainRow}>
         <View style={styles.brandBlock}>
-          <Image
-            source={ESCUDO}
-            style={styles.escudo}
-            resizeMode="contain"
-            accessibilityLabel="Escudo Municipalidad de Cerro Azul"
-          />
+          <View style={styles.escudoWrap}>
+            <Image
+              source={ESCUDO}
+              style={styles.escudo}
+              resizeMode="contain"
+              accessibilityLabel="Escudo Municipalidad de Cerro Azul"
+            />
+          </View>
+
           <View style={styles.brandText}>
             <Text style={styles.brandTitle} numberOfLines={1}>
               Bus Escolar
@@ -105,24 +116,23 @@ export function AppTabHeaderBar({ onLogout }: AppTabHeaderBarProps) {
           <TouchableOpacity
             onPress={() => router.push('/(tabs)/profile')}
             style={styles.iconButton}
-            activeOpacity={0.8}
+            activeOpacity={0.75}
             accessibilityLabel="Abrir perfil"
           >
-            <MaterialCommunityIcons name="account-circle-outline" size={24} color={colors.navLogoutIcon} />
+            <MaterialCommunityIcons name="account-circle-outline" size={22} color={colors.navLogoutIcon} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={onLogout}
             style={styles.iconButton}
-            activeOpacity={0.8}
+            activeOpacity={0.75}
             accessibilityLabel="Cerrar sesión"
           >
-            <MaterialCommunityIcons name="logout" size={22} color={colors.navLogoutIcon} />
+            <MaterialCommunityIcons name="logout" size={20} color={colors.navLogoutIcon} />
           </TouchableOpacity>
         </View>
       </View>
 
       <View style={styles.accentBar} />
-      <View style={styles.separatorBar} />
     </View>
   );
 }

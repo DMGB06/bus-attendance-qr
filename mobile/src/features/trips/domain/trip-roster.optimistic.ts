@@ -32,7 +32,10 @@ export function patchRosterItemsForEvent(
       return item;
     }
 
-    const status = eventType === "bajo" ? "completed" : "onboard";
+    const status =
+      eventType === "bajo" || eventType === "ausente"
+        ? "completed"
+        : "onboard";
 
     return {
       ...item,
@@ -43,4 +46,16 @@ export function patchRosterItemsForEvent(
       canMarkExit: status === "onboard",
     };
   });
+}
+
+export function patchRosterItemsForBulkDropoff(
+  items: TripRosterItem[],
+  tripId: string,
+  studentIds: string[],
+): TripRosterItem[] {
+  return studentIds.reduce(
+    (currentItems, studentId) =>
+      patchRosterItemsForEvent(currentItems, tripId, studentId, "bajo"),
+    items,
+  );
 }

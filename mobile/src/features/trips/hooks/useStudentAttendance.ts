@@ -1,19 +1,27 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { getErrorMessage } from "@/src/shared/utils/errors";
+import { perfStart } from "@/src/shared/utils/perfMark";
 import { notifyScanSuccess } from "@/src/shared/utils/haptics";
+import {
+  resolveScannerEventForStudent,
+  type ResolvedScannerEvent,
+} from "@/src/features/trips/domain/scanner-event.rules";
+import { findStudentInStudentList, searchStudentsInStudentList } from "@/src/features/trips/services/students-cache.service";
 import {
   findStudentByLookup,
   searchStudentsByName,
 } from "@/src/features/trips/services/students.service";
-import { rosterStoreActions } from "@/src/features/trips/store/rosterStore";
-import type { Student } from "@/src/features/trips/types";
+import { rosterStoreActions, useRosterItems } from "@/src/features/trips/store/rosterStore";
+import type { Student, TripDirection } from "@/src/features/trips/types";
 
 export type LookupState = "idle" | "searching" | "found" | "not_found";
 export type ScannerViewMode = "scanner" | "manual";
 
 const SCAN_DEBOUNCE_MS = 800;
 const CANCEL_RESCAN_SUPPRESS_MS = 3000;
+const MANUAL_SEARCH_DEBOUNCE_MS = 300;
+export const MANUAL_SEARCH_MIN_CHARS = 2;
 
 type ScanRecord = {
   value: string;
@@ -21,35 +29,41 @@ type ScanRecord = {
   suppressMs: number;
 };
 
-export function useStudentAttendance(tripId: string | undefined) {
+export function useStudentAttendance(
+  tripId: string | undefined,
+  tripDirection: TripDirection | undefined,
+) {
   const [lookupState, setLookupState] = useState<LookupState>("idle");
   const [viewMode, setViewMode] = useState<ScannerViewMode>("scanner");
   const [scannedValue, setScannedValue] = useState("");
   const [manualName, setManualName] = useState("");
   const [manualCandidates, setManualCandidates] = useState<Student[]>([]);
   const [student, setStudent] = useState<Student | null>(null);
+  const [resolvedEvent, setResolvedEvent] = useState<Extract<ResolvedScannerEvent, { ok: true }> | null>(
+    null,
+  );
   const [isConfirmModalVisible, setIsConfirmModalVisible] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
+  const rosterItems = useRosterItems(tripId);
+  const rosterStudents = useMemo(
+    () => rosterItems.map((item) => item.student),
+    [rosterItems],
+  );
 
   const scanLockedRef = useRef(false);
   const lastScannedRef = useRef<ScanRecord | null>(null);
   const confirmModalOpenRef = useRef(false);
   const studentRef = useRef<Student | null>(null);
+  const resolveInFlightRef = useRef<string | null>(null);
+  const manualSearchRequestRef = useRef(0);
 
   confirmModalOpenRef.current = isConfirmModalVisible;
   studentRef.current = student;
 
   const isSearching = lookupState === "searching";
-
-  useEffect(() => {
-    if (!tripId) {
-      return;
-    }
-    void rosterStoreActions.hydrateTripRoster(tripId);
-  }, [tripId]);
 
   const releaseScanLock = useCallback(() => {
     scanLockedRef.current = false;
@@ -65,10 +79,12 @@ export function useStudentAttendance(tripId: string | undefined) {
       const clearSuccess = options?.clearSuccess ?? false;
 
       releaseScanLock();
+      resolveInFlightRef.current = null;
       lastScannedRef.current = null;
       setLookupState("idle");
       setScannedValue("");
       setStudent(null);
+      setResolvedEvent(null);
       setManualCandidates([]);
       setIsConfirmModalVisible(false);
       setErrorMessage(null);
@@ -114,21 +130,37 @@ export function useStudentAttendance(tripId: string | undefined) {
     }
   }, [isRegistering, resetLookupSession, scannedValue, viewMode]);
 
-  const guardDuplicateRegistration = useCallback((studentId: string) => {
-    const duplicateMessage = rosterStoreActions.getRegistrationValidationError(studentId, "subio");
-    if (duplicateMessage) {
-      setErrorMessage(duplicateMessage);
-      setLookupState("idle");
-      setIsConfirmModalVisible(false);
-      releaseScanLock();
-      return true;
-    }
-    return false;
-  }, [releaseScanLock]);
+  const resolveEventForStudent = useCallback(
+    (studentId: string): ResolvedScannerEvent => {
+      if (!tripDirection) {
+        return resolveScannerEventForStudent("recojo", [], studentId);
+      }
+      return resolveScannerEventForStudent(tripDirection, rosterItems, studentId);
+    },
+    [tripDirection, rosterItems],
+  );
+
+  const guardScannerRegistration = useCallback(
+    (studentId: string) => {
+      const resolved = resolveEventForStudent(studentId);
+      if (!resolved.ok) {
+        setErrorMessage(resolved.error);
+        setResolvedEvent(null);
+        setLookupState("idle");
+        setIsConfirmModalVisible(false);
+        releaseScanLock();
+        return true;
+      }
+
+      setResolvedEvent(resolved);
+      return false;
+    },
+    [releaseScanLock, resolveEventForStudent],
+  );
 
   const selectStudent = useCallback(
     (foundStudent: Student) => {
-      if (guardDuplicateRegistration(foundStudent.id)) {
+      if (guardScannerRegistration(foundStudent.id)) {
         return;
       }
 
@@ -140,7 +172,7 @@ export function useStudentAttendance(tripId: string | undefined) {
       setIsConfirmModalVisible(true);
       lockScan();
     },
-    [guardDuplicateRegistration, lockScan],
+    [guardScannerRegistration, lockScan],
   );
 
   const resolveStudentByCode = useCallback(
@@ -152,16 +184,33 @@ export function useStudentAttendance(tripId: string | undefined) {
         return;
       }
 
-      setLookupState("searching");
+      if (resolveInFlightRef.current === normalizedValue) {
+        return;
+      }
+
+      resolveInFlightRef.current = normalizedValue;
       setErrorMessage(null);
       setSuccessMessage(null);
       setInfoMessage(null);
       setStudent(null);
+      setResolvedEvent(null);
       setManualCandidates([]);
       setScannedValue(normalizedValue);
 
+      const endResolve = perfStart("scanner.resolveStudentByCode");
       try {
-        const foundStudent = await findStudentByLookup(normalizedValue);
+        const localMatch = rosterStudents.length
+          ? findStudentInStudentList(rosterStudents, normalizedValue)
+          : null;
+
+        if (localMatch) {
+          void notifyScanSuccess();
+          selectStudent(localMatch);
+          return;
+        }
+
+        setLookupState("searching");
+        const foundStudent = await findStudentByLookup(normalizedValue, rosterStudents);
 
         if (!foundStudent) {
           setLookupState("not_found");
@@ -184,9 +233,14 @@ export function useStudentAttendance(tripId: string | undefined) {
         setLookupState("idle");
         setErrorMessage(getErrorMessage(error, "No se pudo buscar al alumno."));
         releaseScanLock();
+      } finally {
+        if (resolveInFlightRef.current === normalizedValue) {
+          resolveInFlightRef.current = null;
+        }
+        endResolve();
       }
     },
-    [releaseScanLock, selectStudent],
+    [releaseScanLock, rosterStudents, selectStudent],
   );
 
   const handleBarcodeScanned = useCallback(
@@ -200,7 +254,8 @@ export function useStudentAttendance(tripId: string | undefined) {
         scanLockedRef.current ||
         isSearching ||
         isRegistering ||
-        studentRef.current
+        studentRef.current ||
+        resolveInFlightRef.current
       ) {
         return;
       }
@@ -221,60 +276,135 @@ export function useStudentAttendance(tripId: string | undefined) {
     [viewMode, isSearching, isRegistering, lockScan, resolveStudentByCode],
   );
 
-  const handleManualSearch = useCallback(async () => {
-    if (isSearching || isRegistering) {
-      return;
-    }
+  const runManualSearch = useCallback(
+    async (nameOverride?: string) => {
+      if (isRegistering) {
+        return;
+      }
 
-    const normalizedName = manualName.trim();
-    if (!normalizedName) {
-      setErrorMessage("Ingresa el nombre del alumno.");
-      return;
-    }
+      const normalizedName = (nameOverride ?? manualName).trim();
+      if (!normalizedName) {
+        setErrorMessage("Ingresa el nombre del alumno.");
+        return;
+      }
 
-    setLookupState("searching");
-    setErrorMessage(null);
-    setSuccessMessage(null);
-    setInfoMessage(null);
-    setStudent(null);
-    setManualCandidates([]);
-    setScannedValue("");
-    lockScan();
+      if (normalizedName.length < MANUAL_SEARCH_MIN_CHARS) {
+        setManualCandidates([]);
+        setErrorMessage(null);
+        setInfoMessage(`Escribe al menos ${MANUAL_SEARCH_MIN_CHARS} caracteres para buscar.`);
+        return;
+      }
 
-    try {
-      const candidates = await searchStudentsByName(normalizedName);
+      const requestId = manualSearchRequestRef.current + 1;
+      manualSearchRequestRef.current = requestId;
 
-      if (!candidates.length) {
-        setLookupState("not_found");
-        setErrorMessage(
-          "No encontramos coincidencias en el padrón oficial. Revisa el nombre e intenta de nuevo.",
-        );
+      setLookupState("searching");
+      setErrorMessage(null);
+      setSuccessMessage(null);
+      setInfoMessage(null);
+      setStudent(null);
+      setResolvedEvent(null);
+      setManualCandidates([]);
+      setScannedValue("");
+      lockScan();
+
+      try {
+        const localCandidates = rosterStudents.length
+          ? searchStudentsInStudentList(rosterStudents, normalizedName, 8)
+          : [];
+
+        const candidates =
+          localCandidates.length > 0
+            ? localCandidates
+            : await searchStudentsByName(normalizedName, 8, rosterStudents);
+
+        if (manualSearchRequestRef.current !== requestId) {
+          return;
+        }
+
+        if (!candidates.length) {
+          setLookupState("not_found");
+          setErrorMessage(
+            "No encontramos coincidencias en el padrón oficial. Revisa el nombre e intenta de nuevo.",
+          );
+          releaseScanLock();
+          return;
+        }
+
+        if (candidates.length === 1) {
+          selectStudent(candidates[0]);
+          return;
+        }
+
+        setLookupState("idle");
+        setManualCandidates(candidates);
+        setInfoMessage(`Se encontraron ${candidates.length} alumnos. Selecciona uno.`);
         releaseScanLock();
-        return;
+      } catch (error: unknown) {
+        if (manualSearchRequestRef.current !== requestId) {
+          return;
+        }
+        setLookupState("idle");
+        setErrorMessage(getErrorMessage(error, "No se pudo buscar al alumno."));
+        releaseScanLock();
       }
+    },
+    [
+      isRegistering,
+      manualName,
+      lockScan,
+      releaseScanLock,
+      rosterStudents,
+      selectStudent,
+    ],
+  );
 
-      if (candidates.length === 1) {
-        selectStudent(candidates[0]);
-        return;
-      }
-
-      setLookupState("idle");
-      setManualCandidates(candidates);
-      setInfoMessage(`Se encontraron ${candidates.length} alumnos. Selecciona uno.`);
-      releaseScanLock();
-    } catch (error: unknown) {
-      setLookupState("idle");
-      setErrorMessage(getErrorMessage(error, "No se pudo buscar al alumno."));
-      releaseScanLock();
+  const handleManualSearch = useCallback(async () => {
+    if (isSearching) {
+      return;
     }
-  }, [isSearching, isRegistering, manualName, lockScan, releaseScanLock, selectStudent]);
+    await runManualSearch();
+  }, [isSearching, runManualSearch]);
+
+  useEffect(() => {
+    if (viewMode !== "manual") {
+      return;
+    }
+
+    const trimmed = manualName.trim();
+    if (trimmed.length < MANUAL_SEARCH_MIN_CHARS) {
+      manualSearchRequestRef.current += 1;
+      setManualCandidates([]);
+      setLookupState("idle");
+      releaseScanLock();
+      if (trimmed.length === 0) {
+        setInfoMessage(null);
+      }
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      void runManualSearch(trimmed);
+    }, MANUAL_SEARCH_DEBOUNCE_MS);
+
+    return () => clearTimeout(timer);
+  }, [manualName, viewMode, runManualSearch, releaseScanLock]);
 
   const handleConfirmAttendance = useCallback(async () => {
     if (!tripId || !student) {
       return;
     }
 
-    const duplicateMessage = rosterStoreActions.getRegistrationValidationError(student.id, "subio");
+    const resolved = resolveEventForStudent(student.id);
+    if (!resolved.ok) {
+      setErrorMessage(resolved.error);
+      return;
+    }
+
+    const duplicateMessage = rosterStoreActions.getRegistrationValidationError(
+      student.id,
+      resolved.eventType,
+    );
     if (duplicateMessage) {
       setErrorMessage(duplicateMessage);
       return;
@@ -287,25 +417,27 @@ export function useStudentAttendance(tripId: string | undefined) {
     setErrorMessage(null);
 
     clearStudentSelection(true);
-    setSuccessMessage(`Asistencia registrada para ${studentName}.`);
+    setSuccessMessage(resolved.successMessage(studentName));
 
     try {
       const result = await rosterStoreActions.registerStudentAttendance(
         tripId,
         studentToRegister.id,
-        "subio",
+        resolved.eventType,
       );
 
       if (result.duplicate) {
         setSuccessMessage(null);
-        setErrorMessage("Ya registrado");
+        setErrorMessage(
+          resolved.eventType === "bajo"
+            ? "La salida de este alumno ya fue registrada."
+            : "Ya registrado",
+        );
         return;
       }
 
       if (result.queued) {
-        setSuccessMessage(
-          `Asistencia registrada para ${studentName}. Se sincronizará al recuperar señal.`,
-        );
+        setSuccessMessage(resolved.queuedMessage(studentName));
       }
     } catch (error: unknown) {
       setSuccessMessage(null);
@@ -315,13 +447,41 @@ export function useStudentAttendance(tripId: string | undefined) {
       setIsRegistering(false);
       releaseScanLock();
     }
-  }, [tripId, student, clearStudentSelection, releaseScanLock]);
+  }, [
+    tripId,
+    student,
+    resolveEventForStudent,
+    clearStudentSelection,
+    releaseScanLock,
+  ]);
 
   const handleManualNameChange = useCallback((value: string) => {
     setManualName(value);
     setErrorMessage(null);
-    setInfoMessage(null);
+    if (value.trim().length >= MANUAL_SEARCH_MIN_CHARS) {
+      setInfoMessage(null);
+    }
   }, []);
+
+  useEffect(() => {
+    if (!student) {
+      setResolvedEvent(null);
+      return;
+    }
+
+    const resolved = resolveEventForStudent(student.id);
+    if (!resolved.ok) {
+      setErrorMessage(resolved.error);
+      setResolvedEvent(null);
+      setIsConfirmModalVisible(false);
+      setStudent(null);
+      setLookupState("idle");
+      releaseScanLock();
+      return;
+    }
+
+    setResolvedEvent(resolved);
+  }, [student, resolveEventForStudent, releaseScanLock]);
 
   return {
     viewMode,
@@ -331,6 +491,7 @@ export function useStudentAttendance(tripId: string | undefined) {
     manualName,
     manualCandidates,
     student,
+    resolvedEvent,
     isConfirmModalVisible,
     isRegistering,
     errorMessage,

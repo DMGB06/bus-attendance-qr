@@ -7,6 +7,9 @@ const STUDENTS_KEY = "@buscontrol/roster/students";
 const TRIP_ATTENDANCE_PREFIX = "@buscontrol/roster/attendance/";
 const TRIP_ROSTER_PREFIX = "@buscontrol/roster/snapshot/";
 
+/** TTL del padrón en AsyncStorage — refresh ligero solo trae asistencia si está vigente. */
+export const STUDENTS_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
 type CachedStudents = {
   students: Student[];
   savedAt: string;
@@ -53,6 +56,26 @@ export async function saveCachedStudents(students: Student[]): Promise<void> {
     students,
     savedAt: new Date().toISOString(),
   } satisfies CachedStudents);
+}
+
+export function isStudentsCacheFresh(savedAt: string | null | undefined): boolean {
+  if (!savedAt) {
+    return false;
+  }
+  const savedMs = Date.parse(savedAt);
+  if (Number.isNaN(savedMs)) {
+    return false;
+  }
+  return Date.now() - savedMs < STUDENTS_CACHE_TTL_MS;
+}
+
+/** Fuerza re-descarga del padrón en el próximo refresh completo. */
+export async function invalidateCachedStudents(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(STUDENTS_KEY);
+  } catch {
+    /* non-fatal */
+  }
 }
 
 export async function loadCachedTripAttendance(

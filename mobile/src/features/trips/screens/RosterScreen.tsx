@@ -1,39 +1,36 @@
-import { Fragment, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { HelperText, Searchbar, Text } from "react-native-paper";
-import { useRouter } from "expo-router";
+import { HelperText, Searchbar, Text, Button } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-import { formatTripDirectionLabel } from "@/src/features/trips/components/TripHeader";
+import { NoActiveTripView } from "@/src/features/trips/components/NoActiveTripView";
+import { RosterAfternoonBanner } from "@/src/features/trips/components/roster/RosterAfternoonBanner";
+import { RosterLevelSuggestionBanner } from "@/src/features/trips/components/roster/RosterLevelSuggestionBanner";
 import { RosterStudentRow } from "@/src/features/trips/components/roster/RosterStudentRow";
+import { ROSTER_ROW_HEIGHT } from "@/src/features/trips/components/roster/rosterRowTheme";
 import { RosterSyncBanner } from "@/src/features/trips/components/roster/RosterSyncBanner";
 import { useTripRoster, type RosterViewMode } from "@/src/features/trips/hooks/useTripRoster";
+import type { TripRosterItem } from "@/src/features/trips/services/trip-roster.service";
 import { useTripStore } from "@/src/features/trips/store/tripStore";
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
 import { useScrollBottomPadding } from "@/src/core/theme/useScrollBottomPadding";
+import { useScreenPerfMark } from "@/src/shared/hooks/useScreenPerfMark";
 
-type RosterChipFilter = Extract<RosterViewMode, "all" | "pending" | "attended">;
-
-const CHIP_FILTERS: { id: RosterChipFilter; label: (pendingCount: number) => string }[] = [
-  { id: "all", label: () => "Todos" },
-  { id: "pending", label: (pendingCount) => `Pendientes (${pendingCount})` },
-  { id: "attended", label: () => "Asistieron" },
-];
-
-const STAT_FILTERS: { id: RosterViewMode; label: string }[] = [
-  { id: "attended", label: "Asistieron" },
-  { id: "onboard", label: "En bus" },
-  { id: "pending", label: "Pendientes" },
-];
+type DriverFilter = {
+  id: RosterViewMode;
+  label: string;
+  count: number;
+};
 
 export default function RosterScreen() {
-  const router = useRouter();
+  useScreenPerfMark("roster");
   const insets = useSafeAreaInsets();
   const { colors, tokens } = useAppTheme();
   const scrollBottom = useScrollBottomPadding(tokens.spacing.md);
   const { activeTrip } = useTripStore();
   const roster = useTripRoster(activeTrip?.id);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const styles = useMemo(
     () =>
@@ -56,50 +53,29 @@ export default function RosterScreen() {
         toolbar: {
           paddingHorizontal: tokens.spacing.lg,
           paddingTop: tokens.spacing.md,
-          gap: tokens.spacing.md,
+          paddingBottom: tokens.spacing.sm,
+          gap: tokens.spacing.sm,
         },
-        header: {
-          gap: tokens.spacing.xs,
+        titleRow: {
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: tokens.spacing.sm,
         },
         title: {
           ...tokens.typography.title2,
           color: colors.textTitle,
         },
-        subtitle: {
-          ...tokens.typography.body,
-          color: colors.textMuted,
-        },
-        statsBar: {
-          flexDirection: "row",
-          backgroundColor: colors.primary,
-          borderRadius: tokens.radius.md,
-          overflow: "hidden",
-        },
-        statCell: {
-          flex: 1,
+        searchToggle: {
+          width: 40,
+          height: 40,
+          borderRadius: tokens.radius.full,
           alignItems: "center",
-          paddingVertical: tokens.spacing.md,
-          gap: 2,
+          justifyContent: "center",
+          backgroundColor: colors.surfaceTrack,
         },
-        statCellActive: {
-          backgroundColor: "rgba(255, 255, 255, 0.14)",
-        },
-        statLabelActive: {
-          color: colors.textOnPrimary,
-        },
-        statDivider: {
-          width: 1,
-          backgroundColor: "rgba(255, 255, 255, 0.2)",
-          marginVertical: tokens.spacing.sm,
-        },
-        statValue: {
-          ...tokens.typography.title2,
-          color: colors.textOnPrimary,
-        },
-        statLabel: {
-          ...tokens.typography.overline,
-          color: "rgba(255, 255, 255, 0.75)",
-          letterSpacing: 0.3,
+        searchToggleActive: {
+          backgroundColor: colors.primarySoftBg,
         },
         filterBar: {
           flexDirection: "row",
@@ -113,17 +89,40 @@ export default function RosterScreen() {
           alignItems: "center",
           paddingVertical: tokens.spacing.sm,
           borderRadius: tokens.radius.sm,
+          gap: 2,
+          minWidth: 0,
         },
         filterButtonActive: {
           backgroundColor: colors.surfaceCard,
         },
+        filterButtonHighlight: {
+          backgroundColor: colors.feedbackWarningBg,
+        },
+        filterValue: {
+          ...tokens.typography.title3,
+          color: colors.textTitle,
+        },
+        filterValueHighlight: {
+          color: colors.attendancePending,
+        },
         filterLabel: {
-          ...tokens.typography.label,
+          ...tokens.typography.caption,
           color: colors.textMuted,
           textAlign: "center",
+          fontSize: 11,
+        },
+        backLink: {
+          flexDirection: "row",
+          alignItems: "center",
+          gap: tokens.spacing.xs,
+        },
+        backLinkText: {
+          ...tokens.typography.bodyStrong,
+          color: colors.primary,
         },
         filterLabelActive: {
           color: colors.textTitle,
+          fontWeight: "600",
         },
         search: {
           backgroundColor: colors.surfaceCard,
@@ -147,97 +146,139 @@ export default function RosterScreen() {
           borderColor: colors.borderMuted,
           overflow: "hidden",
         },
-        listHeader: {
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          paddingHorizontal: tokens.spacing.md,
-          paddingVertical: tokens.spacing.sm,
-          backgroundColor: colors.surfaceTrack,
-          borderBottomWidth: 1,
-          borderBottomColor: colors.borderMuted,
-        },
-        listHeaderText: {
-          ...tokens.typography.label,
-          color: colors.textMuted,
-        },
-        listHeaderCount: {
-          ...tokens.typography.caption,
-          color: colors.textMuted,
-        },
         list: {
           paddingBottom: tokens.spacing.xs,
         },
-        emptyState: {
+        listEmptyState: {
           padding: tokens.spacing.xl,
           alignItems: "center",
           gap: tokens.spacing.sm,
         },
-        emptyTitle: {
+        listEmptyTitle: {
           ...tokens.typography.headline,
           color: colors.textTitle,
         },
-        emptyBody: {
+        listEmptyBody: {
           ...tokens.typography.body,
           color: colors.textMuted,
           textAlign: "center",
         },
-        emptyButton: {
-          marginTop: tokens.spacing.sm,
-          backgroundColor: colors.primary,
-          borderRadius: tokens.radius.md,
-          paddingHorizontal: tokens.spacing.xl,
-          paddingVertical: tokens.spacing.md,
-        },
-        emptyButtonText: {
-          ...tokens.typography.bodyStrong,
-          color: colors.textOnPrimary,
-        },
         messages: {
           paddingHorizontal: tokens.spacing.lg,
+        },
+        bulkButton: {
+          borderRadius: tokens.radius.md,
+          backgroundColor: colors.primary,
+        },
+        bulkButtonContent: {
+          height: tokens.layout.buttonHeight,
+        },
+        bulkButtonLabel: {
+          ...tokens.typography.bodyStrong,
+          color: colors.textOnPrimary,
         },
       }),
     [colors, tokens],
   );
 
+  const driverFilters = useMemo((): DriverFilter[] => {
+    const pendingLabel = roster.isAfternoonReturn ? "Faltan" : "Pendientes";
+    const onboardLabel = roster.isAfternoonReturn ? "A bordo" : "En bus";
+
+    const filters: DriverFilter[] = [
+      {
+        id: "pending",
+        label: pendingLabel,
+        count: roster.stats.pendingCount,
+      },
+      {
+        id: "onboard",
+        label: onboardLabel,
+        count: roster.stats.onboardCount,
+      },
+      {
+        id: "all",
+        label: "Todos",
+        count:
+          roster.useSuggestedLevelFilter && roster.suggestedNivel
+            ? roster.suggestedLevelMatchCount
+            : roster.totalStudentCount,
+      },
+    ];
+
+    return filters;
+  }, [roster.isAfternoonReturn, roster.totalStudentCount, roster.stats, roster.suggestedLevelMatchCount, roster.suggestedNivel, roster.useSuggestedLevelFilter]);
+
+  const tripDirection = activeTrip?.direction ?? "recojo";
+  const isAfternoonReturn = roster.isAfternoonReturn;
+  const viewMode = roster.viewMode;
+  const rowTheme = useMemo(() => ({ colors, tokens }), [colors, tokens]);
+  const showMorningHintInList =
+    isAfternoonReturn && (viewMode === "prioritarios" || viewMode === "pending");
+
+  const getItemLayout = useCallback(
+    (_: unknown, index: number) => ({
+      length: ROSTER_ROW_HEIGHT,
+      offset: ROSTER_ROW_HEIGHT * index,
+      index,
+    }),
+    [],
+  );
+
+  const keyExtractor = useCallback((item: TripRosterItem) => item.student.id, []);
+
+  const renderRosterItem = useCallback(
+    ({ item }: { item: TripRosterItem }) => {
+      const isMorningRiderStudent = roster.isMorningRider(item.student.id);
+      return (
+        <RosterStudentRow
+          item={item}
+          tripDirection={tripDirection}
+          theme={rowTheme}
+          showMorningHint={showMorningHintInList && isMorningRiderStudent}
+          isMorningRider={isMorningRiderStudent}
+          canMarkAbsent={
+            isAfternoonReturn &&
+            item.status === "pending" &&
+            (viewMode === "prioritarios" || isMorningRiderStudent)
+          }
+          onMarkExit={roster.handleExitMark}
+          onMarkAbsent={roster.handleMarkAbsent}
+          isMarkingExit={roster.isMarkingStudentId === item.student.id}
+        />
+      );
+    },
+    [
+      tripDirection,
+      rowTheme,
+      showMorningHintInList,
+      isAfternoonReturn,
+      viewMode,
+      roster.isMorningRider,
+      roster.handleExitMark,
+      roster.handleMarkAbsent,
+      roster.isMarkingStudentId,
+    ],
+  );
+
   if (!activeTrip) {
-    return (
-      <SafeAreaView
-        edges={["bottom", "left", "right"]}
-        style={[styles.container, { paddingBottom: insets.bottom + tokens.spacing.lg }]}
-      >
-        <View style={styles.centerFill}>
-          <View style={styles.emptyState}>
-            <MaterialCommunityIcons name="bus-alert" size={40} color={colors.textMuted} />
-            <Text style={styles.emptyTitle}>Sin viaje activo</Text>
-            <Text style={styles.emptyBody}>Inicia un viaje para ver la lista de asistencia.</Text>
-            <Pressable style={styles.emptyButton} onPress={() => router.replace("/(tabs)/trip")}>
-              <Text style={styles.emptyButtonText}>Ir a inicio</Text>
-            </Pressable>
-          </View>
-        </View>
-      </SafeAreaView>
-    );
+    return <NoActiveTripView context="roster" />;
   }
 
   const emptyBodyByMode: Record<RosterViewMode, string> = {
-    all: "No encontramos alumnos con ese filtro.",
-    pending: "Todos los alumnos ya registraron asistencia.",
+    all: "No hay alumnos que coincidan con la búsqueda.",
+    pending: roster.isAfternoonReturn
+      ? "Todos los alumnos ya fueron escaneados."
+      : "Todos los alumnos ya registraron asistencia.",
     onboard: "Nadie está a bordo en este momento.",
+    completed: roster.isAfternoonReturn
+      ? "Aún no hay alumnos registrados en casa o ausentes."
+      : "Aún no hay alumnos registrados en colegio o ausentes.",
     attended: "Aún no hay estudiantes con asistencia registrada.",
+    prioritarios: "No hay prioritarios pendientes de escaneo.",
   };
 
   const emptyBody = emptyBodyByMode[roster.viewMode];
-  const listHeaderLabel =
-    roster.viewMode === "pending"
-      ? "Pendientes"
-      : roster.viewMode === "onboard"
-        ? "En bus"
-        : roster.viewMode === "attended"
-          ? "Asistieron"
-          : "Alumnos";
-
-  const totalShown = roster.filteredItems.length;
 
   return (
     <SafeAreaView
@@ -245,66 +286,113 @@ export default function RosterScreen() {
       style={[styles.container, { paddingBottom: insets.bottom }]}
     >
       <View style={styles.toolbar}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Lista de asistencia</Text>
-          <Text style={styles.subtitle}>
-            {formatTripDirectionLabel(activeTrip.direction)} · {roster.items.length} alumnos en ruta
-          </Text>
+        <View style={styles.titleRow}>
+          {roster.viewMode === "prioritarios" ? (
+            <Pressable
+              style={styles.backLink}
+              onPress={() => roster.setViewMode("pending")}
+              accessibilityRole="button"
+            >
+              <MaterialCommunityIcons name="chevron-left" size={24} color={colors.primary} />
+              <Text style={styles.title}>Prioritarios</Text>
+            </Pressable>
+          ) : (
+            <Text style={styles.title}>Lista</Text>
+          )}
+          <Pressable
+            style={[
+              styles.searchToggle,
+              (searchOpen || roster.searchQuery.length > 0) && styles.searchToggleActive,
+            ]}
+            onPress={() => setSearchOpen((open) => !open)}
+            accessibilityRole="button"
+            accessibilityLabel="Buscar alumno"
+          >
+            <MaterialCommunityIcons
+              name="magnify"
+              size={22}
+              color={
+                searchOpen || roster.searchQuery.length > 0
+                  ? colors.primarySoftText
+                  : colors.textBody
+              }
+            />
+          </Pressable>
         </View>
 
-        <View style={styles.statsBar}>
-          {STAT_FILTERS.map((stat, index) => {
-            const isActive = roster.viewMode === stat.id;
-            const count =
-              stat.id === "attended"
-                ? roster.stats.attendedCount
-                : stat.id === "onboard"
-                  ? roster.stats.onboardCount
-                  : roster.stats.pendingCount;
-
-            return (
-              <Fragment key={stat.id}>
-                {index > 0 ? <View style={styles.statDivider} /> : null}
+        {roster.viewMode !== "prioritarios" ? (
+          <View style={styles.filterBar}>
+            {driverFilters.map((filter) => {
+              const isActive = roster.viewMode === filter.id;
+              return (
                 <Pressable
-                  style={[styles.statCell, isActive && styles.statCellActive]}
-                  onPress={() => roster.setViewMode(stat.id)}
+                  key={filter.id}
+                  style={[styles.filterButton, isActive && styles.filterButtonActive]}
+                  onPress={() => roster.setViewMode(filter.id)}
                 >
-                  <Text style={styles.statValue}>{count}</Text>
-                  <Text style={[styles.statLabel, isActive && styles.statLabelActive]}>
-                    {stat.label}
+                  <Text style={styles.filterValue}>{filter.count}</Text>
+                  <Text style={[styles.filterLabel, isActive && styles.filterLabelActive]}>
+                    {filter.label}
                   </Text>
                 </Pressable>
-              </Fragment>
-            );
-          })}
-        </View>
+              );
+            })}
+          </View>
+        ) : null}
 
-        <View style={styles.filterBar}>
-          {CHIP_FILTERS.map((filter) => {
-            const isActive = roster.viewMode === filter.id;
-            return (
-              <Pressable
-                key={filter.id}
-                style={[styles.filterButton, isActive && styles.filterButtonActive]}
-                onPress={() => roster.setViewMode(filter.id)}
-              >
-                <Text style={[styles.filterLabel, isActive && styles.filterLabelActive]}>
-                  {filter.label(roster.stats.pendingCount)}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        {roster.suggestedNivel ? (
+          <RosterLevelSuggestionBanner
+            suggestedNivel={roster.suggestedNivel}
+            visibleCount={roster.suggestedLevelMatchCount}
+            totalCount={roster.totalStudentCount}
+            withLevelDataCount={roster.withLevelDataCount}
+            isActive={roster.useSuggestedLevelFilter}
+            onToggle={() => roster.setUseSuggestedLevelFilter(!roster.useSuggestedLevelFilter)}
+          />
+        ) : null}
 
-        <Searchbar
-          placeholder="Buscar alumno o código..."
-          value={roster.searchQuery}
-          onChangeText={roster.setSearchQuery}
-          style={styles.search}
-          inputStyle={styles.searchInput}
-          elevation={0}
-          iconColor={colors.textMuted}
-        />
+        {roster.isAfternoonReturn ? (
+          <RosterAfternoonBanner
+            prioritariosCount={roster.stats.prioritariosCount}
+            prioritariosPreview={roster.prioritariosPreview}
+            onPress={
+              roster.stats.prioritariosCount > 0
+                ? () => roster.setViewMode("prioritarios")
+                : undefined
+            }
+          />
+        ) : null}
+
+        {searchOpen ? (
+          <Searchbar
+            placeholder="Nombre o código..."
+            value={roster.searchQuery}
+            onChangeText={roster.setSearchQuery}
+            style={styles.search}
+            inputStyle={styles.searchInput}
+            elevation={0}
+            iconColor={colors.textBody}
+            placeholderTextColor={colors.textMuted}
+            autoFocus
+          />
+        ) : null}
+
+        {roster.totalOnboardCount > 0 ? (
+          <Button
+            mode="contained"
+            icon={activeTrip.direction === "recojo" ? "school" : "home"}
+            loading={roster.isBulkDropping}
+            disabled={roster.isBulkDropping}
+            onPress={() => void roster.handleBulkDropoff()}
+            style={styles.bulkButton}
+            contentStyle={styles.bulkButtonContent}
+            labelStyle={styles.bulkButtonLabel}
+          >
+            {activeTrip.direction === "recojo"
+              ? `Dejar todos en colegio (${roster.totalOnboardCount})`
+              : `Dejar todos en casa (${roster.totalOnboardCount})`}
+          </Button>
+        ) : null}
       </View>
 
       <RosterSyncBanner
@@ -325,27 +413,23 @@ export default function RosterScreen() {
           </View>
         ) : !roster.isLoading && roster.filteredItems.length === 0 ? (
           <View style={styles.centerFill}>
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>Sin resultados</Text>
-              <Text style={styles.emptyBody}>{emptyBody}</Text>
+            <View style={styles.listEmptyState}>
+              <Text style={styles.listEmptyTitle}>Sin resultados</Text>
+              <Text style={styles.listEmptyBody}>{emptyBody}</Text>
             </View>
           </View>
         ) : (
           <View style={styles.listCard}>
-            <View style={styles.listHeader}>
-              <Text style={styles.listHeaderText}>{listHeaderLabel}</Text>
-              <Text style={styles.listHeaderCount}>{totalShown} mostrados</Text>
-            </View>
             <FlatList
               data={roster.filteredItems}
-              keyExtractor={(item) => item.student.id}
-              renderItem={({ item }) => (
-                <RosterStudentRow
-                  item={item}
-                  onMarkExit={roster.handleExitMark}
-                  isMarkingExit={roster.isMarkingStudentId === item.student.id}
-                />
-              )}
+              keyExtractor={keyExtractor}
+              renderItem={renderRosterItem}
+              getItemLayout={getItemLayout}
+              initialNumToRender={12}
+              maxToRenderPerBatch={8}
+              windowSize={7}
+              removeClippedSubviews
+              updateCellsBatchingPeriod={50}
               contentContainerStyle={[styles.list, { paddingBottom: scrollBottom }]}
               refreshing={roster.isRefreshing}
               onRefresh={() => void roster.loadRoster()}

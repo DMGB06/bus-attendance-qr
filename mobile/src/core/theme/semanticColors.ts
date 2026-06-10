@@ -453,25 +453,64 @@ export const highContrastSemanticColors: SemanticColors = {
   ...lightSemanticColors,
   screenSolid: "#FFFFFF",
   screenGradient: ["#FFFFFF", "#FFFFFF", "#FFFFFF"],
-  textMuted: "#1A1A1A",
-  textBody: "#111111",
-  textSubtitle: "#111111",
+  headerGradient: ["#FFFFFF", "#FFFFFF"],
+
+  textHero: "#000000",
+  textTitle: "#000000",
+  textSubtitle: "#1A1A1A",
+  textBody: "#1A1A1A",
+  textMuted: "#333333",
+
   borderDefault: "rgba(0, 0, 0, 0.35)",
   borderMuted: "rgba(0, 0, 0, 0.22)",
   borderHighlight: "#FFCC00",
+
   surfaceTrack: "#D8DEE8",
+  surfaceCard: "#FFFFFF",
   surfaceCardBorder: "rgba(0, 0, 0, 0.28)",
   surfaceDivider: "rgba(0, 0, 0, 0.18)",
-  primarySoftBg: "#1C3284",
-  primarySoftText: "#FFFFFF",
+  surfaceListItem: "#FFFFFF",
+
+  primarySoftBg: "#D4DCF0",
+  primarySoftText: "#1C3284",
+
+  tabBarInactive: "#444444",
+  tabBarBorder: "rgba(0, 0, 0, 0.25)",
+
+  navHeaderSubtitle: "#333333",
+
+  tripSelectorIdleText: "#333333",
+  tripActionOutlineText: "#1C3284",
+
+  scannerRootBg: "#FFFFFF",
+  scannerScreenContainerBg: "#FFFFFF",
+  scannerSelectionMuted: "#333333",
+  scannerSelectionLabel: "#1C3284",
+  scannerBadgeText: "#1C3284",
+  scannerHintText: "#FFFFFF",
+  scannerOverlay: "rgba(0, 0, 0, 0.28)",
+
+  feedbackWarningBg: "rgba(255, 204, 0, 0.28)",
+  feedbackWarningBorder: "rgba(0, 0, 0, 0.35)",
+  feedbackWarningTitle: "#000000",
+  feedbackWarningBody: "#1A1A1A",
+  feedbackWarningGlyph: "#1C3284",
+
+  modalSubtitle: "#333333",
+  authFooter: "#333333",
+  authBottomNote: "#333333",
+  authInputPlaceholder: "#444444",
+  authIconMuted: "#444444",
+
+  sky: "#1C3284",
+
+  statusBadgeText: "#1C3284",
+  statusBadgeBg: "rgba(93, 184, 229, 0.35)",
+
   attendancePending: "#B91C1C",
   attendanceOnboard: "#1C3284",
   attendanceCompleted: "#166534",
   attendanceLabel: "#FFFFFF",
-  scannerHintText: "#FFFFFF",
-  scannerOverlay: "rgba(0, 0, 0, 0.28)",
-  feedbackWarningBorder: "rgba(0, 0, 0, 0.3)",
-  feedbackWarningBody: "#111111",
 };
 
 export function getSemanticColors(

@@ -13,6 +13,7 @@ export function confirmAlert({
   message,
   confirmLabel = "Confirmar",
   cancelLabel = "Cancelar",
+  destructive = false,
 }: ConfirmAlertOptions): Promise<boolean> {
   if (Platform.OS === "web") {
     if (typeof window !== "undefined" && typeof window.confirm === "function") {
@@ -30,7 +31,7 @@ export function confirmAlert({
         { text: cancelLabel, style: "cancel", onPress: () => resolve(false) },
         {
           text: confirmLabel,
-          style: "default",
+          style: destructive ? "destructive" : "default",
           onPress: () => resolve(true),
         },
       ],

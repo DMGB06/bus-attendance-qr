@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 import type { Session } from '@supabase/supabase-js';
 import { Redirect, Stack, useSegments } from 'expo-router';
@@ -10,8 +10,11 @@ import { getSession } from '@/src/features/auth/services/auth.service';
 import { useTripStore } from '@/src/features/trips/store/tripStore';
 import { AppThemeProvider } from '@/src/core/theme/ThemeProvider';
 import { AppLoadingScreen } from '@/src/shared/ui/AppLoadingScreen';
+import { perfMarkBootReady } from '@/src/shared/utils/perfMark';
 
 void SplashScreen.preventAutoHideAsync();
+
+const bootStartedAt = performance.now();
 
 export default function RootLayout() {
   const [fontsLoaded, fontsError] = useFonts({
@@ -23,29 +26,27 @@ export default function RootLayout() {
   const { hydrateActiveTrip, clearActiveTrip } = useTripStore();
   const [session, setSession] = useState<Session | null>(null);
   const [isBootLoading, setIsBootLoading] = useState(true);
+  const skipNextSessionHydrateRef = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
 
-    void getSession()
-      .then((activeSession) => {
-        if (!isMounted) {
-          return;
-        }
-        setSession(activeSession ?? null);
-      })
-      .catch(() => {
-        if (!isMounted) {
-          return;
-        }
-        setSession(null);
-      })
-      .finally(() => {
-        if (!isMounted) {
-          return;
-        }
-        setIsBootLoading(false);
-      });
+    void Promise.all([
+      getSession().catch(() => null),
+      hydrateActiveTrip().catch(() => null),
+    ]).then(([activeSession]) => {
+      if (!isMounted) {
+        return;
+      }
+
+      setSession(activeSession ?? null);
+      if (!activeSession) {
+        clearActiveTrip();
+      } else {
+        skipNextSessionHydrateRef.current = true;
+      }
+      setIsBootLoading(false);
+    });
 
     const {
       data: { subscription },
@@ -60,32 +61,31 @@ export default function RootLayout() {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [hydrateActiveTrip, clearActiveTrip]);
 
   useEffect(() => {
-    let isMounted = true;
+    if (isBootLoading) {
+      return;
+    }
 
     if (!session) {
       clearActiveTrip();
-      return () => {
-        isMounted = false;
-      };
+      return;
+    }
+
+    if (skipNextSessionHydrateRef.current) {
+      skipNextSessionHydrateRef.current = false;
+      return;
     }
 
     void hydrateActiveTrip().catch(() => {
-      if (!isMounted) {
-        return;
-      }
       clearActiveTrip();
     });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [session, hydrateActiveTrip, clearActiveTrip]);
+  }, [session, isBootLoading, hydrateActiveTrip, clearActiveTrip]);
 
   useEffect(() => {
     if (fontsLoaded && !isBootLoading) {
+      perfMarkBootReady(bootStartedAt);
       void SplashScreen.hideAsync();
     }
   }, [fontsLoaded, isBootLoading]);

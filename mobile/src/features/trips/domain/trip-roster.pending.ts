@@ -10,5 +10,6 @@ export function getOnboardStudentsFromRoster(
       id: item.student.id,
       nombre_alumno: item.student.nombre_alumno,
       codigo: item.student.codigo,
+      direccion: item.student.direccion,
     }));
 }

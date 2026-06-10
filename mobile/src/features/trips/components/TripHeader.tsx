@@ -3,24 +3,18 @@ import { StyleSheet, View } from "react-native";
 import { Surface, Text } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-import type { Trip, TripDirection, TripStatus } from "@/src/features/trips/types";
+import type { Trip, TripStatus } from "@/src/features/trips/types";
+import {
+  formatTripTitle,
+  getTripSegmentSubtitle,
+} from "@/src/features/trips/domain/trip-labels";
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
 
 interface TripHeaderProps {
   trip: Trip;
 }
 
-export function formatTripDirectionLabel(direction: TripDirection): string {
-  if (direction === "recojo") {
-    return "Recojo";
-  }
-
-  if (direction === "retorno") {
-    return "Retorno";
-  }
-
-  return direction;
-}
+export { formatTripDirectionLabel, formatTripTitle } from "@/src/features/trips/domain/trip-labels";
 
 export function formatTripStatusLabel(status: TripStatus): string {
   if (status === "active") {
@@ -131,8 +125,8 @@ export function TripHeader({ trip }: TripHeaderProps) {
         </View>
 
         <View style={styles.titleContainer}>
-          <Text style={styles.title}>Viaje {formatTripDirectionLabel(trip.direction)}</Text>
-          <Text style={styles.subtitle}>Transporte escolar</Text>
+          <Text style={styles.title}>{formatTripTitle(trip)}</Text>
+          <Text style={styles.subtitle}>{getTripSegmentSubtitle(trip)}</Text>
         </View>
 
         <View style={[styles.statusBadge, isActive && styles.statusBadgeActive]}>

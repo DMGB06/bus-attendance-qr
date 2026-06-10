@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { login, requestPasswordReset } from '@/src/features/auth/services/auth.service';
 import { hasSupabaseConfig } from '@/src/core/config/supabase';
 import { LoginForm } from '@/src/features/auth/components/LoginForm';
@@ -43,7 +43,7 @@ export default function LoginScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
 
-  async function handleLogin() {
+  const handleLogin = useCallback(async () => {
     if (!email.trim() || !password.trim()) {
       setErrorMessage('Ingresa correo y contraseña.');
       return;
@@ -63,9 +63,9 @@ export default function LoginScreen() {
     } finally {
       setIsSubmitting(false);
     }
-  }
+  }, [email, password]);
 
-  async function handleForgotPassword() {
+  const handleForgotPassword = useCallback(async () => {
     const normalizedEmail = email.trim();
 
     if (!normalizedEmail) {
@@ -88,7 +88,25 @@ export default function LoginScreen() {
     } finally {
       setIsResettingPassword(false);
     }
-  }
+  }, [email]);
+
+  const handleChangeEmail = useCallback((text: string) => {
+    setEmail(text);
+    setErrorMessage(null);
+  }, []);
+
+  const handleChangePassword = useCallback((text: string) => {
+    setPassword(text);
+    setErrorMessage(null);
+  }, []);
+
+  const handleSubmit = useCallback(() => {
+    void handleLogin();
+  }, [handleLogin]);
+
+  const handleForgotPasswordPress = useCallback(() => {
+    void handleForgotPassword();
+  }, [handleForgotPassword]);
 
   return (
     <LoginForm
@@ -98,16 +116,10 @@ export default function LoginScreen() {
       isSubmitting={isSubmitting}
       isResettingPassword={isResettingPassword}
       hasSupabaseConfig={hasSupabaseConfig}
-      onChangeEmail={(text) => {
-        setEmail(text);
-        setErrorMessage(null);
-      }}
-      onChangePassword={(text) => {
-        setPassword(text);
-        setErrorMessage(null);
-      }}
-      onSubmit={handleLogin}
-      onForgotPassword={handleForgotPassword}
+      onChangeEmail={handleChangeEmail}
+      onChangePassword={handleChangePassword}
+      onSubmit={handleSubmit}
+      onForgotPassword={handleForgotPasswordPress}
     />
   );
 }

@@ -51,74 +51,70 @@ export function LoginForm({
           flex: 1,
           backgroundColor: colors.screenSolid,
         },
-        brandBand: {
-          alignItems: 'center',
-          backgroundColor: colors.primary,
-          paddingTop: tokens.spacing['2xl'],
-          paddingBottom: tokens.spacing.xl,
-          paddingHorizontal: tokens.spacing.xl,
-        },
-        goldRule: {
-          height: 4,
-          backgroundColor: colors.accent,
-        },
-        formArea: {
+        keyboardRoot: {
           flex: 1,
-          backgroundColor: colors.screenSolid,
-          borderTopLeftRadius: tokens.radius['2xl'],
-          borderTopRightRadius: tokens.radius['2xl'],
-          marginTop: tokens.spacing.md,
-          overflow: 'hidden',
         },
         scrollInner: {
           flexGrow: 1,
-          paddingVertical: tokens.spacing.xl,
+          justifyContent: 'center',
           paddingHorizontal: tokens.spacing.xl,
+          paddingVertical: tokens.spacing['2xl'],
+        },
+        panel: {
+          width: '100%',
+          maxWidth: 420,
+          alignSelf: 'center',
           gap: tokens.spacing.lg,
         },
+        brandBlock: {
+          alignItems: 'center',
+          gap: tokens.spacing.sm,
+        },
         logo: {
-          width: 96,
-          height: 96,
-          marginBottom: tokens.spacing.md,
+          width: 88,
+          height: 88,
         },
         brandTitle: {
           ...tokens.typography.title1,
-          color: colors.textInverse,
+          color: colors.textTitle,
           textAlign: 'center',
         },
         brandSubtitle: {
-          ...tokens.typography.caption,
-          color: colors.navHeaderSubtitle,
+          ...tokens.typography.body,
+          color: colors.textMuted,
           textAlign: 'center',
-          marginTop: tokens.spacing.xs,
+        },
+        accentLine: {
+          height: 3,
+          width: 56,
+          borderRadius: tokens.radius.full,
+          backgroundColor: colors.accent,
+          alignSelf: 'center',
+        },
+        formHeader: {
+          alignItems: 'center',
+          gap: tokens.spacing.xs,
         },
         formTitle: {
           ...tokens.typography.title3,
           color: colors.textTitle,
+          textAlign: 'center',
         },
         formHint: {
-          ...tokens.typography.caption,
+          ...tokens.typography.body,
           color: colors.textMuted,
-          marginTop: -tokens.spacing.sm,
+          textAlign: 'center',
         },
         fields: {
           gap: tokens.spacing.md,
         },
-        errorText: {
-          marginTop: -tokens.spacing.sm,
-        },
         forgotPassword: {
-          ...tokens.typography.bodyStrong,
+          ...tokens.typography.label,
           color: colors.authForgotPassword,
           textAlign: 'right',
         },
         buttonContent: {
           height: tokens.layout.buttonHeight - 4,
-        },
-        footer: {
-          ...tokens.typography.caption,
-          textAlign: 'center',
-          color: colors.authFooter,
         },
       }),
     [colors, tokens],
@@ -126,21 +122,9 @@ export function LoginForm({
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.brandBand}>
-        <Image
-          source={require('../../../../assets/images/escudo_MDCA.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <Text style={styles.brandTitle}>Bus Escolar</Text>
-        <Text style={styles.brandSubtitle}>Municipalidad de Cerro Azul</Text>
-      </View>
-
-      <View style={styles.goldRule} />
-
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.formArea}
+        style={styles.keyboardRoot}
       >
         <AppScrollView
           omitTabBarInset
@@ -149,69 +133,82 @@ export function LoginForm({
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View>
-            <Text style={styles.formTitle}>Ingreso de operador</Text>
-            <Text style={styles.formHint}>Control de asistencia en ruta escolar</Text>
-          </View>
+          <View style={styles.panel}>
+            <View style={styles.brandBlock}>
+              <Image
+                source={require('../../../../assets/images/escudo_MDCA.png')}
+                style={styles.logo}
+                resizeMode="contain"
+                accessibilityLabel="Escudo Municipalidad de Cerro Azul"
+              />
+              <Text style={styles.brandTitle}>Bus Escolar</Text>
+              <Text style={styles.brandSubtitle}>Municipalidad de Cerro Azul</Text>
+            </View>
 
-          <View style={styles.fields}>
-            <AppInput
-              variant="auth"
-              placeholder="Usuario"
-              value={email}
-              onChangeText={onChangeEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              returnKeyType="next"
-              onSubmitEditing={() => passwordInputRef.current?.focus()}
-              blurOnSubmit={false}
+            <View style={styles.accentLine} />
+
+            <View style={styles.formHeader}>
+              <Text style={styles.formTitle}>Ingreso de operador</Text>
+              <Text style={styles.formHint}>Control de asistencia en ruta escolar</Text>
+            </View>
+
+            <View style={styles.fields}>
+              <AppInput
+                variant="auth"
+                placeholder="Usuario"
+                value={email}
+                onChangeText={onChangeEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                returnKeyType="next"
+                onSubmitEditing={() => passwordInputRef.current?.focus()}
+                blurOnSubmit={false}
+                disabled={isSubmitting || isResettingPassword}
+                left={<AppInput.Icon icon="account-outline" color={colors.authIconMuted} />}
+              />
+
+              <AppInput
+                ref={passwordInputRef}
+                variant="auth"
+                placeholder="Contraseña"
+                value={password}
+                onChangeText={onChangePassword}
+                secureTextEntry
+                returnKeyType="go"
+                onSubmitEditing={onSubmit}
+                disabled={isSubmitting || isResettingPassword}
+                left={<AppInput.Icon icon="lock-outline" color={colors.authIconMuted} />}
+              />
+            </View>
+
+            {!hasSupabaseConfig ? (
+              <HelperText type="error" visible>
+                Configura Supabase correctamente.
+              </HelperText>
+            ) : null}
+
+            {errorMessage ? (
+              <HelperText type="error" visible>
+                {errorMessage}
+              </HelperText>
+            ) : null}
+
+            <Pressable onPress={onForgotPassword} disabled={isSubmitting || isResettingPassword}>
+              <Text style={styles.forgotPassword}>
+                {isResettingPassword ? 'Enviando enlace...' : '¿Olvidaste tu contraseña?'}
+              </Text>
+            </Pressable>
+
+            <AppButton
+              variant="authPrimary"
+              onPress={onSubmit}
+              loading={isSubmitting}
               disabled={isSubmitting || isResettingPassword}
-              left={<AppInput.Icon icon="account-outline" color={colors.authIconMuted} />}
-            />
-
-            <AppInput
-              ref={passwordInputRef}
-              variant="auth"
-              placeholder="Contraseña"
-              value={password}
-              onChangeText={onChangePassword}
-              secureTextEntry
-              returnKeyType="go"
-              onSubmitEditing={onSubmit}
-              disabled={isSubmitting || isResettingPassword}
-              left={<AppInput.Icon icon="lock-outline" color={colors.authIconMuted} />}
-            />
+              contentStyle={styles.buttonContent}
+            >
+              Ingresar
+            </AppButton>
           </View>
-
-          {!hasSupabaseConfig ? (
-            <HelperText type="error" visible style={styles.errorText}>
-              Configura Supabase correctamente.
-            </HelperText>
-          ) : null}
-
-          {errorMessage ? (
-            <HelperText type="error" visible style={styles.errorText}>
-              {errorMessage}
-            </HelperText>
-          ) : null}
-
-          <Pressable onPress={onForgotPassword} disabled={isSubmitting || isResettingPassword}>
-            <Text style={styles.forgotPassword}>
-              {isResettingPassword ? 'Enviando enlace...' : '¿Olvidaste tu contraseña?'}
-            </Text>
-          </Pressable>
-
-          <AppButton
-            variant="authPrimary"
-            onPress={onSubmit}
-            loading={isSubmitting}
-            disabled={isSubmitting || isResettingPassword}
-            contentStyle={styles.buttonContent}
-          >
-            Ingresar
-          </AppButton>
-
-          <Text style={styles.footer}>Acceso restringido a personal autorizado</Text>
         </AppScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

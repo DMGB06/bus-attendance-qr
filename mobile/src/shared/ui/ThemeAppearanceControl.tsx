@@ -3,7 +3,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-import { useAppTheme } from '@/src/core/theme/ThemeProvider';
+import { useAppThemePreferences, useAppThemeVisual } from '@/src/core/theme/ThemeProvider';
 
 // compact control: no reanimated spring needed
 
@@ -13,7 +13,8 @@ type ThemeAppearanceControlProps = {
 };
 
 export function ThemeAppearanceControl({ variant = 'navbar' }: ThemeAppearanceControlProps) {
-  const { isDark, toggleScheme, colors, tokens } = useAppTheme();
+  const { toggleScheme } = useAppThemePreferences();
+  const { isDark, colors, tokens } = useAppThemeVisual();
   const trackW = tokens.layout.appearanceNavbarWidth;
   const trackH = tokens.layout.appearanceNavbarHeight;
   const knobSize = Math.round(trackH - 8);

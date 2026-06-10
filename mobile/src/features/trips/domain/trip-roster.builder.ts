@@ -27,6 +27,9 @@ export function deriveRosterStatus(history: AttendanceRecord[]): TripRosterStatu
   if (hasBoarding) {
     return "onboard";
   }
+  if (history.some((record) => record.event_type === "ausente")) {
+    return "completed";
+  }
   return "pending";
 }
 

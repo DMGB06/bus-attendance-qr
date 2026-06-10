@@ -2,16 +2,19 @@ import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 
+import type { TripDirection } from "@/src/features/trips/types";
+import { getDropoffLabel } from "@/src/features/trips/domain/trip-labels";
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
 
 export type AttendanceBadgeStatus = "pending" | "onboard" | "completed";
 
 interface AttendanceBadgeProps {
   status: AttendanceBadgeStatus;
+  direction: TripDirection;
   label?: string;
 }
 
-export function AttendanceBadge({ status, label }: AttendanceBadgeProps) {
+export function AttendanceBadge({ status, direction, label }: AttendanceBadgeProps) {
   const { colors, tokens } = useAppTheme();
 
   const styles = useMemo(
@@ -49,7 +52,11 @@ export function AttendanceBadge({ status, label }: AttendanceBadgeProps) {
         : styles.badgePending;
 
   const defaultLabel =
-    status === "completed" ? "SALIDA" : status === "onboard" ? "ABORDO" : "PENDIENTE";
+    status === "completed"
+      ? getDropoffLabel(direction).toUpperCase()
+      : status === "onboard"
+        ? "A BORDO"
+        : "PENDIENTE";
 
   return (
     <View style={[styles.badge, variantStyle]}>

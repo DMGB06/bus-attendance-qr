@@ -30,6 +30,10 @@ export function ScannerStatusCard({
   const styles = useMemo(
     () =>
       StyleSheet.create({
+        wrapper: {
+          flex: 1,
+          minHeight: 240,
+        },
         card: {
           flex: 1,
           justifyContent: "center",
@@ -58,7 +62,7 @@ export function ScannerStatusCard({
   );
 
   return (
-    <View style={style}>
+    <View style={[styles.wrapper, style]}>
       <Card mode="outlined" style={styles.card}>
         <Card.Content style={styles.content}>
           <MaterialCommunityIcons

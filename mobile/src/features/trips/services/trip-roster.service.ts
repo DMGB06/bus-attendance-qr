@@ -1,4 +1,5 @@
 import { supabase } from "@/src/core/config/supabase";
+import { perfAsync } from "@/src/shared/utils/perfMark";
 import {
   markManualAttendance,
   registerDropoffAttendance,
@@ -23,27 +24,54 @@ export async function getTripRosterRaw(tripId: string): Promise<{
   students: Student[];
   attendanceRecords: AttendanceRecord[];
 }> {
-  const [studentsResult, attendanceResult] = await Promise.all([
-    supabase.from("social_bus_escolar").select("*").order("nombre_alumno"),
-    supabase
+  return perfAsync("getTripRosterRaw", async () => {
+    const [studentsResult, attendanceResult] = await Promise.all([
+      supabase
+        .from("social_bus_escolar")
+        .select(
+          "id, nombre_alumno, dni_alumno, edad, sexo, colegio, nivel_educativo, nombre_apoderado, telefono_apoderado, dni_apoderado, direccion, usuario_registro, created_at, codigo, foto_url, activo, notas",
+        )
+        .order("nombre_alumno"),
+      supabase
+        .from("bus_attendance_records")
+        .select(
+          "id, trip_id, student_id, event_type, scanned_at, lat, lng, operator_id, is_offline_sync",
+        )
+        .eq("trip_id", tripId)
+        .order("scanned_at", { ascending: true }),
+    ]);
+
+    if (studentsResult.error) {
+      throw new Error("No se pudo cargar la lista de alumnos.");
+    }
+
+    if (attendanceResult.error) {
+      throw new Error("No se pudo cargar la asistencia del viaje.");
+    }
+
+    return {
+      students: studentsResult.data ?? [],
+      attendanceRecords: attendanceResult.data ?? [],
+    };
+  }, { tripId });
+}
+
+export async function getTripAttendanceOnly(tripId: string): Promise<AttendanceRecord[]> {
+  return perfAsync("getTripAttendanceOnly", async () => {
+    const { data, error } = await supabase
       .from("bus_attendance_records")
-      .select("*")
+      .select(
+        "id, trip_id, student_id, event_type, scanned_at, lat, lng, operator_id, is_offline_sync",
+      )
       .eq("trip_id", tripId)
-      .order("scanned_at", { ascending: true }),
-  ]);
+      .order("scanned_at", { ascending: true });
 
-  if (studentsResult.error) {
-    throw new Error("No se pudo cargar la lista de alumnos.");
-  }
+    if (error) {
+      throw new Error("No se pudo cargar la asistencia del viaje.");
+    }
 
-  if (attendanceResult.error) {
-    throw new Error("No se pudo cargar la asistencia del viaje.");
-  }
-
-  return {
-    students: studentsResult.data ?? [],
-    attendanceRecords: attendanceResult.data ?? [],
-  };
+    return data ?? [];
+  }, { tripId });
 }
 
 export async function getTripRoster(tripId: string): Promise<TripRosterItem[]> {

@@ -36,12 +36,22 @@ export function canRegisterDropoff(item: TripRosterItem | undefined): boolean {
   return item.status === "onboard";
 }
 
+export function canRegisterAbsent(item: TripRosterItem | undefined): boolean {
+  if (!item) {
+    return false;
+  }
+  return item.status === "pending";
+}
+
 export function getDuplicateRegistrationMessage(eventType: AttendanceEventType): string {
   if (eventType === "bajo") {
     return "La salida de este alumno ya fue registrada.";
   }
   if (isBoardingEvent(eventType)) {
     return "Ya registrado";
+  }
+  if (eventType === "ausente") {
+    return "Este alumno ya fue marcado como ausente.";
   }
   return "Este evento ya fue registrado.";
 }

@@ -1,11 +1,17 @@
-import { useCallback, useMemo } from "react";
+import { Fragment, useCallback, useMemo } from "react";
 import { Tabs, useRouter } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { logout } from "@/src/features/auth/services/auth.service";
+import { useActiveTripRoster } from "@/src/features/trips/hooks/useActiveTripRoster";
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
 import { AppTabHeaderBar } from "@/src/shared/ui/AppTabHeaderBar";
+
+function ActiveTripRosterSync() {
+  useActiveTripRoster();
+  return null;
+}
 
 export default function TabsLayout() {
   const router = useRouter();
@@ -60,63 +66,68 @@ export default function TabsLayout() {
   );
 
   return (
-    <Tabs initialRouteName="trip" screenOptions={screenOptions}>
-      <Tabs.Screen
-        name="trip"
-        options={{
-          title: "Iniciar Viaje",
-          tabBarLabel: "Viaje",
-          tabBarIcon: ({ color, focused }) => (
-            <MaterialCommunityIcons
-              name="bus-clock"
-              size={24}
-              color={focused ? colors.tabBarActive : color}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="scanner"
-        options={{
-          title: "Escanear QR",
-          tabBarLabel: "Escanear",
-          tabBarIcon: ({ color, focused }) => (
-            <MaterialCommunityIcons
-              name={focused ? "qrcode-scan" : "qrcode"}
-              size={24}
-              color={focused ? colors.tabBarActive : color}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="roster"
-        options={{
-          title: "Lista",
-          tabBarLabel: "Lista",
-          tabBarIcon: ({ color, focused }) => (
-            <MaterialCommunityIcons
-              name={focused ? "format-list-bulleted" : "format-list-bulleted-square"}
-              size={24}
-              color={focused ? colors.tabBarActive : color}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          href: null,
-          title: "Perfil",
-        }}
-      />
-      <Tabs.Screen
-        name="close-trip"
-        options={{
-          href: null,
-          title: "Cerrar viaje",
-        }}
-      />
-    </Tabs>
+    <Fragment>
+      <ActiveTripRosterSync />
+      <Tabs initialRouteName="trip" screenOptions={screenOptions}>
+        <Tabs.Screen
+          name="trip"
+          options={{
+            title: "Iniciar Viaje",
+            tabBarLabel: "Viaje",
+            tabBarIcon: ({ color, focused }) => (
+              <MaterialCommunityIcons
+                name="bus-clock"
+                size={24}
+                color={focused ? colors.tabBarActive : color}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="scanner"
+          options={{
+            lazy: true,
+            title: "Escanear QR",
+            tabBarLabel: "Escanear",
+            tabBarIcon: ({ color, focused }) => (
+              <MaterialCommunityIcons
+                name={focused ? "qrcode-scan" : "qrcode"}
+                size={24}
+                color={focused ? colors.tabBarActive : color}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="roster"
+          options={{
+            lazy: true,
+            title: "Lista",
+            tabBarLabel: "Lista",
+            tabBarIcon: ({ color, focused }) => (
+              <MaterialCommunityIcons
+                name={focused ? "format-list-bulleted" : "format-list-bulleted-square"}
+                size={24}
+                color={focused ? colors.tabBarActive : color}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="profile"
+          options={{
+            href: null,
+            title: "Perfil",
+          }}
+        />
+        <Tabs.Screen
+          name="close-trip"
+          options={{
+            href: null,
+            title: "Cerrar viaje",
+          }}
+        />
+      </Tabs>
+    </Fragment>
   );
 }

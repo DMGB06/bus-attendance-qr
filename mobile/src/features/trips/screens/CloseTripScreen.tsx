@@ -1,19 +1,39 @@
 import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Button, Card, HelperText, Surface, Text } from "react-native-paper";
+import { Button, Card, HelperText, Text } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
+import { NoActiveTripView } from "@/src/features/trips/components/NoActiveTripView";
+import { CloseTripStudentList } from "@/src/features/trips/components/CloseTripStudentList";
+import { CloseTripValidationSkeleton } from "@/src/features/trips/components/CloseTripValidationSkeleton";
 import { TripHeader } from "@/src/features/trips/components/TripHeader";
+import { hasPendingDropoffIssues } from "@/src/features/trips/domain/close-trip-validation";
+import {
+  getCloseTripOnboardSectionTitle,
+  getCloseTripPrioritariosSectionTitle,
+  getCloseTripReadyMessage,
+  getCloseTripScreenSubtitle,
+} from "@/src/features/trips/domain/trip-labels";
 import { useCloseTrip } from "@/src/features/trips/hooks/useCloseTrip";
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
 import { AppScrollView } from "@/src/shared/ui/AppScrollView";
+import { useScreenPerfMark } from "@/src/shared/hooks/useScreenPerfMark";
 
 export default function CloseTripScreen() {
+  useScreenPerfMark("close-trip");
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const { activeTrip, isClosing, errorMessage, handleCloseTrip } = useCloseTrip();
+  const {
+    activeTrip,
+    validation,
+    isLoadingValidation,
+    validationError,
+    isClosing,
+    errorMessage,
+    reloadValidation,
+    handleCloseTrip,
+  } = useCloseTrip();
   const { colors, tokens } = useAppTheme();
 
   const styles = useMemo(
@@ -57,34 +77,20 @@ export default function CloseTripScreen() {
           textAlign: "center",
           paddingHorizontal: tokens.spacing.sm,
         },
-        warningCard: {
-          backgroundColor: colors.feedbackWarningBg,
-          borderRadius: tokens.radius["2xl"],
-          padding: tokens.radius.lg,
+        readyCard: {
+          backgroundColor: "rgba(47, 133, 90, 0.1)",
+          borderRadius: tokens.radius.xl,
+          padding: tokens.spacing.md,
           borderWidth: 1,
-          borderColor: colors.feedbackWarningBorder,
-          gap: tokens.spacing.md,
-        },
-        warningTop: {
+          borderColor: colors.attendanceCompleted,
           flexDirection: "row",
           alignItems: "center",
-          gap: tokens.spacing.md,
+          gap: tokens.spacing.sm,
         },
-        warningIcon: {
-          width: tokens.layout.iconSm,
-          height: tokens.layout.iconSm,
-          borderRadius: tokens.radius.full,
-          backgroundColor: colors.feedbackWarningIconCircle,
-          alignItems: "center",
-          justifyContent: "center",
-        },
-        warningTitle: {
-          ...tokens.typography.headline,
-          color: colors.feedbackWarningTitle,
-        },
-        warningBody: {
+        readyText: {
           ...tokens.typography.body,
-          color: colors.feedbackWarningBody,
+          color: colors.attendanceCompleted,
+          flex: 1,
         },
         actionCard: {
           backgroundColor: colors.surfaceCard,
@@ -99,6 +105,9 @@ export default function CloseTripScreen() {
         closeButton: {
           borderRadius: tokens.radius.lg,
           backgroundColor: colors.primaryPressed,
+        },
+        closeButtonDanger: {
+          backgroundColor: colors.attendancePending,
         },
         backButton: {
           borderRadius: tokens.radius.lg,
@@ -115,60 +124,17 @@ export default function CloseTripScreen() {
           ...tokens.typography.bodyStrong,
           color: colors.textBody,
         },
-        emptyContainer: {
-          flex: 1,
-          justifyContent: "center",
-          paddingHorizontal: tokens.spacing.xl,
-        },
-        emptyCard: {
-          backgroundColor: colors.surfaceCard,
-          borderRadius: tokens.radius["2xl"],
-          padding: tokens.radius["2xl"],
-          alignItems: "center",
-          gap: tokens.spacing.lg,
-          borderWidth: 1,
-          borderColor: colors.surfaceCardBorder,
-        },
-        emptyTitle: {
-          ...tokens.typography.title2,
-          color: colors.textTitle,
-        },
-        emptyBody: {
-          ...tokens.typography.body,
-          color: colors.textMuted,
-          textAlign: "center",
-        },
-        homeButton: {
-          marginTop: tokens.spacing.sm,
-          borderRadius: tokens.radius.lg,
-          backgroundColor: colors.primaryPressed,
-          width: "100%",
-        },
       }),
     [colors, tokens],
   );
 
   if (!activeTrip) {
-    return (
-      <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>
-        <View style={[styles.emptyContainer, { paddingBottom: insets.bottom + tokens.radius.lg }]}>
-          <Surface style={styles.emptyCard}>
-            <MaterialCommunityIcons name="bus-stop" size={tokens.layout.iconEmptyState} color={colors.textMuted} />
-            <Text style={styles.emptyTitle}>Sin viaje activo</Text>
-            <Text style={styles.emptyBody}>No existe un viaje en curso para cerrar.</Text>
-            <Button
-              mode="contained"
-              onPress={() => router.replace("/(tabs)/trip")}
-              style={styles.homeButton}
-              contentStyle={styles.buttonContent}
-            >
-              Ir al inicio
-            </Button>
-          </Surface>
-        </View>
-      </SafeAreaView>
-    );
+    return <NoActiveTripView context="close-trip" />;
   }
+
+  const hasOnboardPending = hasPendingDropoffIssues(validation);
+  const hasPrioritariosPending = validation.missingPrioritarios.length > 0;
+  const showReadyState = !isLoadingValidation && !hasOnboardPending && !validationError;
 
   return (
     <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>
@@ -182,24 +148,46 @@ export default function CloseTripScreen() {
             <MaterialCommunityIcons name="bus-alert" size={tokens.fontSize["3xl"]} color={colors.primaryIconContrast} />
           </View>
           <Text style={styles.title}>Cerrar viaje</Text>
-          <Text style={styles.subtitle}>
-            Revisa toda la información antes de finalizar el recorrido.
-          </Text>
+          <Text style={styles.subtitle}>{getCloseTripScreenSubtitle(activeTrip.direction)}</Text>
         </View>
 
         <TripHeader trip={activeTrip} />
 
-        <Surface style={styles.warningCard}>
-          <View style={styles.warningTop}>
-            <View style={styles.warningIcon}>
-              <MaterialCommunityIcons name="alert-outline" size={tokens.fontSize.lg} color={colors.feedbackWarningGlyph} />
-            </View>
-            <Text style={styles.warningTitle}>Validación previa</Text>
+        {isLoadingValidation ? <CloseTripValidationSkeleton /> : null}
+
+        {validation.connectivityWarning ? (
+          <HelperText type="info">{validation.connectivityWarning}</HelperText>
+        ) : null}
+
+        {validationError ? (
+          <HelperText type="error">{validationError}</HelperText>
+        ) : null}
+
+        {hasOnboardPending ? (
+          <CloseTripStudentList
+            title={getCloseTripOnboardSectionTitle(
+              activeTrip.direction,
+              validation.pendingDropoff.length,
+            )}
+            students={validation.pendingDropoff}
+            tone="danger"
+          />
+        ) : null}
+
+        {activeTrip.direction === "retorno" && hasPrioritariosPending ? (
+          <CloseTripStudentList
+            title={getCloseTripPrioritariosSectionTitle(validation.missingPrioritarios.length)}
+            students={validation.missingPrioritarios}
+            tone="warning"
+          />
+        ) : null}
+
+        {showReadyState ? (
+          <View style={styles.readyCard}>
+            <MaterialCommunityIcons name="check-circle-outline" size={22} color={colors.attendanceCompleted} />
+            <Text style={styles.readyText}>{getCloseTripReadyMessage(activeTrip.direction)}</Text>
           </View>
-          <Text style={styles.warningBody}>
-            El sistema verificará alumnos con abordo pendiente antes de permitir cerrar el viaje.
-          </Text>
-        </Surface>
+        ) : null}
 
         <Card mode="outlined" style={styles.actionCard}>
           <Card.Content style={styles.content}>
@@ -209,25 +197,37 @@ export default function CloseTripScreen() {
               mode="contained"
               onPress={() => void handleCloseTrip()}
               loading={isClosing}
-              disabled={isClosing}
-              style={styles.closeButton}
+              disabled={isClosing || isLoadingValidation}
+              style={[styles.closeButton, hasOnboardPending && styles.closeButtonDanger]}
               contentStyle={styles.buttonContent}
               labelStyle={styles.closeLabel}
-              icon="check-circle"
+              icon={hasOnboardPending ? "alert-circle-outline" : "check-circle"}
             >
-              Finalizar viaje
+              {hasOnboardPending ? "Finalizar igualmente" : "Finalizar viaje"}
             </Button>
 
             <Button
               mode="outlined"
-              onPress={() => router.back()}
+              onPress={() => {
+                if (hasOnboardPending || hasPrioritariosPending) {
+                  router.replace("/(tabs)/roster");
+                  return;
+                }
+                router.back();
+              }}
               disabled={isClosing}
               style={styles.backButton}
               contentStyle={styles.buttonContent}
               labelStyle={styles.backLabel}
             >
-              Volver
+              {hasOnboardPending || hasPrioritariosPending ? "Ir a la lista" : "Volver"}
             </Button>
+
+            {validationError ? (
+              <Button mode="text" onPress={() => void reloadValidation()} disabled={isLoadingValidation}>
+                Reintentar verificación
+              </Button>
+            ) : null}
           </Card.Content>
         </Card>
       </AppScrollView>

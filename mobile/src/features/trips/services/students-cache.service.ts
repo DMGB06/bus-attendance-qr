@@ -22,27 +22,49 @@ function matchStudentByCode(students: Student[], code: string): Student | null {
   );
 }
 
+/** Resuelve alumno por código o UUID en una lista en memoria (p. ej. roster hidratado). */
+export function findStudentInStudentList(students: Student[], lookup: string): Student | null {
+  const normalized = normalizeLookup(lookup);
+  if (!normalized || !students.length) {
+    return null;
+  }
+
+  const byCode = matchStudentByCode(students, normalized);
+  if (byCode) {
+    return byCode;
+  }
+
+  if (UUID_REGEX.test(normalized)) {
+    return students.find((student) => student.id === normalized) ?? null;
+  }
+
+  return null;
+}
+
+/** Busca alumnos por nombre en una lista en memoria. */
+export function searchStudentsInStudentList(
+  students: Student[],
+  name: string,
+  limit = 8,
+): Student[] {
+  const normalized = normalizeLookup(name).toLowerCase();
+  if (!normalized || !students.length) {
+    return [];
+  }
+
+  return students
+    .filter((student) => student.nombre_alumno.toLowerCase().includes(normalized))
+    .sort((a, b) => a.nombre_alumno.localeCompare(b.nombre_alumno, "es"))
+    .slice(0, limit);
+}
+
 export async function findStudentInCache(lookup: string): Promise<Student | null> {
   const cached = await loadCachedStudents();
   if (!cached?.students.length) {
     return null;
   }
 
-  const normalized = normalizeLookup(lookup);
-  if (!normalized) {
-    return null;
-  }
-
-  const byCode = matchStudentByCode(cached.students, normalized);
-  if (byCode) {
-    return byCode;
-  }
-
-  if (UUID_REGEX.test(normalized)) {
-    return cached.students.find((student) => student.id === normalized) ?? null;
-  }
-
-  return null;
+  return findStudentInStudentList(cached.students, lookup);
 }
 
 export async function searchStudentsInCache(name: string, limit = 8): Promise<Student[]> {
@@ -51,13 +73,5 @@ export async function searchStudentsInCache(name: string, limit = 8): Promise<St
     return [];
   }
 
-  const normalized = normalizeLookup(name).toLowerCase();
-  if (!normalized) {
-    return [];
-  }
-
-  return cached.students
-    .filter((student) => student.nombre_alumno.toLowerCase().includes(normalized))
-    .sort((a, b) => a.nombre_alumno.localeCompare(b.nombre_alumno, "es"))
-    .slice(0, limit);
+  return searchStudentsInStudentList(cached.students, name, limit);
 }

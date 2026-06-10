@@ -1,6 +1,7 @@
 import { supabase } from "@/src/core/config/supabase";
 import { getUser } from "@/src/features/auth/services/auth.service";
-import type { Trip, TripDirection } from "@/src/features/trips/types";
+import { getDirectionForTurnType } from "@/src/features/trips/domain/trip-turn";
+import type { Trip, TurnType } from "@/src/features/trips/types";
 
 function formatSupabaseError(
   prefix: string,
@@ -41,7 +42,7 @@ async function getAnyActiveTripByOperator(operatorId: string): Promise<Trip | nu
   return data;
 }
 
-async function validateCompletedOutboundTrip(operatorId: string, tripDate: string) {
+async function validateCompletedMorningRecojo(operatorId: string, tripDate: string) {
   const { data, error } = await supabase
     .from("bus_trips")
     .select("id")
@@ -57,27 +58,64 @@ async function validateCompletedOutboundTrip(operatorId: string, tripDate: strin
   }
 
   if (!data) {
-    throw new Error("Debes completar el viaje de recojo antes de iniciar el retorno.");
+    throw new Error("Debes completar el viaje de recojo de la mañana antes de iniciar la tarde.");
   }
 }
 
-export async function startTrip(direction: TripDirection): Promise<Trip> {
-  const operatorId = await getAuthenticatedOperatorId();
-  const tripDate = getTodayDate();
+async function validateCompletedTurn(operatorId: string, tripDate: string, turnType: TurnType) {
+  const { data, error } = await supabase
+    .from("bus_trips")
+    .select("id")
+    .eq("operator_id", operatorId)
+    .eq("trip_date", tripDate)
+    .eq("turn_type", turnType)
+    .eq("status", "completed")
+    .limit(1)
+    .maybeSingle();
 
-  const activeTrip = await getAnyActiveTripByOperator(operatorId);
-  if (activeTrip) {
-    throw new Error("Ya tienes un viaje activo. Ciérralo antes de iniciar otro.");
+  if (error) {
+    throw new Error(formatSupabaseError("No se pudo validar el tramo anterior", error));
   }
 
+  if (!data) {
+    throw new Error("Debes completar el viaje de tarde primaria antes de iniciar tarde secundaria.");
+  }
+}
+
+async function validateCanStartTurn(operatorId: string, tripDate: string, turnType: TurnType) {
+  const direction = getDirectionForTurnType(turnType);
+  const validations: Promise<void>[] = [];
+
   if (direction === "retorno") {
-    await validateCompletedOutboundTrip(operatorId, tripDate);
+    validations.push(validateCompletedMorningRecojo(operatorId, tripDate));
+  }
+
+  if (turnType === "tarde_secundaria") {
+    validations.push(validateCompletedTurn(operatorId, tripDate, "tarde_primaria"));
+  }
+
+  await Promise.all(validations);
+}
+
+export async function startTrip(turnType: TurnType): Promise<Trip> {
+  const operatorId = await getAuthenticatedOperatorId();
+  const tripDate = getTodayDate();
+  const direction = getDirectionForTurnType(turnType);
+
+  const [activeTrip] = await Promise.all([
+    getAnyActiveTripByOperator(operatorId),
+    validateCanStartTurn(operatorId, tripDate, turnType),
+  ]);
+
+  if (activeTrip) {
+    throw new Error("Ya tienes un viaje activo. Ciérralo antes de iniciar otro.");
   }
 
   const { data, error } = await supabase
     .from("bus_trips")
     .insert({
       direction,
+      turn_type: turnType,
       status: "active",
       started_at: new Date().toISOString(),
       operator_id: operatorId,
@@ -115,4 +153,3 @@ export async function closeTrip(tripId: string): Promise<void> {
     throw new Error(formatSupabaseError("No se pudo cerrar el viaje", error));
   }
 }
-

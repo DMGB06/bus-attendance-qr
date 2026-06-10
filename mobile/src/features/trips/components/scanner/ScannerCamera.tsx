@@ -1,18 +1,18 @@
 import { useMemo } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import { CameraView } from "expo-camera";
 import { Text } from "react-native-paper";
 
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
 
 type ScannerCameraProps = {
-  height: number;
+  style?: StyleProp<ViewStyle>;
   scanningEnabled?: boolean;
   onBarcodeScanned: (event: { data: string }) => void;
 };
 
 export function ScannerCamera({
-  height,
+  style,
   scanningEnabled = true,
   onBarcodeScanned,
 }: ScannerCameraProps) {
@@ -22,7 +22,10 @@ export function ScannerCamera({
     () =>
       StyleSheet.create({
         frame: {
-          borderRadius: tokens.spacing["2xl"],
+          flex: 1,
+          width: "100%",
+          minHeight: 200,
+          borderRadius: tokens.radius["2xl"],
           overflow: "hidden",
           backgroundColor: colors.scannerCameraBg,
           borderWidth: 1,
@@ -31,11 +34,11 @@ export function ScannerCamera({
           shadowColor: colors.scannerCameraShadow,
           shadowOpacity: 0.18,
           shadowRadius: tokens.spacing.xl,
-          shadowOffset: { width: 0, height: tokens.spacing.md },
+          shadowOffset: { width: 0, height: tokens.spacing.sm },
           elevation: 10,
         },
         camera: {
-          flex: 1,
+          ...StyleSheet.absoluteFillObject,
         },
         overlay: {
           ...StyleSheet.absoluteFillObject,
@@ -43,39 +46,51 @@ export function ScannerCamera({
           alignItems: "center",
           backgroundColor: colors.scannerOverlay,
         },
+        scanRegion: {
+          width: "74%",
+          maxWidth: 320,
+          aspectRatio: 1,
+          position: "relative",
+          justifyContent: "center",
+          alignItems: "center",
+        },
         corner: {
           position: "absolute",
-          width: tokens.spacing.xl,
-          height: tokens.spacing.xl,
+          width: "18%",
+          height: "18%",
+          minWidth: 28,
+          minHeight: 28,
+          maxWidth: 44,
+          maxHeight: 44,
           borderColor: colors.scannerCorner,
           borderWidth: 3,
         },
         topLeft: {
-          top: tokens.spacing.xl,
-          left: tokens.spacing.xl,
+          top: 0,
+          left: 0,
           borderRightWidth: 0,
           borderBottomWidth: 0,
         },
         topRight: {
-          top: tokens.spacing.xl,
-          right: tokens.spacing.xl,
+          top: 0,
+          right: 0,
           borderLeftWidth: 0,
           borderBottomWidth: 0,
         },
         bottomLeft: {
-          bottom: tokens.spacing.xl,
-          left: tokens.spacing.xl,
+          bottom: 0,
+          left: 0,
           borderRightWidth: 0,
           borderTopWidth: 0,
         },
         bottomRight: {
-          bottom: tokens.spacing.xl,
-          right: tokens.spacing.xl,
+          bottom: 0,
+          right: 0,
           borderLeftWidth: 0,
           borderTopWidth: 0,
         },
         scanLine: {
-          width: "82%",
+          width: "88%",
           height: tokens.spacing.xs,
           borderRadius: tokens.radius.full,
           backgroundColor: colors.scannerScanLine,
@@ -83,7 +98,9 @@ export function ScannerCamera({
         },
         hint: {
           position: "absolute",
-          bottom: tokens.radius.xl,
+          bottom: tokens.spacing.md,
+          left: tokens.spacing.md,
+          right: tokens.spacing.md,
           ...tokens.typography.bodyStrong,
           color: colors.scannerHintText,
           backgroundColor: colors.scannerHintPillBg,
@@ -91,13 +108,14 @@ export function ScannerCamera({
           paddingVertical: tokens.spacing.sm,
           borderRadius: tokens.radius.full,
           overflow: "hidden",
+          textAlign: "center",
         },
       }),
     [colors, tokens],
   );
 
   return (
-    <View style={[styles.frame, { height }]}>
+    <View style={[styles.frame, style]}>
       <CameraView
         style={styles.camera}
         facing="back"
@@ -105,12 +123,16 @@ export function ScannerCamera({
         onBarcodeScanned={scanningEnabled ? onBarcodeScanned : undefined}
       />
       <View style={styles.overlay} pointerEvents="none">
-        <View style={[styles.corner, styles.topLeft]} />
-        <View style={[styles.corner, styles.topRight]} />
-        <View style={[styles.corner, styles.bottomLeft]} />
-        <View style={[styles.corner, styles.bottomRight]} />
-        <View style={styles.scanLine} />
-        <Text style={styles.hint}>Apunta el QR dentro del marco</Text>
+        <View style={styles.scanRegion}>
+          <View style={[styles.corner, styles.topLeft]} />
+          <View style={[styles.corner, styles.topRight]} />
+          <View style={[styles.corner, styles.bottomLeft]} />
+          <View style={[styles.corner, styles.bottomRight]} />
+          <View style={styles.scanLine} />
+        </View>
+        <Text style={styles.hint} numberOfLines={2}>
+          Apunta el QR dentro del marco
+        </Text>
       </View>
     </View>
   );

@@ -2,10 +2,11 @@ import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Switch, Text } from 'react-native-paper';
 
-import { useAppTheme } from '@/src/core/theme/ThemeProvider';
+import { useAppThemePreferences, useAppThemeVisual } from '@/src/core/theme/ThemeProvider';
 
 export function HighContrastToggle() {
-  const { colors, tokens, highContrastEnabled, setHighContrastEnabled, isDark } = useAppTheme();
+  const { highContrastEnabled, setHighContrastEnabled } = useAppThemePreferences();
+  const { colors, tokens, isDark } = useAppThemeVisual();
 
   const styles = useMemo(
     () =>

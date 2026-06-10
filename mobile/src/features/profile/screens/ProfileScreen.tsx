@@ -1,108 +1,131 @@
-import { useMemo } from "react";
-import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
-import { ActivityIndicator, Avatar, Divider, Surface, Text } from "react-native-paper";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useCallback, useMemo } from "react";
+import { ActivityIndicator, RefreshControl, StyleSheet, View } from "react-native";
+import { Avatar, Divider, Surface, Text } from "react-native-paper";
+import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
+import { logout } from "@/src/features/auth/services/auth.service";
 import { useProfile } from "@/src/features/profile/hooks/useProfile";
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
 import { AppButton } from "@/src/shared/ui/AppButton";
 import { HighContrastToggle } from "@/src/shared/ui/HighContrastToggle";
 import { ThemeAppearanceControl } from "@/src/shared/ui/ThemeAppearanceControl";
+import { AppScrollView } from "@/src/shared/ui/AppScrollView";
 
-export default function ProfileScreen() {
+function formatRoleLabel(role: string | null | undefined): string {
+  if (!role) {
+    return "—";
+  }
+  if (role.toLowerCase() === "admin") {
+    return "Administrador";
+  }
+  if (role.toLowerCase() === "visor") {
+    return "Visor";
+  }
+  return role;
+}
+
+function ProfileField({ label, value }: { label: string; value: string }) {
   const { colors, tokens } = useAppTheme();
-  const profileState = useProfile();
 
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        container: {
+        row: {
+          gap: tokens.spacing.xs,
+          paddingVertical: tokens.spacing.sm,
+        },
+        label: {
+          ...tokens.typography.caption,
+          color: colors.textMuted,
+        },
+        value: {
+          ...tokens.typography.bodyStrong,
+          color: colors.textTitle,
+        },
+      }),
+    [colors, tokens],
+  );
+
+  return (
+    <View style={styles.row}>
+      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.value}>{value}</Text>
+    </View>
+  );
+}
+
+export default function ProfileScreen() {
+  const router = useRouter();
+  const { colors, tokens } = useAppTheme();
+  const profileState = useProfile();
+  const { refreshProfile, refreshing } = profileState;
+
+  const handleLogout = useCallback(async () => {
+    await logout();
+    router.replace("/(auth)/login");
+  }, [router]);
+
+  const handleRefresh = useCallback(() => {
+    void refreshProfile();
+  }, [refreshProfile]);
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        safeArea: {
           flex: 1,
           backgroundColor: colors.screenSolid,
         },
         content: {
-          padding: tokens.spacing.lg,
+          paddingHorizontal: tokens.spacing.lg,
+          paddingTop: tokens.spacing.md,
+          gap: tokens.spacing.lg,
         },
         loadingContainer: {
           flex: 1,
           justifyContent: "center",
           alignItems: "center",
-          backgroundColor: colors.screenSolid,
         },
         hero: {
           alignItems: "center",
-          marginBottom: tokens.spacing.md,
-        },
-        avatarRing: {
-          width: tokens.layout.avatarProfileSize,
-          height: tokens.layout.avatarProfileSize,
-          borderRadius: tokens.radius.full,
-          alignItems: "center",
-          justifyContent: "center",
-          borderWidth: tokens.spacing.xs,
-          borderColor: colors.primary,
-          marginBottom: tokens.spacing.sm,
-        },
-        avatar: {
-          backgroundColor: colors.surfaceCard,
-        },
-        editPhotoButton: {
-          flexDirection: "row",
-          alignItems: "center",
+          paddingVertical: tokens.spacing.sm,
           gap: tokens.spacing.sm,
         },
-        editPhotoLabel: {
-          color: colors.primary,
-          ...tokens.typography.label,
+        avatar: {
+          backgroundColor: colors.primary,
         },
-        title: {
+        name: {
           ...tokens.typography.title2,
-          color: colors.textHero,
-          marginTop: tokens.spacing.md,
-          marginBottom: tokens.spacing.xs,
+          color: colors.textTitle,
+          textAlign: "center",
         },
-        subtitle: {
-          ...tokens.typography.body,
-          color: colors.textSubtitle,
+        rolePill: {
+          ...tokens.typography.caption,
+          color: colors.primarySoftText,
+          backgroundColor: colors.primarySoftBg,
+          paddingHorizontal: tokens.spacing.md,
+          paddingVertical: tokens.spacing.xs,
+          borderRadius: tokens.radius.full,
+          overflow: "hidden",
         },
         card: {
-          padding: tokens.spacing.md,
+          padding: tokens.spacing.lg,
           backgroundColor: colors.surfaceCard,
-          borderRadius: tokens.radius.lg,
+          borderRadius: tokens.radius.xl,
           borderWidth: 1,
           borderColor: colors.surfaceCardBorder,
-          marginBottom: tokens.spacing.md,
+          gap: tokens.spacing.sm,
         },
         cardTitle: {
-          ...tokens.typography.title3,
-          marginBottom: tokens.spacing.sm,
+          ...tokens.typography.headline,
           color: colors.textTitle,
+          marginBottom: tokens.spacing.xs,
         },
-        cardDivider: {
-          borderTopWidth: 1,
-          borderTopColor: colors.surfaceCardBorder,
-        },
-        cardBody: {
-          paddingVertical: tokens.spacing.md,
-        },
-        row: {
-          flexDirection: "row",
-          justifyContent: "space-between",
-          paddingVertical: tokens.spacing.sm,
-        },
-        label: {
-          ...tokens.typography.label,
+        cardHint: {
+          ...tokens.typography.caption,
           color: colors.textMuted,
-        },
-        value: {
-          ...tokens.typography.bodyStrong,
-          color: colors.textBody,
-        },
-        spacerMd: {
-          height: tokens.spacing.md,
-        },
-        spacerLg: {
-          height: tokens.spacing.lg,
+          marginBottom: tokens.spacing.sm,
         },
       }),
     [colors, tokens],
@@ -110,89 +133,64 @@ export default function ProfileScreen() {
 
   if (profileState.loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator animating size={36} />
-      </View>
+      <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator animating size={36} color={colors.primary} />
+        </View>
+      </SafeAreaView>
     );
   }
 
+  const roleLabel = formatRoleLabel(profileState.profile?.role ?? null);
+  const areaLabel = profileState.profile?.area ?? "—";
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.hero}>
-        <View style={styles.avatarRing}>
+    <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>
+      <AppScrollView
+        contentContainerStyle={styles.content}
+        extraBottomInset={tokens.spacing.lg}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        }
+      >
+        <View style={styles.hero}>
           <Avatar.Text
-            size={tokens.layout.avatarProfileSize - tokens.spacing.lg}
+            size={72}
             label={profileState.initials}
             style={styles.avatar}
+            color={colors.textOnPrimary}
           />
+          <Text style={styles.name}>{profileState.displayName}</Text>
+          <Text style={styles.rolePill}>{roleLabel}</Text>
         </View>
 
-        <TouchableOpacity
-          onPress={() => profileState.setEditing(true)}
-          style={styles.editPhotoButton}
-        >
-          <MaterialCommunityIcons name="camera-outline" size={tokens.fontSize.lg} color={colors.primary} />
-          <Text style={styles.editPhotoLabel}>Editar foto</Text>
-        </TouchableOpacity>
-
-        <Text style={styles.title}>{profileState.displayName}</Text>
-        <Text style={styles.subtitle}>
-          {profileState.profile?.role ?? "Sin rol"} · {profileState.profile?.area ?? "Sin área"}
-        </Text>
-      </View>
-
-      <Surface style={styles.card}>
-        <Text style={styles.cardTitle}>Mi perfil</Text>
-        <View style={styles.cardDivider} />
-        <View style={styles.cardBody}>
-          <View style={styles.row}>
-            <Text style={styles.label}>Nombre</Text>
-            <Text style={styles.value}>{profileState.displayName}</Text>
-          </View>
+        <Surface style={styles.card} elevation={0}>
+          <Text style={styles.cardTitle}>Datos del operador</Text>
+          <ProfileField label="Correo" value={profileState.email || "—"} />
           <Divider />
-          <View style={styles.row}>
-            <Text style={styles.label}>E-mail</Text>
-            <Text style={styles.value}>{profileState.email}</Text>
-          </View>
+          <ProfileField label="Rol" value={roleLabel} />
           <Divider />
-          <View style={styles.row}>
-            <Text style={styles.label}>Rol</Text>
-            <Text style={styles.value}>{profileState.profile?.role ?? "-"}</Text>
-          </View>
-        </View>
-      </Surface>
+          <ProfileField label="Área" value={areaLabel} />
+        </Surface>
 
-      <Surface style={styles.card}>
-        <Text style={styles.cardTitle}>Apariencia</Text>
-        <View style={styles.cardDivider} />
-        <View style={styles.cardBody}>
+        <Surface style={styles.card} elevation={0}>
+          <Text style={styles.cardTitle}>Preferencias</Text>
+          <Text style={styles.cardHint}>Ajustes de visualización para uso en ruta.</Text>
           <ThemeAppearanceControl variant="panel" />
           <Divider />
           <HighContrastToggle />
-        </View>
-      </Surface>
+        </Surface>
 
-      <View style={styles.spacerMd} />
-
-      <Surface style={styles.card}>
-        <Text style={styles.cardTitle}>Mi compañía</Text>
-        <View style={styles.cardBody}>
-          <View style={styles.row}>
-            <Text style={styles.label}>Área</Text>
-            <Text style={styles.value}>{profileState.profile?.area ?? "-"}</Text>
-          </View>
-        </View>
-      </Surface>
-
-      <View style={styles.spacerLg} />
-
-      {profileState.editing ? (
-        <AppButton mode="contained" onPress={() => void profileState.handleSave()} loading={profileState.saving}>
-          Guardar cambios
+        <AppButton mode="outlined" icon="logout" onPress={() => void handleLogout()}>
+          Cerrar sesión
         </AppButton>
-      ) : (
-        <AppButton onPress={() => profileState.setEditing(true)}>Editar perfil</AppButton>
-      )}
-    </ScrollView>
+      </AppScrollView>
+    </SafeAreaView>
   );
 }

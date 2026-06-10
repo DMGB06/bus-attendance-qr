@@ -1,8 +1,9 @@
 import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
-import { Button, TextInput } from "react-native-paper";
+import { Button, HelperText, TextInput } from "react-native-paper";
 
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
+import { MANUAL_SEARCH_MIN_CHARS } from "@/src/features/trips/hooks/useStudentAttendance";
 
 type ManualRegisterProps = {
   manualName: string;
@@ -20,6 +21,8 @@ export function ManualRegister({
   onSearch,
 }: ManualRegisterProps) {
   const { tokens } = useAppTheme();
+  const trimmedLength = manualName.trim().length;
+  const canSearch = trimmedLength >= MANUAL_SEARCH_MIN_CHARS;
 
   const styles = useMemo(
     () =>
@@ -43,14 +46,19 @@ export function ManualRegister({
         editable={!isSearching && !isRegistering}
         returnKeyType="search"
         onSubmitEditing={() => {
-          void onSearch();
+          if (canSearch) {
+            void onSearch();
+          }
         }}
       />
+      <HelperText type="info" visible={trimmedLength > 0 && !canSearch}>
+        Escribe al menos {MANUAL_SEARCH_MIN_CHARS} caracteres para buscar.
+      </HelperText>
       <Button
         mode="contained"
         onPress={() => void onSearch()}
         loading={isSearching}
-        disabled={isRegistering}
+        disabled={isRegistering || !canSearch}
       >
         Buscar por nombre
       </Button>

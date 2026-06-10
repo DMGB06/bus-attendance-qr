@@ -1,30 +1,43 @@
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { Avatar, Text } from "react-native-paper";
 
+import type { TripDirection } from "@/src/features/trips/types";
 import type { TripRosterItem } from "@/src/features/trips/services/trip-roster.service";
-import { useAppTheme } from "@/src/core/theme/ThemeProvider";
+import {
+  getDropoffActionLabel,
+  getMorningHintLabel,
+  getRosterStatusLabel,
+} from "@/src/features/trips/domain/trip-labels";
+import type { RosterRowTheme } from "@/src/features/trips/components/roster/rosterRowTheme";
 
 interface RosterStudentRowProps {
   item: TripRosterItem;
+  tripDirection: TripDirection;
+  theme: RosterRowTheme;
+  showMorningHint?: boolean;
+  isMorningRider?: boolean;
+  canMarkAbsent?: boolean;
   onMarkExit?: (studentId: string) => void;
+  onMarkAbsent?: (studentId: string) => void;
   isMarkingExit?: boolean;
 }
 
-function getStatusLabel(item: TripRosterItem) {
-  if (item.status === "pending") return "Pendiente";
-  if (item.status === "completed") return "Salida";
-  if (item.attendance?.event_type === "ausente") return "Ausente";
-  if (item.attendance?.event_type === "manual") return "Manual";
-  return "Abordo";
-}
-
-export function RosterStudentRow({
+export const RosterStudentRow = memo(function RosterStudentRow({
   item,
+  tripDirection,
+  theme,
+  showMorningHint = false,
+  isMorningRider = false,
+  canMarkAbsent = false,
   onMarkExit,
+  onMarkAbsent,
   isMarkingExit = false,
 }: RosterStudentRowProps) {
-  const { colors, tokens } = useAppTheme();
+  const { colors, tokens } = theme;
+
+  const showDropoffButton = Boolean(item.canMarkExit && onMarkExit);
+  const showAbsentAction = Boolean(canMarkAbsent && onMarkAbsent && item.status === "pending");
 
   const statusColors = useMemo(() => {
     if (item.status === "pending") {
@@ -32,6 +45,13 @@ export function RosterStudentRow({
         stripe: colors.attendancePending,
         tagBg: "rgba(197, 48, 48, 0.1)",
         tagText: colors.attendancePending,
+      };
+    }
+    if (item.attendance?.event_type === "ausente") {
+      return {
+        stripe: colors.textMuted,
+        tagBg: colors.surfaceTrack,
+        tagText: colors.textMuted,
       };
     }
     if (item.status === "completed") {
@@ -46,7 +66,7 @@ export function RosterStudentRow({
       tagBg: colors.primarySoftBg,
       tagText: colors.primarySoftText,
     };
-  }, [colors, item.status]);
+  }, [colors, item.attendance?.event_type, item.status]);
 
   const styles = useMemo(
     () =>
@@ -85,34 +105,61 @@ export function RosterStudentRow({
           ...tokens.typography.caption,
           color: colors.sky,
         },
+        onboardMeta: {
+          ...tokens.typography.caption,
+          color: colors.primarySoftText,
+          fontWeight: "600",
+        },
+        morningHint: {
+          ...tokens.typography.caption,
+          color: isMorningRider ? colors.primarySoftText : colors.textMuted,
+        },
         trailing: {
-          width: 84,
+          minWidth: 108,
           alignItems: "flex-end",
           justifyContent: "center",
-          gap: tokens.spacing.sm,
         },
         statusTag: {
           backgroundColor: statusColors.tagBg,
           borderRadius: tokens.radius.xs,
           paddingHorizontal: tokens.spacing.sm,
-          paddingVertical: 3,
-          minWidth: 72,
+          paddingVertical: 5,
+          minWidth: 88,
           alignItems: "center",
         },
         statusTagText: {
           ...tokens.typography.overline,
           color: statusColors.tagText,
           letterSpacing: 0.2,
+          textAlign: "center",
         },
-        actionLink: {
-          paddingVertical: tokens.spacing.xs,
+        dropoffButton: {
+          backgroundColor: colors.attendanceCompleted,
+          borderRadius: tokens.radius.sm,
+          paddingHorizontal: tokens.spacing.sm,
+          paddingVertical: tokens.spacing.sm,
+          minWidth: 108,
+          alignItems: "center",
         },
-        actionText: {
+        dropoffButtonText: {
           ...tokens.typography.label,
-          color: colors.attendanceCompleted,
+          color: colors.textOnPrimary,
+          textAlign: "center",
+        },
+        pendingActions: {
+          alignItems: "flex-end",
+          gap: tokens.spacing.xs,
+        },
+        absentButton: {
+          paddingVertical: 2,
+        },
+        absentText: {
+          ...tokens.typography.caption,
+          color: colors.textMuted,
+          textDecorationLine: "underline",
         },
       }),
-    [colors, statusColors, tokens],
+    [colors, isMorningRider, statusColors, tokens],
   );
 
   const initials = item.student.nombre_alumno
@@ -129,6 +176,47 @@ export function RosterStudentRow({
       })
     : null;
 
+  function renderTrailing() {
+    if (isMarkingExit) {
+      return <ActivityIndicator size="small" color={colors.attendanceCompleted} />;
+    }
+
+    if (showDropoffButton) {
+      return (
+        <Pressable
+          onPress={() => onMarkExit?.(item.student.id)}
+          style={styles.dropoffButton}
+          accessibilityRole="button"
+        >
+          <Text style={styles.dropoffButtonText}>{getDropoffActionLabel(tripDirection)}</Text>
+        </Pressable>
+      );
+    }
+
+    if (showAbsentAction) {
+      return (
+        <View style={styles.pendingActions}>
+          <View style={styles.statusTag}>
+            <Text style={styles.statusTagText}>{getRosterStatusLabel(item, tripDirection)}</Text>
+          </View>
+          <Pressable
+            onPress={() => onMarkAbsent?.(item.student.id)}
+            style={styles.absentButton}
+            accessibilityRole="button"
+          >
+            <Text style={styles.absentText}>Marcar ausente</Text>
+          </Pressable>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.statusTag}>
+        <Text style={styles.statusTagText}>{getRosterStatusLabel(item, tripDirection)}</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.row}>
       <Avatar.Text size={36} label={initials || "AL"} style={styles.avatar} />
@@ -140,23 +228,19 @@ export function RosterStudentRow({
         <Text style={styles.stop} numberOfLines={1}>
           {item.student.direccion ?? "Sin parada registrada"}
         </Text>
-        {scannedAt ? <Text style={styles.meta}>Escaneado {scannedAt}</Text> : null}
-      </View>
-
-      <View style={styles.trailing}>
-        <View style={styles.statusTag}>
-          <Text style={styles.statusTagText}>{getStatusLabel(item)}</Text>
-        </View>
-        {item.canMarkExit && onMarkExit ? (
-          isMarkingExit ? (
-            <ActivityIndicator size="small" color={colors.attendanceCompleted} />
-          ) : (
-            <Pressable onPress={() => onMarkExit(item.student.id)} style={styles.actionLink}>
-              <Text style={styles.actionText}>Salida</Text>
-            </Pressable>
-          )
+        {showMorningHint ? (
+          <Text style={styles.morningHint}>{getMorningHintLabel(isMorningRider)}</Text>
+        ) : null}
+        {item.status === "onboard" ? (
+          <Text style={styles.onboardMeta}>
+            A bordo{scannedAt ? ` · ${scannedAt}` : ""}
+          </Text>
+        ) : scannedAt ? (
+          <Text style={styles.meta}>Escaneado {scannedAt}</Text>
         ) : null}
       </View>
+
+      <View style={styles.trailing}>{renderTrailing()}</View>
     </View>
   );
-}
+});

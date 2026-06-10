@@ -3,6 +3,15 @@
 # dependencies
 node_modules/
 
+# Solo publicar mobile — lo demás queda local
+docs/
+scripts/
+shared/
+index.html
+.env
+.env.local
+.env*.local
+
 # Expo
 .expo/
 dist/

@@ -5,6 +5,7 @@ export type PendingDropoffStudent = {
   id: string;
   nombre_alumno: string;
   codigo: string | null;
+  direccion: string | null;
 };
 
 function mapAttendanceInsertError(code?: string) {
@@ -124,16 +125,19 @@ export async function getPendingDropoffStudents(tripId: string): Promise<Pending
 
   const { data: students, error: studentsError } = await supabase
     .from("social_bus_escolar")
-    .select("id, nombre_alumno, codigo")
+    .select("id, nombre_alumno, codigo, direccion")
     .in("id", pendingIds);
 
   if (studentsError) {
     throw new Error("No se pudo obtener los alumnos pendientes de bajada.");
   }
 
-  return (students ?? []).map((student) => ({
-    id: student.id,
-    nombre_alumno: student.nombre_alumno,
-    codigo: student.codigo,
-  }));
+  return (students ?? [])
+    .map((student) => ({
+      id: student.id,
+      nombre_alumno: student.nombre_alumno,
+      codigo: student.codigo,
+      direccion: student.direccion,
+    }))
+    .sort((left, right) => left.nombre_alumno.localeCompare(right.nombre_alumno, "es"));
 }
