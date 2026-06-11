@@ -178,10 +178,10 @@ export function getMorningHintLabel(isMorningRider: boolean): string {
 
 export function getSuggestedLevelFilterHint(turnType: TurnType | null | undefined): string | null {
   if (turnType === "tarde_primaria") {
-    return "Al iniciar, la lista sugerirá alumnos de primaria (sin ocultar los sin nivel).";
+    return "Sugerencia: primaria (+ sin nivel).";
   }
   if (turnType === "tarde_secundaria") {
-    return "Al iniciar, la lista sugerirá alumnos de secundaria (sin ocultar los sin nivel).";
+    return "Sugerencia: secundaria (+ sin nivel).";
   }
   return null;
 }
