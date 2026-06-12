@@ -11,8 +11,10 @@ import {
   refreshRosterFromNetwork,
   syncBulkDropoffToServer,
   syncAttendanceToServer,
+  undoPendingRegistration as undoPendingRegistrationService,
   validateRegistration,
 } from "@/src/features/trips/services/attendance-registration.service";
+import { voidAttendanceRecord } from "@/src/features/trips/services/attendance.service";
 import {
   isStudentsCacheFresh,
   loadCachedRosterSnapshot,
@@ -415,6 +417,21 @@ async function syncPendingWrites(tripId: string): Promise<void> {
   await refreshTripRoster(tripId, { silent: true });
 }
 
+async function undoPendingRegistration(
+  tripId: string,
+  studentId: string,
+  eventType: AttendanceEventType,
+): Promise<void> {
+  const items = await undoPendingRegistrationService(tripId, studentId, eventType);
+  setState({ tripId, items, errorMessage: null });
+  await updatePendingSyncCount(tripId);
+}
+
+async function voidStudentAttendance(tripId: string, recordId: string, reason: string): Promise<void> {
+  await voidAttendanceRecord(recordId, reason);
+  await refreshTripRoster(tripId, { force: true, silent: true });
+}
+
 /** Metadatos del roster (loading, refresh, sync) sin suscribirse a `items`. */
 export function useRosterMeta(tripId: string | undefined): RosterMetaSnapshot {
   const getMetaSnapshot = () => getRosterMetaSnapshot(tripId);
@@ -498,4 +515,6 @@ export const rosterStoreActions = {
   bulkRegisterDropoff,
   getRegistrationValidationError,
   syncPendingWrites,
+  undoPendingRegistration,
+  voidStudentAttendance,
 };

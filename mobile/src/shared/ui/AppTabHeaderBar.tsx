@@ -6,6 +6,7 @@ import { Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAppTheme } from '@/src/core/theme/ThemeProvider';
+import { OPS_ROUTES } from '@/src/core/routes';
 import { ThemeAppearanceControl } from '@/src/shared/ui/ThemeAppearanceControl';
 
 const ESCUDO = require('../../../assets/images/escudo_MDCA.png');
@@ -114,7 +115,7 @@ export function AppTabHeaderBar({ onLogout }: AppTabHeaderBarProps) {
         <View style={styles.actionsBlock}>
           <ThemeAppearanceControl />
           <TouchableOpacity
-            onPress={() => router.push('/(tabs)/profile')}
+            onPress={() => router.push(OPS_ROUTES.profile)}
             style={styles.iconButton}
             activeOpacity={0.75}
             accessibilityLabel="Abrir perfil"

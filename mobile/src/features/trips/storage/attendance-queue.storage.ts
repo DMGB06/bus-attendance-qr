@@ -10,6 +10,7 @@ export type QueuedAttendanceWrite = {
   studentId: string;
   eventType: AttendanceEventType;
   createdAt: string;
+  scannedBy?: string | null;
 };
 
 async function readQueue(): Promise<QueuedAttendanceWrite[]> {
@@ -73,6 +74,25 @@ export async function removeAttendanceWrite(id: string): Promise<void> {
   await writeQueue(queue.filter((item) => item.id !== id));
 }
 
+export async function removeQueuedWrite(
+  tripId: string,
+  studentId: string,
+  eventType: AttendanceEventType,
+): Promise<QueuedAttendanceWrite | null> {
+  const queue = await readQueue();
+  const key = queueEntryKey(tripId, studentId, eventType);
+  const target = queue.find(
+    (item) => queueEntryKey(item.tripId, item.studentId, item.eventType) === key,
+  );
+
+  if (!target) {
+    return null;
+  }
+
+  await writeQueue(queue.filter((item) => item.id !== target.id));
+  return target;
+}
+
 export async function countPendingForTrip(tripId: string): Promise<number> {
   const queue = await readQueue();
   return queue.filter((item) => item.tripId === tripId).length;
@@ -87,5 +107,19 @@ export async function hasQueuedWrite(
   const key = queueEntryKey(tripId, studentId, eventType);
   return queue.some(
     (item) => queueEntryKey(item.tripId, item.studentId, item.eventType) === key,
+  );
+}
+
+export async function findQueuedWrite(
+  tripId: string,
+  studentId: string,
+  eventType: AttendanceEventType,
+): Promise<QueuedAttendanceWrite | null> {
+  const queue = await readQueue();
+  const key = queueEntryKey(tripId, studentId, eventType);
+  return (
+    queue.find(
+      (item) => queueEntryKey(item.tripId, item.studentId, item.eventType) === key,
+    ) ?? null
   );
 }

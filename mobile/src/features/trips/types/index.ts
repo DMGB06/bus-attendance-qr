@@ -37,7 +37,24 @@ export type Trip = {
   operator_id: string | null;
   trip_date: string;
   turn_type: TurnType | null;
+  bus_id: string | null;
+  started_by: string | null;
+  assistant_id: string | null;
+  last_lat: number | null;
+  last_lng: number | null;
+  last_location_at: string | null;
 };
+
+export type TripLocationPoint = {
+  id: string;
+  trip_id: string;
+  lat: number;
+  lng: number;
+  recorded_at: string;
+  recorded_by: string | null;
+};
+
+export type CrewRole = "chofer" | "asistenta";
 
 export type AttendanceRecord = {
   id: string;
@@ -49,4 +66,9 @@ export type AttendanceRecord = {
   lng: number | null;
   operator_id: string | null;
   is_offline_sync: boolean | null;
+  scanned_by: string | null;
+  scan_role: CrewRole | null;
+  voided_at: string | null;
+  voided_by: string | null;
+  void_reason: string | null;
 };

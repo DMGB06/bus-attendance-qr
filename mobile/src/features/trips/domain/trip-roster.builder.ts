@@ -1,3 +1,9 @@
+import {
+  findQueueEntryForRecord,
+  isActiveAttendanceRecord,
+  isRecordPendingSync,
+} from "@/src/features/trips/domain/attendance-sync.rules";
+import type { QueuedAttendanceWrite } from "@/src/features/trips/storage/attendance-queue.storage";
 import type { AttendanceRecord, Student } from "@/src/features/trips/types";
 import type { TripRosterItem, TripRosterStatus } from "@/src/features/trips/services/trip-roster.service";
 
@@ -7,6 +13,10 @@ export function groupAttendanceByStudent(
   const map = new Map<string, AttendanceRecord[]>();
 
   for (const record of records) {
+    if (!isActiveAttendanceRecord(record)) {
+      continue;
+    }
+
     const history = map.get(record.student_id) ?? [];
     history.push(record);
     map.set(record.student_id, history);
@@ -36,6 +46,7 @@ export function deriveRosterStatus(history: AttendanceRecord[]): TripRosterStatu
 export function buildTripRosterItems(
   students: Student[],
   attendanceRecords: AttendanceRecord[],
+  tripQueue: QueuedAttendanceWrite[] = [],
 ): TripRosterItem[] {
   const attendanceByStudent = groupAttendanceByStudent(attendanceRecords);
 
@@ -43,6 +54,8 @@ export function buildTripRosterItems(
     const history = attendanceByStudent.get(student.id) ?? [];
     const attendance = history.length > 0 ? history[history.length - 1] : null;
     const status = deriveRosterStatus(history);
+    const isPendingSync = isRecordPendingSync(attendance, tripQueue);
+    const queueEntry = attendance ? findQueueEntryForRecord(attendance, tripQueue) : undefined;
 
     return {
       student,
@@ -51,6 +64,8 @@ export function buildTripRosterItems(
       hasAttendance: history.length > 0,
       canMarkManual: status === "pending",
       canMarkExit: status === "onboard",
+      isPendingSync,
+      pendingScannedBy: queueEntry?.scannedBy ?? attendance?.scanned_by ?? null,
     };
   });
 }

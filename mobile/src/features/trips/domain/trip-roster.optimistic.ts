@@ -16,6 +16,11 @@ function createPatchRecord(
     lng: null,
     operator_id: null,
     is_offline_sync: true,
+    scanned_by: null,
+    scan_role: null,
+    voided_at: null,
+    voided_by: null,
+    void_reason: null,
   };
 }
 
@@ -44,6 +49,8 @@ export function patchRosterItemsForEvent(
       hasAttendance: true,
       canMarkManual: false,
       canMarkExit: status === "onboard",
+      isPendingSync: true,
+      pendingScannedBy: null,
     };
   });
 }

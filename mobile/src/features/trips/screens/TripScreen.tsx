@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Button, HelperText, Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { OPS_ROUTES } from '@/src/core/routes';
+import { useAppCapabilities } from '@/src/features/auth/hooks/useAppCapabilities';
 import {
   AFTERNOON_TURN_OPTIONS,
   type AfternoonTurnType,
@@ -14,36 +16,70 @@ import {
   getSuggestedLevelFilterHint,
   getTripSegmentSubtitle,
 } from '@/src/features/trips/domain/trip-labels';
+import { WaitingForDriverView } from '@/src/features/trips/components/WaitingForDriverView';
 import { useTripDashboard } from '@/src/features/trips/hooks/useTripDashboard';
 import { createTripScreenStyles } from '@/src/features/trips/screens/tripScreen.styles';
-import { startTrip } from '@/src/features/trips/services/trips.service';
+import {
+  getOperationalContext,
+  startTrip,
+} from '@/src/features/trips/services/trips.service';
+import type { OperationalBusContext } from '@/src/features/trips/services/crew.service';
 import { useTripStore } from '@/src/features/trips/store/tripStore';
 import { getErrorMessage } from '@/src/shared/utils/errors';
 import type { TurnType } from '@/src/features/trips/types';
 import { useAppTheme } from '@/src/core/theme/ThemeProvider';
 import { AppScrollView } from '@/src/shared/ui/AppScrollView';
 import { useScreenPerfMark } from '@/src/shared/hooks/useScreenPerfMark';
+
 type TripPeriod = 'mañana' | 'tarde';
 
 export default function TripScreen() {
   const router = useRouter();
   useScreenPerfMark('trip');
-  const { activeTrip, setActiveTrip } = useTripStore();
+  const { activeTrip, setActiveTrip, hydrateActiveTrip } = useTripStore();
+  const { capabilities } = useAppCapabilities();
   const dashboard = useTripDashboard(activeTrip);
   const { colors, tokens } = useAppTheme();
   const [period, setPeriod] = useState<TripPeriod>('mañana');
   const [afternoonTurn, setAfternoonTurn] = useState<AfternoonTurnType>('tarde_primaria');
   const [isStartingTrip, setIsStartingTrip] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [operationalContext, setOperationalContext] = useState<
+    OperationalBusContext | null | undefined
+  >(undefined);
+  const [isWaitingRefresh, setIsWaitingRefresh] = useState(false);
 
   const styles = useMemo(() => createTripScreenStyles(colors, tokens), [colors, tokens]);
+
+  useEffect(() => {
+    void getOperationalContext().then((context) => {
+      setOperationalContext(context);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!capabilities.isAssistant || activeTrip) {
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      setIsWaitingRefresh(true);
+      void hydrateActiveTrip().finally(() => {
+        setIsWaitingRefresh(false);
+      });
+    }, 10_000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [capabilities.isAssistant, activeTrip, hydrateActiveTrip]);
 
   function getSelectedTurnType(): TurnType {
     return period === 'mañana' ? 'mañana' : afternoonTurn;
   }
 
   async function handleStartTrip() {
-    if (activeTrip) return;
+    if (activeTrip || !capabilities.canStartTrip) return;
 
     setIsStartingTrip(true);
     setErrorMessage(null);
@@ -67,6 +103,30 @@ export default function TripScreen() {
         minute: '2-digit',
       })
     : null;
+
+  if (capabilities.isAssistant && !activeTrip) {
+    if (operationalContext === undefined) {
+      return null;
+    }
+
+    if (!operationalContext) {
+      return (
+        <WaitingForDriverView
+          busLabel={null}
+          isRefreshing={false}
+          title="Sin bus asignado"
+          body="No tienes una unidad asignada para hoy. Pide al coordinador que te registre en BUS-01."
+        />
+      );
+    }
+
+    return (
+      <WaitingForDriverView
+        busLabel={operationalContext.busLabel}
+        isRefreshing={isWaitingRefresh}
+      />
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
@@ -181,7 +241,9 @@ export default function TripScreen() {
                 <View style={styles.infoContainer}>
                   <View style={styles.infoRow}>
                     <MaterialCommunityIcons name="bus" size={18} color={colors.sky} />
-                    <Text style={styles.infoText}>Unidad asignada: BUS-03</Text>
+                    <Text style={styles.infoText}>
+                      Unidad asignada: {operationalContext?.busLabel ?? 'BUS-01'}
+                    </Text>
                   </View>
                   <View style={styles.infoRow}>
                     <MaterialCommunityIcons name="account-check" size={18} color={colors.sky} />
@@ -195,19 +257,21 @@ export default function TripScreen() {
                   </HelperText>
                 ) : null}
 
-                <Button
-                  mode="contained"
-                  icon="play"
-                  onPress={handleStartTrip}
-                  loading={isStartingTrip}
-                  disabled={isStartingTrip}
-                  style={styles.startButton}
-                  contentStyle={styles.startButtonContent}
-                  labelStyle={styles.startButtonLabel}
-                  buttonColor={colors.primary}
-                >
-                  Iniciar viaje
-                </Button>
+                {capabilities.canStartTrip ? (
+                  <Button
+                    mode="contained"
+                    icon="play"
+                    onPress={handleStartTrip}
+                    loading={isStartingTrip}
+                    disabled={isStartingTrip}
+                    style={styles.startButton}
+                    contentStyle={styles.startButtonContent}
+                    labelStyle={styles.startButtonLabel}
+                    buttonColor={colors.primary}
+                  >
+                    Iniciar viaje
+                  </Button>
+                ) : null}
               </>
             ) : (
               <>
@@ -229,30 +293,34 @@ export default function TripScreen() {
                 <View style={styles.sectionDivider} />
 
                 <View style={styles.activeActions}>
-                  <Button
-                    mode="contained"
-                    icon="qrcode-scan"
-                    buttonColor={colors.primary}
-                    onPress={() => router.push('/(tabs)/scanner')}
-                    style={styles.actionButton}
-                    contentStyle={styles.actionButtonContent}
-                    labelStyle={styles.startButtonLabel}
-                  >
-                    Ir a escáner
-                  </Button>
+                  {capabilities.canScan ? (
+                    <Button
+                      mode="contained"
+                      icon="qrcode-scan"
+                      buttonColor={colors.primary}
+                      onPress={() => router.push(OPS_ROUTES.scanner)}
+                      style={styles.actionButton}
+                      contentStyle={styles.actionButtonContent}
+                      labelStyle={styles.startButtonLabel}
+                    >
+                      Ir a escáner
+                    </Button>
+                  ) : null}
 
-                  <Button
-                    mode="outlined"
-                    icon="format-list-bulleted"
-                    textColor={colors.primary}
-                    onPress={() => router.push('/(tabs)/roster')}
-                    style={styles.actionButton}
-                    contentStyle={styles.actionButtonContent}
-                  >
-                    Ver lista
-                  </Button>
+                  {capabilities.canViewRoster ? (
+                    <Button
+                      mode="outlined"
+                      icon="format-list-bulleted"
+                      textColor={colors.primary}
+                      onPress={() => router.push(OPS_ROUTES.roster)}
+                      style={styles.actionButton}
+                      contentStyle={styles.actionButtonContent}
+                    >
+                      Ver lista
+                    </Button>
+                  ) : null}
 
-                  {dashboard.totalOnboardCount > 0 ? (
+                  {capabilities.canBulkDropoff && dashboard.totalOnboardCount > 0 ? (
                     <Button
                       mode="contained"
                       buttonColor={colors.primaryPressed}
@@ -276,22 +344,24 @@ export default function TripScreen() {
                     </HelperText>
                   ) : null}
 
-                  <Button
-                    mode="outlined"
-                    icon="check-circle-outline"
-                    textColor={colors.tripActionOutlineText}
-                    onPress={() => router.push('/(tabs)/close-trip')}
-                    style={styles.actionButton}
-                    contentStyle={styles.actionButtonContent}
-                  >
-                    Cerrar viaje
-                  </Button>
+                  {capabilities.canCloseTrip ? (
+                    <Button
+                      mode="outlined"
+                      icon="check-circle-outline"
+                      textColor={colors.tripActionOutlineText}
+                      onPress={() => router.push(OPS_ROUTES.closeTrip)}
+                      style={styles.actionButton}
+                      contentStyle={styles.actionButtonContent}
+                    >
+                      Cerrar viaje
+                    </Button>
+                  ) : null}
                 </View>
               </>
             )}
           </View>
 
-          {!activeTrip ? (
+          {!activeTrip && capabilities.canStartTrip ? (
             <View style={styles.warning}>
               <View style={styles.warningIcon}>
                 <MaterialCommunityIcons name="shield-alert-outline" size={20} color={colors.feedbackWarningGlyph} />
@@ -309,4 +379,3 @@ export default function TripScreen() {
     </SafeAreaView>
   );
 }
-

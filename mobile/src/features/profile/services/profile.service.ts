@@ -3,12 +3,12 @@ import {
   loadCachedProfile,
   saveCachedProfile,
 } from "@/src/features/profile/storage/profile-cache.storage";
-import type { Area, Profile, Role, UpdateProfile } from "../types";
+import type { AppProfile, UpdateAppProfile } from "../types";
 
 export async function getProfile(
   email: string,
   options?: { forceRefresh?: boolean },
-): Promise<Profile | null> {
+): Promise<AppProfile | null> {
   const normalizedEmail = email.trim();
   if (!normalizedEmail) {
     return null;
@@ -22,15 +22,12 @@ export async function getProfile(
   }
 
   const { data, error } = await supabase
-    .from("profiles")
+    .from("app_profiles")
     .select()
     .eq("email", normalizedEmail)
-    .single();
+    .maybeSingle();
 
   if (error) {
-    if (error.code === "PGRST116" || error.message?.includes("No rows")) {
-      return null;
-    }
     const cached = await loadCachedProfile(normalizedEmail);
     if (cached) {
       return cached;
@@ -38,31 +35,37 @@ export async function getProfile(
     throw new Error(error.message);
   }
 
-  const profile = data as Profile;
-  await saveCachedProfile(normalizedEmail, profile);
+  if (!data) {
+    return null;
+  }
+
+  const profile = data as AppProfile;
+  if (profile.email) {
+    await saveCachedProfile(profile.email, profile);
+  }
   return profile;
 }
 
-export async function getProfileById(id: string): Promise<Profile | null> {
-  const { data, error } = await supabase.from("profiles").select().eq("id", id).single();
+export async function getProfileById(id: string): Promise<AppProfile | null> {
+  const { data, error } = await supabase.from("app_profiles").select().eq("id", id).maybeSingle();
   if (error) {
     if (error.code === "PGRST116" || error.message?.includes("No rows")) {
       return null;
     }
     throw new Error(error.message);
   }
-  return data as Profile;
+  return data as AppProfile | null;
 }
 
-export async function updateProfile(id: string, payload: UpdateProfile): Promise<Profile> {
-  const dbPayload: { email?: string; role?: Role; area?: Area } = {};
+export async function updateProfile(id: string, payload: UpdateAppProfile): Promise<AppProfile> {
+  const dbPayload: UpdateAppProfile = {};
   if (payload.email !== undefined) dbPayload.email = payload.email;
-  if (payload.role !== undefined && payload.role !== null) dbPayload.role = payload.role;
-  if (payload.area !== undefined && payload.area !== null) dbPayload.area = payload.area;
+  if (payload.full_name !== undefined) dbPayload.full_name = payload.full_name;
+  if (payload.phone !== undefined) dbPayload.phone = payload.phone;
 
   const { data, error } = await supabase
-    .from("profiles")
-    .update(dbPayload as unknown as { email?: string; role?: Role; area?: Area })
+    .from("app_profiles")
+    .update(dbPayload)
     .eq("id", id)
     .select()
     .single();
@@ -70,7 +73,7 @@ export async function updateProfile(id: string, payload: UpdateProfile): Promise
     throw new Error(error.message);
   }
 
-  const profile = data as Profile;
+  const profile = data as AppProfile;
   if (profile.email) {
     await saveCachedProfile(profile.email, profile);
   }

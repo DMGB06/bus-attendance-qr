@@ -1,6 +1,14 @@
 import { supabase } from "@/src/core/config/supabase";
+import { getCapabilitiesForRole } from "@/src/features/auth/domain/permissions";
 import { getUser } from "@/src/features/auth/services/auth.service";
+import { getProfileById } from "@/src/features/profile/services/profile.service";
+import { AppRole } from "@/src/features/profile/types";
 import { getDirectionForTurnType } from "@/src/features/trips/domain/trip-turn";
+import {
+  getAssignedBusForToday,
+  resolveOperationalBusContext,
+  type OperationalBusContext,
+} from "@/src/features/trips/services/crew.service";
 import type { Trip, TurnType } from "@/src/features/trips/types";
 
 function formatSupabaseError(
@@ -15,7 +23,7 @@ function getTodayDate() {
   return new Date().toISOString().split("T")[0];
 }
 
-async function getAuthenticatedOperatorId() {
+async function getAuthenticatedUserId() {
   const user = await getUser();
 
   if (!user) {
@@ -25,11 +33,37 @@ async function getAuthenticatedOperatorId() {
   return user.id;
 }
 
-async function getAnyActiveTripByOperator(operatorId: string): Promise<Trip | null> {
+async function assertCanStartTrip(userId: string) {
+  const profile = await getProfileById(userId);
+  const capabilities = getCapabilitiesForRole(profile?.app_role);
+  if (!capabilities.canStartTrip) {
+    throw new Error("Solo el chofer puede iniciar el viaje.");
+  }
+
+  const assignment = await getAssignedBusForToday(userId);
+  if (assignment?.crewRole === "asistenta") {
+    throw new Error("Solo el chofer puede iniciar el viaje.");
+  }
+}
+
+async function assertCanCloseTrip(userId: string) {
+  const profile = await getProfileById(userId);
+  const capabilities = getCapabilitiesForRole(profile?.app_role);
+  if (!capabilities.canCloseTrip) {
+    throw new Error("Solo el chofer puede cerrar el viaje.");
+  }
+
+  const assignment = await getAssignedBusForToday(userId);
+  if (assignment?.crewRole === "asistenta") {
+    throw new Error("Solo el chofer puede cerrar el viaje.");
+  }
+}
+
+async function getActiveTripByBusId(busId: string): Promise<Trip | null> {
   const { data, error } = await supabase
     .from("bus_trips")
     .select("*")
-    .eq("operator_id", operatorId)
+    .eq("bus_id", busId)
     .eq("status", "active")
     .order("started_at", { ascending: false })
     .limit(1)
@@ -42,11 +76,11 @@ async function getAnyActiveTripByOperator(operatorId: string): Promise<Trip | nu
   return data;
 }
 
-async function validateCompletedMorningRecojo(operatorId: string, tripDate: string) {
+async function validateCompletedMorningRecojo(busId: string, tripDate: string) {
   const { data, error } = await supabase
     .from("bus_trips")
     .select("id")
-    .eq("operator_id", operatorId)
+    .eq("bus_id", busId)
     .eq("trip_date", tripDate)
     .eq("direction", "recojo")
     .eq("status", "completed")
@@ -62,11 +96,11 @@ async function validateCompletedMorningRecojo(operatorId: string, tripDate: stri
   }
 }
 
-async function validateCompletedTurn(operatorId: string, tripDate: string, turnType: TurnType) {
+async function validateCompletedTurn(busId: string, tripDate: string, turnType: TurnType) {
   const { data, error } = await supabase
     .from("bus_trips")
     .select("id")
-    .eq("operator_id", operatorId)
+    .eq("bus_id", busId)
     .eq("trip_date", tripDate)
     .eq("turn_type", turnType)
     .eq("status", "completed")
@@ -82,33 +116,62 @@ async function validateCompletedTurn(operatorId: string, tripDate: string, turnT
   }
 }
 
-async function validateCanStartTurn(operatorId: string, tripDate: string, turnType: TurnType) {
+async function validateCanStartTurn(busId: string, tripDate: string, turnType: TurnType) {
   const direction = getDirectionForTurnType(turnType);
   const validations: Promise<void>[] = [];
 
   if (direction === "retorno") {
-    validations.push(validateCompletedMorningRecojo(operatorId, tripDate));
+    validations.push(validateCompletedMorningRecojo(busId, tripDate));
   }
 
   if (turnType === "tarde_secundaria") {
-    validations.push(validateCompletedTurn(operatorId, tripDate, "tarde_primaria"));
+    validations.push(validateCompletedTurn(busId, tripDate, "tarde_primaria"));
   }
 
   await Promise.all(validations);
 }
 
+export async function getOperationalContext(): Promise<OperationalBusContext | null> {
+  return resolveOperationalBusContext();
+}
+
+export async function getActiveTripForCurrentUser(): Promise<Trip | null> {
+  const context = await resolveOperationalBusContext();
+  if (!context) {
+    return null;
+  }
+
+  return getActiveTripByBusId(context.busId);
+}
+
+/** @deprecated Usar getActiveTripForCurrentUser — conservado por compatibilidad interna. */
+export async function getActiveTripByOperator(): Promise<Trip | null> {
+  return getActiveTripForCurrentUser();
+}
+
 export async function startTrip(turnType: TurnType): Promise<Trip> {
-  const operatorId = await getAuthenticatedOperatorId();
+  const userId = await getAuthenticatedUserId();
+  await assertCanStartTrip(userId);
+
+  const context = await resolveOperationalBusContext();
+  if (!context) {
+    const profile = await getProfileById(userId);
+    if (profile?.app_role === AppRole.ASISTENTA) {
+      throw new Error("No tienes un bus asignado para hoy. Contacta al coordinador.");
+    }
+    throw new Error("No se encontró una unidad de bus disponible.");
+  }
+
   const tripDate = getTodayDate();
   const direction = getDirectionForTurnType(turnType);
 
   const [activeTrip] = await Promise.all([
-    getAnyActiveTripByOperator(operatorId),
-    validateCanStartTurn(operatorId, tripDate, turnType),
+    getActiveTripByBusId(context.busId),
+    validateCanStartTurn(context.busId, tripDate, turnType),
   ]);
 
   if (activeTrip) {
-    throw new Error("Ya tienes un viaje activo. Ciérralo antes de iniciar otro.");
+    throw new Error("Ya hay un viaje activo en esta unidad. Ciérralo antes de iniciar otro.");
   }
 
   const { data, error } = await supabase
@@ -118,7 +181,9 @@ export async function startTrip(turnType: TurnType): Promise<Trip> {
       turn_type: turnType,
       status: "active",
       started_at: new Date().toISOString(),
-      operator_id: operatorId,
+      operator_id: userId,
+      started_by: userId,
+      bus_id: context.busId,
       trip_date: tripDate,
     })
     .select("*")
@@ -135,12 +200,10 @@ export async function startTrip(turnType: TurnType): Promise<Trip> {
   return data;
 }
 
-export async function getActiveTripByOperator(): Promise<Trip | null> {
-  const operatorId = await getAuthenticatedOperatorId();
-  return getAnyActiveTripByOperator(operatorId);
-}
-
 export async function closeTrip(tripId: string): Promise<void> {
+  const userId = await getAuthenticatedUserId();
+  await assertCanCloseTrip(userId);
+
   const { error } = await supabase
     .from("bus_trips")
     .update({

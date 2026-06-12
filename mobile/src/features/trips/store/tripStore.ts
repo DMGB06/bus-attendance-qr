@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-import { getActiveTripByOperator } from "@/src/features/trips/services/trips.service";
+import { getActiveTripForCurrentUser } from "@/src/features/trips/services/trips.service";
 import type { Trip } from "@/src/features/trips/types";
 
 interface TripState {
@@ -47,7 +47,7 @@ function getSnapshot() {
 }
 
 async function hydrateActiveTrip() {
-  const activeTrip = await getActiveTripByOperator();
+  const activeTrip = await getActiveTripForCurrentUser();
   setState({ activeTrip });
   return activeTrip;
 }

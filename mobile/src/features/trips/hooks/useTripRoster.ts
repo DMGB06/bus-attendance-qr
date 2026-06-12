@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { getUser } from "@/src/features/auth/services/auth.service";
+import { useAppCapabilities } from "@/src/features/auth/hooks/useAppCapabilities";
+import {
+  canUndoPendingRecord,
+  canVoidSyncedRecord,
+} from "@/src/features/trips/domain/attendance-sync.rules";
 import { getErrorMessage } from "@/src/shared/utils/errors";
 import {
   isMorningRider,
@@ -26,12 +32,16 @@ import {
   confirmBulkDropoff,
   confirmStudentAbsent,
   confirmStudentDropoff,
+  confirmUndoPendingRegistration,
+  confirmVoidRegistration,
+  pickVoidReason,
 } from "@/src/features/trips/utils/rosterConfirmations";
 
 export type RosterViewMode = "all" | "pending" | "onboard" | "completed" | "attended" | "prioritarios";
 
 export function useTripRoster(tripId: string | undefined) {
   const { activeTrip } = useTripStore();
+  const { capabilities } = useAppCapabilities();
   const items = useRosterItems(tripId);
   const rosterMeta = useRosterMeta(tripId);
   const itemStats = useRosterItemStats(tripId);
@@ -39,6 +49,8 @@ export function useTripRoster(tripId: string | undefined) {
   const [searchQuery, setSearchQuery] = useState("");
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [isMarkingStudentId, setIsMarkingStudentId] = useState<string | null>(null);
+  const [isCorrectingStudentId, setIsCorrectingStudentId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isBulkDropping, setIsBulkDropping] = useState(false);
   const [morningRiderIds, setMorningRiderIds] = useState<Set<string>>(new Set());
   const [useSuggestedLevelFilter, setUseSuggestedLevelFilter] = useState(true);
@@ -193,6 +205,108 @@ export function useTripRoster(tripId: string | undefined) {
     [tripId, isMarkingStudentId, isAfternoonReturn, findStudentName],
   );
 
+  useEffect(() => {
+    void getUser()
+      .then((user) => setCurrentUserId(user?.id ?? null))
+      .catch(() => setCurrentUserId(null));
+  }, [tripId]);
+
+  const canUndoItem = useCallback(
+    (item: TripRosterItem) =>
+      canUndoPendingRecord({
+        isPendingSync: item.isPendingSync,
+        pendingScannedBy: item.pendingScannedBy,
+        currentUserId,
+        isDriver: capabilities.isDriver,
+        isAssistant: capabilities.isAssistant,
+      }),
+    [capabilities.isAssistant, capabilities.isDriver, currentUserId],
+  );
+
+  const canVoidItem = useCallback(
+    (item: TripRosterItem) =>
+      canVoidSyncedRecord({
+        record: item.attendance,
+        isPendingSync: item.isPendingSync,
+        canVoid: capabilities.canCloseTrip,
+      }),
+    [capabilities.canCloseTrip],
+  );
+
+  const handleUndoRegistration = useCallback(
+    async (studentId: string) => {
+      if (!tripId || isCorrectingStudentId) {
+        return;
+      }
+
+      const selectedStudent = findStudentName(studentId);
+      const item = items.find((entry) => entry.student.id === studentId);
+      if (!selectedStudent || !item?.attendance) {
+        return;
+      }
+
+      const confirmed = await confirmUndoPendingRegistration(selectedStudent.nombre_alumno);
+      if (!confirmed) {
+        return;
+      }
+
+      setIsCorrectingStudentId(studentId);
+      setInfoMessage(null);
+
+      try {
+        await rosterStoreActions.undoPendingRegistration(
+          tripId,
+          studentId,
+          item.attendance.event_type,
+        );
+        setInfoMessage("Registro pendiente eliminado del dispositivo.");
+      } catch (error: unknown) {
+        setInfoMessage(getErrorMessage(error, "No se pudo deshacer el registro."));
+      } finally {
+        setIsCorrectingStudentId(null);
+      }
+    },
+    [tripId, isCorrectingStudentId, findStudentName, items],
+  );
+
+  const handleVoidRegistration = useCallback(
+    async (studentId: string) => {
+      if (!tripId || isCorrectingStudentId) {
+        return;
+      }
+
+      const selectedStudent = findStudentName(studentId);
+      const item = items.find((entry) => entry.student.id === studentId);
+      const recordId = item?.attendance?.id;
+      if (!selectedStudent || !recordId || recordId.startsWith("local-")) {
+        return;
+      }
+
+      const confirmed = await confirmVoidRegistration(selectedStudent.nombre_alumno);
+      if (!confirmed) {
+        return;
+      }
+
+      const reason = await pickVoidReason();
+      if (!reason) {
+        return;
+      }
+
+      setIsCorrectingStudentId(studentId);
+      setInfoMessage(null);
+
+      try {
+        await rosterStoreActions.voidStudentAttendance(tripId, recordId, reason);
+        setInfoMessage("Registro anulado. Puedes volver a escanear si corresponde.");
+      } catch (error: unknown) {
+        setInfoMessage(getErrorMessage(error, "No se pudo anular el registro."));
+      } finally {
+        setIsCorrectingStudentId(null);
+      }
+    },
+    [tripId, isCorrectingStudentId, findStudentName, items],
+  );
+
   const handleBulkDropoff = useCallback(async () => {
     if (!tripId || !activeTrip || isBulkDropping) {
       return;
@@ -286,6 +400,7 @@ export function useTripRoster(tripId: string | undefined) {
     errorMessage: rosterMeta.errorMessage,
     infoMessage,
     isMarkingStudentId,
+    isCorrectingStudentId,
     isBulkDropping,
     isAfternoonReturn,
     morningRiderIds,
@@ -303,5 +418,9 @@ export function useTripRoster(tripId: string | undefined) {
     handleExitMark,
     handleMarkAbsent,
     handleBulkDropoff,
+    canUndoItem,
+    canVoidItem,
+    handleUndoRegistration,
+    handleVoidRegistration,
   };
 }

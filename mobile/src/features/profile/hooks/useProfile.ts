@@ -3,37 +3,39 @@ import { Alert } from "react-native";
 
 import { getErrorMessage } from "@/src/shared/utils/errors";
 import { getUser } from "@/src/features/auth/services/auth.service";
-import { getProfile, updateProfile } from "@/src/features/profile/services/profile.service";
+import {
+  getProfile,
+  getProfileById,
+  updateProfile,
+} from "@/src/features/profile/services/profile.service";
 import { getMemoryCachedProfile } from "@/src/features/profile/storage/profile-cache.storage";
-import { Area, Role, type Profile, type UpdateProfile } from "@/src/features/profile/types";
-
-function mapEnumValue<T extends string>(value: string, allowed: readonly T[]): T | null {
-  const normalized = value.trim().toUpperCase();
-  return (allowed as readonly string[]).includes(normalized) ? (normalized as T) : null;
-}
+import type { AppProfile, UpdateAppProfile } from "@/src/features/profile/types";
 
 function applyProfileToState(
-  loadedProfile: Profile | null,
+  loadedProfile: AppProfile | null,
   userEmail: string,
   setters: {
-    setProfile: (value: Profile | null) => void;
+    setProfile: (value: AppProfile | null) => void;
     setEmail: (value: string) => void;
-    setRole: (value: string) => void;
-    setArea: (value: string) => void;
+    setFullName: (value: string) => void;
+    setPhone: (value: string) => void;
+    setAppRole: (value: string) => void;
   },
 ) {
   if (loadedProfile) {
     setters.setProfile(loadedProfile);
     setters.setEmail(loadedProfile.email ?? userEmail);
-    setters.setRole(loadedProfile.role ?? "");
-    setters.setArea(loadedProfile.area ?? "");
+    setters.setFullName(loadedProfile.full_name ?? "");
+    setters.setPhone(loadedProfile.phone ?? "");
+    setters.setAppRole(loadedProfile.app_role ?? "");
     return;
   }
 
   setters.setProfile(null);
   setters.setEmail(userEmail);
-  setters.setRole("");
-  setters.setArea("");
+  setters.setFullName("");
+  setters.setPhone("");
+  setters.setAppRole("");
 }
 
 export function useProfile() {
@@ -41,10 +43,11 @@ export function useProfile() {
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<AppProfile | null>(null);
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState("");
-  const [area, setArea] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [appRole, setAppRole] = useState("");
 
   const loadProfile = useCallback(async (forceRefresh = false) => {
     const user = await getUser();
@@ -53,27 +56,32 @@ export function useProfile() {
     }
 
     const userEmail = user.email ?? "";
+    const setters = {
+      setProfile,
+      setEmail,
+      setFullName,
+      setPhone,
+      setAppRole,
+    };
 
     if (!forceRefresh) {
       const memoryProfile = userEmail ? getMemoryCachedProfile(userEmail) : null;
       if (memoryProfile) {
-        applyProfileToState(memoryProfile, userEmail, {
-          setProfile,
-          setEmail,
-          setRole,
-          setArea,
-        });
+        applyProfileToState(memoryProfile, userEmail, setters);
         return;
       }
     }
 
-    const loadedProfile = await getProfile(userEmail, { forceRefresh });
-    applyProfileToState(loadedProfile, userEmail, {
-      setProfile,
-      setEmail,
-      setRole,
-      setArea,
-    });
+    const loadedById = await getProfileById(user.id);
+    if (loadedById) {
+      applyProfileToState(loadedById, userEmail, setters);
+      return;
+    }
+
+    const loadedProfile = userEmail
+      ? await getProfile(userEmail, { forceRefresh })
+      : null;
+    applyProfileToState(loadedProfile, userEmail, setters);
   }, []);
 
   useEffect(() => {
@@ -116,10 +124,10 @@ export function useProfile() {
     setSaving(true);
 
     try {
-      const payload: UpdateProfile = {
+      const payload: UpdateAppProfile = {
         email: email || undefined,
-        role: mapEnumValue(role, Object.values(Role)),
-        area: mapEnumValue(area, Object.values(Area)),
+        full_name: fullName || null,
+        phone: phone || null,
       };
 
       const updated = await updateProfile(profile.id, payload);
@@ -130,9 +138,21 @@ export function useProfile() {
     } finally {
       setSaving(false);
     }
-  }, [profile, email, role, area]);
+  }, [profile, email, fullName, phone]);
 
   const initials = useMemo(() => {
+    const fromName = profile?.full_name?.trim();
+    if (fromName) {
+      const parts = fromName.split(/\s+/).filter(Boolean);
+      const letters = parts
+        .map((part) => part[0])
+        .slice(0, 2)
+        .join("");
+      if (letters) {
+        return letters.toUpperCase();
+      }
+    }
+
     const source = profile?.email ?? email;
     if (!source) {
       return "US";
@@ -149,6 +169,10 @@ export function useProfile() {
   }, [profile, email]);
 
   const displayName = useMemo(() => {
+    if (profile?.full_name?.trim()) {
+      return profile.full_name.trim();
+    }
+
     if (profile?.email) {
       const name = profile.email.split("@")[0];
       return name.replace(/[._]/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
@@ -164,8 +188,9 @@ export function useProfile() {
     editing,
     profile,
     email,
-    role,
-    area,
+    fullName,
+    phone,
+    appRole,
     initials,
     displayName,
     setEditing,

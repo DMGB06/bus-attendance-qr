@@ -6,6 +6,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppTheme } from '@/src/core/theme/ThemeProvider';
 
 type RosterSyncBannerProps = {
+  isOffline: boolean;
   isShowingCache: boolean;
   cacheSavedAt: string | null;
   pendingSyncCount: number;
@@ -31,6 +32,7 @@ function formatCacheAge(savedAt: string | null): string | null {
 }
 
 export function RosterSyncBanner({
+  isOffline,
   isShowingCache,
   cacheSavedAt,
   pendingSyncCount,
@@ -39,17 +41,23 @@ export function RosterSyncBanner({
   const cacheAge = formatCacheAge(cacheSavedAt);
 
   const message = useMemo(() => {
+    if (isOffline && pendingSyncCount > 0) {
+      return `Sin conexión · ${pendingSyncCount} pendiente(s) de sync.`;
+    }
+    if (isOffline) {
+      return 'Sin conexión · los escaneos se guardarán localmente.';
+    }
     if (pendingSyncCount > 0) {
       return `${pendingSyncCount} registro(s) pendiente(s) de sincronizar.`;
     }
     if (isShowingCache && cacheAge) {
-      return `Sin conexión reciente · mostrando datos guardados ${cacheAge}.`;
+      return `Mostrando datos guardados ${cacheAge}.`;
     }
     if (isShowingCache) {
       return 'Mostrando datos guardados en el dispositivo.';
     }
     return null;
-  }, [cacheAge, isShowingCache, pendingSyncCount]);
+  }, [cacheAge, isOffline, isShowingCache, pendingSyncCount]);
 
   const styles = useMemo(
     () =>
@@ -80,13 +88,15 @@ export function RosterSyncBanner({
     return null;
   }
 
+  const iconName = isOffline
+    ? 'cloud-off-outline'
+    : pendingSyncCount > 0
+      ? 'cloud-upload-outline'
+      : 'cloud-off-outline';
+
   return (
     <View style={styles.banner}>
-      <MaterialCommunityIcons
-        name={pendingSyncCount > 0 ? 'cloud-upload-outline' : 'cloud-off-outline'}
-        size={16}
-        color={colors.feedbackWarningGlyph}
-      />
+      <MaterialCommunityIcons name={iconName} size={16} color={colors.feedbackWarningGlyph} />
       <Text style={styles.text}>{message}</Text>
     </View>
   );

@@ -18,9 +18,14 @@ interface RosterStudentRowProps {
   showMorningHint?: boolean;
   isMorningRider?: boolean;
   canMarkAbsent?: boolean;
+  canUndo?: boolean;
+  canVoid?: boolean;
   onMarkExit?: (studentId: string) => void;
   onMarkAbsent?: (studentId: string) => void;
+  onUndo?: (studentId: string) => void;
+  onVoid?: (studentId: string) => void;
   isMarkingExit?: boolean;
+  isCorrecting?: boolean;
 }
 
 export const RosterStudentRow = memo(function RosterStudentRow({
@@ -30,9 +35,14 @@ export const RosterStudentRow = memo(function RosterStudentRow({
   showMorningHint = false,
   isMorningRider = false,
   canMarkAbsent = false,
+  canUndo = false,
+  canVoid = false,
   onMarkExit,
   onMarkAbsent,
+  onUndo,
+  onVoid,
   isMarkingExit = false,
+  isCorrecting = false,
 }: RosterStudentRowProps) {
   const { colors, tokens } = theme;
 
@@ -158,6 +168,29 @@ export const RosterStudentRow = memo(function RosterStudentRow({
           color: colors.textMuted,
           textDecorationLine: "underline",
         },
+        pendingSyncText: {
+          ...tokens.typography.caption,
+          color: colors.feedbackWarningBody,
+          fontWeight: "600",
+        },
+        correctionActions: {
+          alignItems: "flex-end",
+          gap: tokens.spacing.xs,
+          marginTop: tokens.spacing.xs,
+        },
+        correctionButton: {
+          paddingVertical: 2,
+        },
+        correctionText: {
+          ...tokens.typography.caption,
+          color: colors.attendancePending,
+          textDecorationLine: "underline",
+        },
+        voidText: {
+          ...tokens.typography.caption,
+          color: colors.textMuted,
+          textDecorationLine: "underline",
+        },
       }),
     [colors, isMorningRider, statusColors, tokens],
   );
@@ -177,7 +210,7 @@ export const RosterStudentRow = memo(function RosterStudentRow({
     : null;
 
   function renderTrailing() {
-    if (isMarkingExit) {
+    if (isMarkingExit || isCorrecting) {
       return <ActivityIndicator size="small" color={colors.attendanceCompleted} />;
     }
 
@@ -211,8 +244,35 @@ export const RosterStudentRow = memo(function RosterStudentRow({
     }
 
     return (
-      <View style={styles.statusTag}>
-        <Text style={styles.statusTagText}>{getRosterStatusLabel(item, tripDirection)}</Text>
+      <View style={styles.pendingActions}>
+        <View style={styles.statusTag}>
+          <Text style={styles.statusTagText}>{getRosterStatusLabel(item, tripDirection)}</Text>
+        </View>
+        {item.isPendingSync ? (
+          <Text style={styles.pendingSyncText}>Pendiente sync</Text>
+        ) : null}
+        {(canUndo || canVoid) && (
+          <View style={styles.correctionActions}>
+            {canUndo ? (
+              <Pressable
+                onPress={() => onUndo?.(item.student.id)}
+                style={styles.correctionButton}
+                accessibilityRole="button"
+              >
+                <Text style={styles.correctionText}>Deshacer</Text>
+              </Pressable>
+            ) : null}
+            {canVoid ? (
+              <Pressable
+                onPress={() => onVoid?.(item.student.id)}
+                style={styles.correctionButton}
+                accessibilityRole="button"
+              >
+                <Text style={styles.voidText}>Anular registro</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        )}
       </View>
     );
   }

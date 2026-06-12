@@ -1,0 +1,122 @@
+import { useMemo } from "react";
+import { Platform, StyleSheet, View } from "react-native";
+import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
+import { Text } from "react-native-paper";
+
+import { useAppTheme } from "@/src/core/theme/ThemeProvider";
+import { DEFAULT_MAP_REGION } from "@/src/features/trips/domain/location.constants";
+import { formatLocationAge } from "@/src/features/trips/domain/location-labels";
+import type { ParentBusLocation } from "@/src/features/parent/types/bus-location";
+
+type ParentBusMapProps = {
+  locations: ParentBusLocation[];
+  selectedTripId: string | null;
+};
+
+export function ParentBusMap({ locations, selectedTripId }: ParentBusMapProps) {
+  const { colors, tokens } = useAppTheme();
+
+  const selectedLocation =
+    locations.find((location) => location.tripId === selectedTripId) ?? locations[0] ?? null;
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          borderRadius: tokens.radius.xl,
+          overflow: "hidden",
+          borderWidth: 1,
+          borderColor: colors.surfaceCardBorder,
+        },
+        map: {
+          flex: 1,
+        },
+        footer: {
+          position: "absolute",
+          left: tokens.spacing.md,
+          right: tokens.spacing.md,
+          bottom: tokens.spacing.md,
+          backgroundColor: colors.surfaceCard,
+          borderRadius: tokens.radius.lg,
+          borderWidth: 1,
+          borderColor: colors.surfaceCardBorder,
+          padding: tokens.spacing.md,
+          gap: tokens.spacing.xs,
+        },
+        footerTitle: {
+          ...tokens.typography.bodyStrong,
+          color: colors.textTitle,
+        },
+        footerMeta: {
+          ...tokens.typography.caption,
+          color: colors.textMuted,
+        },
+        webFallback: {
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          padding: tokens.spacing.lg,
+          backgroundColor: colors.surfaceCard,
+        },
+        webText: {
+          ...tokens.typography.body,
+          color: colors.textBody,
+          textAlign: "center",
+        },
+      }),
+    [colors, tokens],
+  );
+
+  if (Platform.OS === "web") {
+    return (
+      <View style={styles.webFallback}>
+        <Text style={styles.webText}>
+          El mapa en vivo está disponible en la app móvil Android/iOS.
+        </Text>
+      </View>
+    );
+  }
+
+  const region = selectedLocation
+    ? {
+        latitude: selectedLocation.lat,
+        longitude: selectedLocation.lng,
+        latitudeDelta: 0.03,
+        longitudeDelta: 0.03,
+      }
+    : DEFAULT_MAP_REGION;
+
+  return (
+    <View style={styles.container}>
+      <MapView
+        style={styles.map}
+        provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
+        initialRegion={region}
+        region={region}
+      >
+        {locations.map((location) => (
+          <Marker
+            key={location.tripId}
+            coordinate={{ latitude: location.lat, longitude: location.lng }}
+            title="Bus escolar"
+            description={location.studentNames.join(", ")}
+          />
+        ))}
+      </MapView>
+
+      {selectedLocation ? (
+        <View style={styles.footer}>
+          <Text style={styles.footerTitle}>
+            {selectedLocation.studentNames.length === 1
+              ? selectedLocation.studentNames[0]
+              : `${selectedLocation.studentNames.length} hijos en este bus`}
+          </Text>
+          <Text style={styles.footerMeta}>
+            {formatLocationAge(selectedLocation.lastLocationAt)}
+          </Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}

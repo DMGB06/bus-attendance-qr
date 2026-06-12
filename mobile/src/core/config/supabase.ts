@@ -17,7 +17,16 @@ export const hasSupabaseConfig = Boolean(
 const supabaseUrl = hasSupabaseConfig ? normalizedSupabaseUrl! : "https://example.supabase.co";
 const supabaseAnonKey = hasSupabaseConfig ? rawSupabaseAnonKey! : "public-anon-key";
 
-export const supabase: SupabaseClient<Database, "public"> = createClient<Database, "public">(
+/** Operaciones BusControl: viajes, asistencia, app_profiles, etc. */
+export const supabase: SupabaseClient<Database, "buscontrol"> = createClient<Database, "buscontrol">(
   supabaseUrl,
   supabaseAnonKey,
+  { db: { schema: "buscontrol" } },
+);
+
+/** Padrón municipal compartido (solo lectura en V1). */
+export const supabasePublic: SupabaseClient<Database, "public"> = createClient<Database, "public">(
+  supabaseUrl,
+  supabaseAnonKey,
+  { db: { schema: "public" } },
 );

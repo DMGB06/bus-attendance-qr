@@ -1,4 +1,4 @@
-import { supabase } from "@/src/core/config/supabase";
+import { supabasePublic } from "@/src/core/config/supabase";
 import { perfAsync } from "@/src/shared/utils/perfMark";
 import {
   findStudentInCache,
@@ -25,7 +25,7 @@ export async function findStudentByCode(code: string): Promise<Student | null> {
     return null;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from("social_bus_escolar")
     .select("*")
     .eq("codigo", normalizedCode)
@@ -45,7 +45,7 @@ export async function findStudentByCode(code: string): Promise<Student | null> {
 
   const upperCode = normalizedCode.toUpperCase();
   if (upperCode !== normalizedCode) {
-    const { data: upperData, error: upperError } = await supabase
+    const { data: upperData, error: upperError } = await supabasePublic
       .from("social_bus_escolar")
       .select("*")
       .eq("codigo", upperCode)
@@ -123,7 +123,7 @@ export async function searchStudentsByName(
     }
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from("social_bus_escolar")
     .select("*")
     .ilike("nombre_alumno", `%${normalizedName}%`)
@@ -143,7 +143,7 @@ export async function getStudentById(id: string): Promise<Student | null> {
     return null;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from("social_bus_escolar")
     .select("*")
     .eq("id", normalizedId)
@@ -154,4 +154,23 @@ export async function getStudentById(id: string): Promise<Student | null> {
   }
 
   return data;
+}
+
+export async function getStudentsByIds(ids: string[]): Promise<Student[]> {
+  const normalizedIds = [...new Set(ids.map(normalizeLookup).filter(Boolean))];
+
+  if (!normalizedIds.length) {
+    return [];
+  }
+
+  const { data, error } = await supabasePublic
+    .from("social_bus_escolar")
+    .select("*")
+    .in("id", normalizedIds);
+
+  if (error) {
+    throw new Error("No se pudo consultar la base de alumnos.");
+  }
+
+  return data ?? [];
 }

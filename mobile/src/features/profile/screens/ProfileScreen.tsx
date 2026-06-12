@@ -14,14 +14,17 @@ import { AppScrollView } from "@/src/shared/ui/AppScrollView";
 
 function formatRoleLabel(role: string | null | undefined): string {
   if (!role) {
-    return "—";
+    return "Sin rol asignado";
   }
-  if (role.toLowerCase() === "admin") {
-    return "Administrador";
-  }
-  if (role.toLowerCase() === "visor") {
-    return "Visor";
-  }
+
+  const normalized = role.toLowerCase();
+  if (normalized === "chofer") return "Chofer";
+  if (normalized === "asistenta") return "Asistenta";
+  if (normalized === "padre") return "Padre / madre";
+  if (normalized === "coordinador") return "Coordinador";
+  if (normalized === "admin") return "Administrador";
+  if (normalized === "visor") return "Visor";
+
   return role;
 }
 
@@ -141,8 +144,8 @@ export default function ProfileScreen() {
     );
   }
 
-  const roleLabel = formatRoleLabel(profileState.profile?.role ?? null);
-  const areaLabel = profileState.profile?.area ?? "—";
+  const roleLabel = formatRoleLabel(profileState.appRole || profileState.profile?.app_role);
+  const phoneLabel = profileState.phone || profileState.profile?.phone || "—";
 
   return (
     <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>
@@ -176,7 +179,7 @@ export default function ProfileScreen() {
           <Divider />
           <ProfileField label="Rol" value={roleLabel} />
           <Divider />
-          <ProfileField label="Área" value={areaLabel} />
+          <ProfileField label="Teléfono" value={phoneLabel} />
         </Surface>
 
         <Surface style={styles.card} elevation={0}>

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "expo-router";
 
+import { OPS_ROUTES } from "@/src/core/routes";
+
 import {
   hasPendingDropoffIssues,
   type CloseTripValidationResult,
@@ -14,7 +16,11 @@ import { loadCloseTripValidation } from "@/src/features/trips/services/close-tri
 import { closeTrip } from "@/src/features/trips/services/trips.service";
 import { rosterStoreActions, useRosterItems } from "@/src/features/trips/store/rosterStore";
 import { useTripStore } from "@/src/features/trips/store/tripStore";
-import { confirmCloseWithPendingStudents } from "@/src/features/trips/utils/rosterConfirmations";
+import {
+  confirmCloseWithPendingStudents,
+  confirmCloseWithPendingSync,
+} from "@/src/features/trips/utils/rosterConfirmations";
+import { countPendingForTrip } from "@/src/features/trips/storage/attendance-queue.storage";
 
 const EMPTY_VALIDATION: CloseTripValidationResult = {
   pendingDropoff: [],
@@ -96,7 +102,15 @@ export function useCloseTrip() {
       try {
         await flushPendingAttendanceForClose(tripId);
       } catch {
-        /* Si la cola offline falla, igual intentamos cerrar el viaje en servidor. */
+        /* Si la cola offline falla, pedimos confirmación antes de cerrar. */
+      }
+
+      const pendingSyncCount = await countPendingForTrip(tripId);
+      if (pendingSyncCount > 0) {
+        const shouldCloseWithPendingSync = await confirmCloseWithPendingSync(pendingSyncCount);
+        if (!shouldCloseWithPendingSync) {
+          return;
+        }
       }
 
       await closeTrip(tripId);
@@ -104,7 +118,7 @@ export function useCloseTrip() {
       rosterStoreActions.clearRosterStore();
       await cleanupTripAfterClose(tripId);
       clearActiveTrip();
-      router.replace("/(tabs)/trip");
+      router.replace(OPS_ROUTES.trip);
     } catch (error: unknown) {
       setErrorMessage(getErrorMessage(error, "No se pudo cerrar el viaje."));
     } finally {

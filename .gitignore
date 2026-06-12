@@ -3,6 +3,7 @@ docs/
 scripts/
 shared/
 index.html
+supabase/
 
 # Datos sensibles / generados (por si acaso)
 *.csv

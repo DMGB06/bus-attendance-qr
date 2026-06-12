@@ -4,6 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import { HelperText, Searchbar, Text, Button } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
+import { useNetworkStatus } from "@/src/core/connectivity/useNetworkStatus";
 import { NoActiveTripView } from "@/src/features/trips/components/NoActiveTripView";
 import { RosterAfternoonBanner } from "@/src/features/trips/components/roster/RosterAfternoonBanner";
 import { RosterLevelSuggestionBanner } from "@/src/features/trips/components/roster/RosterLevelSuggestionBanner";
@@ -29,6 +30,7 @@ export default function RosterScreen() {
   const { colors, tokens } = useAppTheme();
   const scrollBottom = useScrollBottomPadding(tokens.spacing.md);
   const { activeTrip } = useTripStore();
+  const { isOffline } = useNetworkStatus();
   const roster = useTripRoster(activeTrip?.id);
   const [searchOpen, setSearchOpen] = useState(false);
 
@@ -242,9 +244,14 @@ export default function RosterScreen() {
             item.status === "pending" &&
             (viewMode === "prioritarios" || isMorningRiderStudent)
           }
+          canUndo={roster.canUndoItem(item)}
+          canVoid={roster.canVoidItem(item)}
           onMarkExit={roster.handleExitMark}
           onMarkAbsent={roster.handleMarkAbsent}
+          onUndo={roster.handleUndoRegistration}
+          onVoid={roster.handleVoidRegistration}
           isMarkingExit={roster.isMarkingStudentId === item.student.id}
+          isCorrecting={roster.isCorrectingStudentId === item.student.id}
         />
       );
     },
@@ -258,6 +265,11 @@ export default function RosterScreen() {
       roster.handleExitMark,
       roster.handleMarkAbsent,
       roster.isMarkingStudentId,
+      roster.isCorrectingStudentId,
+      roster.canUndoItem,
+      roster.canVoidItem,
+      roster.handleUndoRegistration,
+      roster.handleVoidRegistration,
     ],
   );
 
@@ -396,6 +408,7 @@ export default function RosterScreen() {
       </View>
 
       <RosterSyncBanner
+        isOffline={isOffline}
         isShowingCache={roster.isShowingCache}
         cacheSavedAt={roster.cacheSavedAt}
         pendingSyncCount={roster.pendingSyncCount}

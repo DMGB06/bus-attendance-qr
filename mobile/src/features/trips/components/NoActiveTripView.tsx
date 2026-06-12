@@ -5,6 +5,9 @@ import { useRouter } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Text } from "react-native-paper";
 
+import { OPS_ROUTES } from "@/src/core/routes";
+import { useAppCapabilities } from "@/src/features/auth/hooks/useAppCapabilities";
+import { WaitingForDriverView } from "@/src/features/trips/components/WaitingForDriverView";
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
 
 export type NoActiveTripContext = "roster" | "scanner" | "close-trip";
@@ -23,6 +26,7 @@ export function NoActiveTripView({ context }: NoActiveTripViewProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, tokens } = useAppTheme();
+  const { capabilities } = useAppCapabilities();
 
   const styles = useMemo(
     () =>
@@ -64,6 +68,25 @@ export function NoActiveTripView({ context }: NoActiveTripViewProps) {
     [colors, tokens],
   );
 
+  if (capabilities.isAssistant) {
+    return <WaitingForDriverView />;
+  }
+
+  if (context === "close-trip" && !capabilities.canCloseTrip) {
+    return (
+      <SafeAreaView
+        edges={["bottom", "left", "right"]}
+        style={[styles.safeArea, { paddingBottom: insets.bottom + tokens.spacing.lg }]}
+      >
+        <View style={styles.centerFill}>
+          <MaterialCommunityIcons name="lock-outline" size={44} color={colors.textBody} />
+          <Text style={styles.title}>Acceso restringido</Text>
+          <Text style={styles.body}>Solo el chofer puede cerrar el viaje.</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView
       edges={["bottom", "left", "right"]}
@@ -73,13 +96,15 @@ export function NoActiveTripView({ context }: NoActiveTripViewProps) {
         <MaterialCommunityIcons name="bus-alert" size={44} color={colors.textBody} />
         <Text style={styles.title}>Sin viaje activo</Text>
         <Text style={styles.body}>{BODY_BY_CONTEXT[context]}</Text>
-        <Pressable
-          style={styles.button}
-          onPress={() => router.replace("/(tabs)/trip")}
-          accessibilityRole="button"
-        >
-          <Text style={styles.buttonText}>Ir a iniciar viaje</Text>
-        </Pressable>
+        {capabilities.canStartTrip ? (
+          <Pressable
+            style={styles.button}
+            onPress={() => router.replace(OPS_ROUTES.trip)}
+            accessibilityRole="button"
+          >
+            <Text style={styles.buttonText}>Ir a iniciar viaje</Text>
+          </Pressable>
+        ) : null}
       </View>
     </SafeAreaView>
   );

@@ -6,11 +6,14 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import { Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
 import { supabase } from '@/src/core/config/supabase';
+import { AUTH_ROUTES } from '@/src/core/routes';
 import { getSession } from '@/src/features/auth/services/auth.service';
+import { usePostLoginRoute } from '@/src/features/auth/hooks/usePostLoginRoute';
 import { useTripStore } from '@/src/features/trips/store/tripStore';
 import { AppThemeProvider } from '@/src/core/theme/ThemeProvider';
 import { AppLoadingScreen } from '@/src/shared/ui/AppLoadingScreen';
 import { perfMarkBootReady } from '@/src/shared/utils/perfMark';
+import { PushRegistrationSync } from '@/src/features/notifications/components/PushRegistrationSync';
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -27,6 +30,7 @@ export default function RootLayout() {
   const [session, setSession] = useState<Session | null>(null);
   const [isBootLoading, setIsBootLoading] = useState(true);
   const skipNextSessionHydrateRef = useRef(false);
+  const { ready: routeReady, href: postLoginHref } = usePostLoginRoute(session);
 
   useEffect(() => {
     let isMounted = true;
@@ -96,23 +100,55 @@ export default function RootLayout() {
 
   const rootSegment = segments[0];
   const inAuthGroup = rootSegment === '(auth)';
-  const inTabsGroup = rootSegment === '(tabs)';
+  const inOpsGroup = rootSegment === '(ops)';
+  const inParentGroup = rootSegment === '(parent)';
+  const waitingForRoute = Boolean(session) && !routeReady;
+  const showBootLoader = !fontsLoaded || isBootLoading || waitingForRoute;
+
+  if (showBootLoader) {
+    return (
+      <SafeAreaProvider>
+        <AppThemeProvider>
+          <AppLoadingScreen />
+        </AppThemeProvider>
+      </SafeAreaProvider>
+    );
+  }
+
+  if (!session && !inAuthGroup) {
+    return <Redirect href={AUTH_ROUTES.login} />;
+  }
+
+  if (session && postLoginHref && !inAuthGroup) {
+    const wantsParent = postLoginHref.startsWith('/(parent)');
+    const wantsOps = postLoginHref.startsWith('/(ops)');
+
+    if (wantsParent && !inParentGroup) {
+      return <Redirect href={postLoginHref} />;
+    }
+
+    if (wantsOps && !inOpsGroup) {
+      return <Redirect href={postLoginHref} />;
+    }
+
+    if (wantsParent && inOpsGroup) {
+      return <Redirect href={postLoginHref} />;
+    }
+
+    if (wantsOps && inParentGroup) {
+      return <Redirect href={postLoginHref} />;
+    }
+  }
 
   return (
     <SafeAreaProvider>
       <AppThemeProvider>
-        {!fontsLoaded || isBootLoading ? (
-          <AppLoadingScreen />
-        ) : !session && !inAuthGroup ? (
-          <Redirect href="/(auth)/login" />
-        ) : session && !inTabsGroup ? (
-          <Redirect href="/(tabs)/trip" />
-        ) : (
-          <Stack screenOptions={{ headerShown: false, contentStyle: { flex: 1 } }}>
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(tabs)" />
-          </Stack>
-        )}
+        <PushRegistrationSync session={session} postLoginHref={postLoginHref} />
+        <Stack screenOptions={{ headerShown: false, contentStyle: { flex: 1 } }}>
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(ops)" />
+          <Stack.Screen name="(parent)" />
+        </Stack>
       </AppThemeProvider>
     </SafeAreaProvider>
   );

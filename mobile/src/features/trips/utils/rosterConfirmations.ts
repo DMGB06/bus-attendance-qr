@@ -1,3 +1,5 @@
+import { Alert, Platform } from "react-native";
+
 import type { CloseTripStudentRef } from "@/src/features/trips/domain/close-trip-validation";
 import type { TripDirection } from "@/src/features/trips/types";
 import {
@@ -58,5 +60,53 @@ export function confirmStudentAbsent(studentName: string) {
     title: "Marcar como ausente",
     message: `¿Registrar que ${studentName} no vendrá en este tramo tarde?`,
     confirmLabel: "Marcar ausente",
+  });
+}
+
+export function confirmUndoPendingRegistration(studentName: string) {
+  return confirmAlert({
+    title: "Deshacer registro",
+    message: `Este registro de ${studentName} aún no subió al servidor.\n\n¿Quitarlo de la cola local?`,
+    confirmLabel: "Deshacer",
+    destructive: true,
+  });
+}
+
+export function confirmCloseWithPendingSync(pendingCount: number) {
+  return confirmAlert({
+    title: "Registros sin sincronizar",
+    message: `Hay ${pendingCount} registro(s) pendientes de sync. ¿Cerrar el viaje de todas formas?`,
+    confirmLabel: "Cerrar de todas formas",
+    cancelLabel: "Volver a revisar",
+    destructive: true,
+  });
+}
+
+export function pickVoidReason(): Promise<string | null> {
+  if (Platform.OS === "web") {
+    return Promise.resolve("Corrección en ruta");
+  }
+
+  return new Promise((resolve) => {
+    Alert.alert(
+      "Motivo de anulación",
+      "Selecciona el motivo:",
+      [
+        { text: "Cancelar", style: "cancel", onPress: () => resolve(null) },
+        { text: "Escaneo erróneo", onPress: () => resolve("Escaneo erróneo") },
+        { text: "Alumno equivocado", onPress: () => resolve("Alumno equivocado") },
+        { text: "Otro", onPress: () => resolve("Corrección en ruta") },
+      ],
+      { cancelable: true, onDismiss: () => resolve(null) },
+    );
+  });
+}
+
+export function confirmVoidRegistration(studentName: string) {
+  return confirmAlert({
+    title: "Anular registro",
+    message: `¿Anular el registro sincronizado de ${studentName}? El alumno volverá a pendiente si corresponde.`,
+    confirmLabel: "Continuar",
+    destructive: true,
   });
 }

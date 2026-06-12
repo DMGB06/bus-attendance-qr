@@ -7,16 +7,273 @@ import type {
   TurnType,
   AttendanceEventType,
   NivelEducativo,
+  TripLocationPoint,
 } from "@/src/features/trips/types";
 
-import type { Profile, Role, Area, UpdateProfile } from "@/src/features/profile/types";
+import type { AppProfile, AppRole, UpdateAppProfile } from "@/src/features/profile/types";
+import type {
+  BusGuardian,
+  BusStudentGuardianLink,
+  StudentGuardian,
+  StudentTripStatus,
+} from "@/src/features/parent/types";
+import type {
+  DevicePushToken,
+  GuardianNotificationPreference,
+  NotificationLogEntry,
+} from "@/src/features/notifications/types";
+
+type TableDef<Row, Insert = Partial<Row>, Update = Partial<Row>> = {
+  Row: Row;
+  Insert: Insert;
+  Update: Update;
+  Relationships: [];
+};
 
 export type Database = {
+  buscontrol: {
+    Tables: {
+      app_profiles: TableDef<AppProfile, AppProfile, UpdateAppProfile>;
+      bus_trips: TableDef<
+        Trip,
+        {
+          id?: string;
+          direction: TripDirection;
+          status?: TripStatus;
+          started_at?: string | null;
+          ended_at?: string | null;
+          operator_id?: string | null;
+          trip_date?: string;
+          turn_type?: TurnType | null;
+          bus_id?: string | null;
+          started_by?: string | null;
+          assistant_id?: string | null;
+          last_lat?: number | null;
+          last_lng?: number | null;
+          last_location_at?: string | null;
+        },
+        {
+          id?: string;
+          direction?: TripDirection;
+          status?: TripStatus;
+          started_at?: string | null;
+          ended_at?: string | null;
+          operator_id?: string | null;
+          trip_date?: string;
+          turn_type?: TurnType | null;
+          bus_id?: string | null;
+          started_by?: string | null;
+          assistant_id?: string | null;
+          last_lat?: number | null;
+          last_lng?: number | null;
+          last_location_at?: string | null;
+        }
+      >;
+      bus_trip_locations: TableDef<
+        TripLocationPoint,
+        {
+          id?: string;
+          trip_id: string;
+          lat: number;
+          lng: number;
+          recorded_at?: string;
+          recorded_by?: string | null;
+        },
+        {
+          lat?: number;
+          lng?: number;
+          recorded_at?: string;
+          recorded_by?: string | null;
+        }
+      >;
+      bus_attendance_records: TableDef<
+        AttendanceRecord,
+        {
+          id?: string;
+          trip_id: string;
+          student_id: string;
+          event_type: AttendanceEventType;
+          scanned_at?: string | null;
+          lat?: number | null;
+          lng?: number | null;
+          operator_id?: string | null;
+          is_offline_sync?: boolean | null;
+          scanned_by?: string | null;
+          scan_role?: "chofer" | "asistenta" | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
+          void_reason?: string | null;
+        },
+        {
+          id?: string;
+          trip_id?: string;
+          student_id?: string;
+          event_type?: AttendanceEventType;
+          scanned_at?: string | null;
+          lat?: number | null;
+          lng?: number | null;
+          operator_id?: string | null;
+          is_offline_sync?: boolean | null;
+          scanned_by?: string | null;
+          scan_role?: "chofer" | "asistenta" | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
+          void_reason?: string | null;
+        }
+      >;
+      bus_units: TableDef<{
+        id: string;
+        code: string;
+        plate: string | null;
+        label: string;
+        is_active: boolean;
+      }>;
+      bus_crew_assignments: TableDef<{
+        id: string;
+        bus_id: string;
+        user_id: string;
+        crew_role: "chofer" | "asistenta";
+        assignment_date: string;
+        is_active: boolean;
+      }>;
+      student_guardians: TableDef<
+        StudentGuardian,
+        {
+          id?: string;
+          student_id: string;
+          guardian_user_id: string;
+          relationship?: string;
+          is_primary?: boolean;
+          verified_at?: string | null;
+          created_at?: string;
+        },
+        {
+          relationship?: string;
+          is_primary?: boolean;
+          verified_at?: string | null;
+        }
+      >;
+      bus_guardians: TableDef<
+        BusGuardian,
+        {
+          id?: string;
+          full_name: string;
+          phone?: string | null;
+          phone_normalized?: string | null;
+          dni?: string | null;
+          email?: string | null;
+          auth_user_id?: string | null;
+          is_active?: boolean;
+          notes?: string | null;
+        },
+        {
+          full_name?: string;
+          phone?: string | null;
+          phone_normalized?: string | null;
+          dni?: string | null;
+          email?: string | null;
+          auth_user_id?: string | null;
+          is_active?: boolean;
+          notes?: string | null;
+          updated_at?: string;
+        }
+      >;
+      bus_student_guardians: TableDef<
+        BusStudentGuardianLink,
+        {
+          id?: string;
+          student_id: string;
+          guardian_id: string;
+          relationship?: string;
+          is_primary?: boolean;
+        },
+        {
+          relationship?: string;
+          is_primary?: boolean;
+        }
+      >;
+      student_trip_status: TableDef<
+        StudentTripStatus,
+        {
+          student_id: string;
+          trip_id: string;
+          trip_date: string;
+          direction: TripDirection;
+          status: StudentTripStatus["status"];
+          last_event_type?: string | null;
+          last_event_at?: string | null;
+          updated_at?: string;
+        },
+        {
+          status?: StudentTripStatus["status"];
+          last_event_type?: string | null;
+          last_event_at?: string | null;
+          updated_at?: string;
+        }
+      >;
+      device_push_tokens: TableDef<
+        DevicePushToken,
+        {
+          id?: string;
+          user_id: string;
+          expo_push_token: string;
+          platform?: string | null;
+          is_active?: boolean;
+          updated_at?: string;
+        },
+        {
+          platform?: string | null;
+          is_active?: boolean;
+          updated_at?: string;
+        }
+      >;
+      notification_log: TableDef<
+        NotificationLogEntry,
+        {
+          id?: string;
+          guardian_user_id: string;
+          student_id: string;
+          event_key: string;
+          title: string;
+          body: string;
+          delivery_status?: NotificationLogEntry["delivery_status"];
+          created_at?: string;
+        },
+        {
+          delivery_status?: NotificationLogEntry["delivery_status"];
+        }
+      >;
+      guardian_notification_preferences: TableDef<
+        GuardianNotificationPreference,
+        {
+          guardian_user_id: string;
+          event_key: GuardianNotificationPreference["event_key"];
+          is_enabled?: boolean;
+          updated_at?: string;
+        },
+        {
+          is_enabled?: boolean;
+          updated_at?: string;
+        }
+      >;
+    };
+    Views: { [_ in never]: never };
+    Functions: {
+      void_attendance_record: {
+        Args: { p_record_id: string; p_reason: string };
+        Returns: AttendanceRecord;
+      };
+    };
+    Enums: {
+      app_role: AppRole;
+    };
+    CompositeTypes: { [_ in never]: never };
+  };
   public: {
     Tables: {
-      social_bus_escolar: {
-        Row: Student;
-        Insert: {
+      social_bus_escolar: TableDef<
+        Student,
+        {
           id?: string;
           nombre_alumno: string;
           dni_alumno: string;
@@ -34,8 +291,8 @@ export type Database = {
           foto_url?: string | null;
           activo?: boolean | null;
           notas?: string | null;
-        };
-        Update: {
+        },
+        {
           id?: string;
           nombre_alumno?: string;
           dni_alumno?: string;
@@ -53,75 +310,8 @@ export type Database = {
           foto_url?: string | null;
           activo?: boolean | null;
           notas?: string | null;
-        };
-        Relationships: [];
-      };
-      bus_trips: {
-        Row: Trip;
-        Insert: {
-          id?: string;
-          direction: TripDirection;
-          status?: TripStatus;
-          started_at?: string | null;
-          ended_at?: string | null;
-          operator_id?: string | null;
-          trip_date?: string;
-          turn_type?: TurnType | null;
-        };
-        Update: {
-          id?: string;
-          direction?: TripDirection;
-          status?: TripStatus;
-          started_at?: string | null;
-          ended_at?: string | null;
-          operator_id?: string | null;
-          trip_date?: string;
-          turn_type?: TurnType | null;
-        };
-        Relationships: [];
-      };
-      bus_attendance_records: {
-        Row: AttendanceRecord;
-        Insert: {
-          id?: string;
-          trip_id: string;
-          student_id: string;
-          event_type: AttendanceEventType;
-          scanned_at?: string | null;
-          lat?: number | null;
-          lng?: number | null;
-          operator_id?: string | null;
-          is_offline_sync?: boolean | null;
-        };
-        Update: {
-          id?: string;
-          trip_id?: string;
-          student_id?: string;
-          event_type?: AttendanceEventType;
-          scanned_at?: string | null;
-          lat?: number | null;
-          lng?: number | null;
-          operator_id?: string | null;
-          is_offline_sync?: boolean | null;
-        };
-        Relationships: [];
-      };
-      profiles: {
-        Row: Profile;
-        Insert: {
-          id?: string;
-          email: string;
-          role?: Role;
-          area?: Area;
-        };
-        Update: {
-          id?: string;
-          email?: string;
-          role?: Role;
-          area?: Area;
-        };
-        Relationships: [];
-      };
+        }
+      >;
     };
     Views: { [_ in never]: never };
     Functions: { [_ in never]: never };

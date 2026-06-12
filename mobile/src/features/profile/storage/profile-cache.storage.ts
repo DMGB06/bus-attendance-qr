@@ -1,16 +1,16 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import type { Profile } from "@/src/features/profile/types";
+import type { AppProfile } from "@/src/features/profile/types";
 
 const STORAGE_PREFIX = "@buscontrol/profile-cache:";
 
-let memoryCache: { email: string; profile: Profile } | null = null;
+let memoryCache: { email: string; profile: AppProfile } | null = null;
 
 function cacheKey(email: string) {
   return `${STORAGE_PREFIX}${email.trim().toLowerCase()}`;
 }
 
-export function getMemoryCachedProfile(email: string): Profile | null {
+export function getMemoryCachedProfile(email: string): AppProfile | null {
   const normalized = email.trim().toLowerCase();
   if (!normalized || memoryCache?.email !== normalized) {
     return null;
@@ -18,7 +18,7 @@ export function getMemoryCachedProfile(email: string): Profile | null {
   return memoryCache.profile;
 }
 
-export async function loadCachedProfile(email: string): Promise<Profile | null> {
+export async function loadCachedProfile(email: string): Promise<AppProfile | null> {
   const normalized = email.trim().toLowerCase();
   if (!normalized) {
     return null;
@@ -34,7 +34,7 @@ export async function loadCachedProfile(email: string): Promise<Profile | null> 
     if (!raw) {
       return null;
     }
-    const profile = JSON.parse(raw) as Profile;
+    const profile = JSON.parse(raw) as AppProfile;
     memoryCache = { email: normalized, profile };
     return profile;
   } catch {
@@ -42,7 +42,7 @@ export async function loadCachedProfile(email: string): Promise<Profile | null> 
   }
 }
 
-export async function saveCachedProfile(email: string, profile: Profile): Promise<void> {
+export async function saveCachedProfile(email: string, profile: AppProfile): Promise<void> {
   const normalized = email.trim().toLowerCase();
   if (!normalized) {
     return;

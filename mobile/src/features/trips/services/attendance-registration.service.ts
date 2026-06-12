@@ -1,4 +1,6 @@
+import { isLocalPendingRecord } from "@/src/features/trips/domain/attendance-sync.rules";
 import { registerAttendance, registerDropoffAttendance } from "@/src/features/trips/services/attendance.service";
+import { getScanContextForCurrentUser } from "@/src/features/trips/services/crew.service";
 import { perfAsync, perfStart } from "@/src/shared/utils/perfMark";
 import {
   canRegisterBoarding,
@@ -14,6 +16,7 @@ import {
   hasQueuedWrite,
   loadAttendanceQueue,
   removeAttendanceWrite,
+  removeQueuedWrite,
   type QueuedAttendanceWrite,
 } from "@/src/features/trips/storage/attendance-queue.storage";
 import {
@@ -73,6 +76,7 @@ async function hasLocalBoardingRecord(tripId: string, studentId: string): Promis
 }
 
 async function flushBoardingWritesForStudent(tripId: string, studentId: string): Promise<void> {
+  const scan = await getScanContextForCurrentUser();
   const queue = await loadAttendanceQueue();
   const boardingEntries = queue.filter(
     (entry) =>
@@ -83,7 +87,7 @@ async function flushBoardingWritesForStudent(tripId: string, studentId: string):
 
   for (const entry of boardingEntries) {
     try {
-      await registerAttendance(entry.tripId, entry.studentId, entry.eventType);
+      await registerAttendance(entry.tripId, entry.studentId, entry.eventType, scan);
       await removeAttendanceWrite(entry.id);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "";
@@ -126,6 +130,11 @@ function createLocalAttendanceRecord(
     lng: null,
     operator_id: null,
     is_offline_sync: true,
+    scanned_by: null,
+    scan_role: null,
+    voided_at: null,
+    voided_by: null,
+    void_reason: null,
   };
 }
 
@@ -165,7 +174,7 @@ export async function buildRosterItemsFromSources(
   const queue = await loadAttendanceQueue();
   const tripQueue = queue.filter((entry) => entry.tripId === tripId);
   const merged = mergeAttendanceRecords(serverRecords, tripQueue);
-  return buildTripRosterItems(students, merged);
+  return buildTripRosterItems(students, merged, tripQueue);
 }
 
 export function validateRegistration(
@@ -207,11 +216,13 @@ export async function syncAttendanceToServer(
     return { status: "queued" };
   }
 
+  const scan = await getScanContextForCurrentUser();
+
   try {
     if (eventType === "bajo") {
-      await registerDropoffAttendance(tripId, studentId);
+      await registerDropoffAttendance(tripId, studentId, scan);
     } else {
-      await registerAttendance(tripId, studentId, eventType);
+      await registerAttendance(tripId, studentId, eventType, scan);
     }
     return { status: "synced" };
   } catch (error: unknown) {
@@ -226,14 +237,19 @@ export async function syncAttendanceToServer(
       if (hasBoarding) {
         try {
           await flushBoardingWritesForStudent(tripId, studentId);
-          await registerDropoffAttendance(tripId, studentId);
+          await registerDropoffAttendance(tripId, studentId, scan);
           return { status: "synced" };
         } catch (retryError: unknown) {
           const retryMessage = retryError instanceof Error ? retryError.message : "";
           if (isDuplicateError(retryMessage)) {
             return { status: "duplicate" };
           }
-          await enqueueAttendanceWrite({ tripId, studentId, eventType });
+          await enqueueAttendanceWrite({
+            tripId,
+            studentId,
+            eventType,
+            scannedBy: scan.scannedBy,
+          });
           return { status: "queued" };
         }
       }
@@ -243,7 +259,12 @@ export async function syncAttendanceToServer(
       throw error;
     }
 
-    await enqueueAttendanceWrite({ tripId, studentId, eventType });
+    await enqueueAttendanceWrite({
+      tripId,
+      studentId,
+      eventType,
+      scannedBy: scan.scannedBy,
+    });
     return { status: "queued" };
   }
 }
@@ -255,13 +276,14 @@ export async function flushAttendanceQueue(tripId?: string): Promise<number> {
   );
 
   let flushed = 0;
+  const scan = await getScanContextForCurrentUser();
 
   for (const entry of pending) {
     try {
       if (entry.eventType === "bajo") {
-        await registerDropoffAttendance(entry.tripId, entry.studentId);
+        await registerDropoffAttendance(entry.tripId, entry.studentId, scan);
       } else {
-        await registerAttendance(entry.tripId, entry.studentId, entry.eventType);
+        await registerAttendance(entry.tripId, entry.studentId, entry.eventType, scan);
       }
       await removeAttendanceWrite(entry.id);
       flushed += 1;
@@ -531,4 +553,43 @@ export async function bulkRegisterDropoff(
 
   const { syncedCount, queuedCount } = await syncBulkDropoffToServer(tripId, eligible);
   return { eligible, syncedCount, queuedCount };
+}
+
+export async function undoPendingRegistration(
+  tripId: string,
+  studentId: string,
+  eventType: AttendanceEventType,
+): Promise<TripRosterItem[]> {
+  const removed = await removeQueuedWrite(tripId, studentId, eventType);
+  if (!removed) {
+    throw new Error("No hay un registro pendiente para deshacer.");
+  }
+
+  const [cachedStudents, cachedAttendance] = await Promise.all([
+    loadCachedStudents(),
+    loadCachedTripAttendance(tripId),
+  ]);
+
+  if (!cachedStudents?.students.length) {
+    throw new Error("No se pudo reconstruir la lista local.");
+  }
+
+  const serverRecords = (cachedAttendance?.records ?? []).filter(
+    (record) =>
+      !(
+        isLocalPendingRecord(record) &&
+        record.student_id === studentId &&
+        record.event_type === eventType
+      ),
+  );
+
+  const queue = await loadAttendanceQueue();
+  const tripQueue = queue.filter((entry) => entry.tripId === tripId);
+  const merged = mergeAttendanceRecords(serverRecords, tripQueue);
+
+  await saveCachedTripAttendance(tripId, merged);
+
+  const items = buildTripRosterItems(cachedStudents.students, merged, tripQueue);
+  await persistRosterSnapshot(tripId, items);
+  return items;
 }

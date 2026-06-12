@@ -3,13 +3,18 @@ import { Tabs, useRouter } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { AUTH_ROUTES } from "@/src/core/routes";
+import { useAppCapabilities } from "@/src/features/auth/hooks/useAppCapabilities";
 import { logout } from "@/src/features/auth/services/auth.service";
+import { TripLocationPublisherSync } from "@/src/features/trips/components/TripLocationPublisherSync";
 import { useActiveTripRoster } from "@/src/features/trips/hooks/useActiveTripRoster";
+import { useAttendanceQueueSync } from "@/src/features/trips/hooks/useAttendanceQueueSync";
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
 import { AppTabHeaderBar } from "@/src/shared/ui/AppTabHeaderBar";
 
 function ActiveTripRosterSync() {
   useActiveTripRoster();
+  useAttendanceQueueSync();
   return null;
 }
 
@@ -17,10 +22,11 @@ export default function TabsLayout() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, tokens } = useAppTheme();
+  const { capabilities, loading: capabilitiesLoading } = useAppCapabilities();
 
   const handleLogout = useCallback(async () => {
     await logout();
-    router.replace("/(auth)/login");
+    router.replace(AUTH_ROUTES.login);
   }, [router]);
 
   const renderHeader = useCallback(
@@ -65,14 +71,18 @@ export default function TabsLayout() {
     [colors, insets.bottom, renderHeader, tabLabelStyle, tokens],
   );
 
+  const showScannerTab = capabilitiesLoading || capabilities.canScan;
+  const showRosterTab = capabilitiesLoading || capabilities.canViewRoster;
+
   return (
     <Fragment>
       <ActiveTripRosterSync />
+      <TripLocationPublisherSync />
       <Tabs initialRouteName="trip" screenOptions={screenOptions}>
         <Tabs.Screen
           name="trip"
           options={{
-            title: "Iniciar Viaje",
+            title: capabilities.isAssistant ? "Viaje activo" : "Iniciar Viaje",
             tabBarLabel: "Viaje",
             tabBarIcon: ({ color, focused }) => (
               <MaterialCommunityIcons
@@ -87,6 +97,7 @@ export default function TabsLayout() {
           name="scanner"
           options={{
             lazy: true,
+            href: showScannerTab ? undefined : null,
             title: "Escanear QR",
             tabBarLabel: "Escanear",
             tabBarIcon: ({ color, focused }) => (
@@ -102,6 +113,7 @@ export default function TabsLayout() {
           name="roster"
           options={{
             lazy: true,
+            href: showRosterTab ? undefined : null,
             title: "Lista",
             tabBarLabel: "Lista",
             tabBarIcon: ({ color, focused }) => (

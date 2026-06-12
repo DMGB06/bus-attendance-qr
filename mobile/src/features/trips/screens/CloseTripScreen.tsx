@@ -5,6 +5,8 @@ import { useRouter } from "expo-router";
 import { Button, Card, HelperText, Text } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
+import { OPS_ROUTES } from "@/src/core/routes";
+
 import { NoActiveTripView } from "@/src/features/trips/components/NoActiveTripView";
 import { CloseTripStudentList } from "@/src/features/trips/components/CloseTripStudentList";
 import { CloseTripValidationSkeleton } from "@/src/features/trips/components/CloseTripValidationSkeleton";
@@ -210,7 +212,7 @@ export default function CloseTripScreen() {
               mode="outlined"
               onPress={() => {
                 if (hasOnboardPending || hasPrioritariosPending) {
-                  router.replace("/(tabs)/roster");
+                  router.replace(OPS_ROUTES.roster);
                   return;
                 }
                 router.back();

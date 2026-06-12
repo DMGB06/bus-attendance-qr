@@ -1,4 +1,5 @@
-import { supabase } from "@/src/core/config/supabase";
+import { supabase, supabasePublic } from "@/src/core/config/supabase";
+import type { ScanContext } from "@/src/features/trips/services/crew.service";
 import type { AttendanceEventType, AttendanceRecord } from "@/src/features/trips/types";
 
 export type PendingDropoffStudent = {
@@ -24,6 +25,7 @@ export async function registerAttendance(
   tripId: string,
   studentId: string,
   eventType: AttendanceEventType,
+  scan?: ScanContext,
 ): Promise<AttendanceRecord> {
   const { data, error } = await supabase
     .from("bus_attendance_records")
@@ -32,6 +34,8 @@ export async function registerAttendance(
       student_id: studentId,
       event_type: eventType,
       scanned_at: new Date().toISOString(),
+      scanned_by: scan?.scannedBy ?? null,
+      scan_role: scan?.scanRole ?? null,
     })
     .select("*")
     .single();
@@ -46,19 +50,22 @@ export async function registerAttendance(
 export async function markManualAttendance(
   tripId: string,
   studentId: string,
+  scan?: ScanContext,
 ): Promise<AttendanceRecord> {
-  return registerAttendance(tripId, studentId, "manual");
+  return registerAttendance(tripId, studentId, "manual", scan);
 }
 
 export async function registerDropoffAttendance(
   tripId: string,
   studentId: string,
+  scan?: ScanContext,
 ): Promise<AttendanceRecord> {
   const { data: attendanceRows, error } = await supabase
     .from("bus_attendance_records")
     .select("event_type")
     .eq("trip_id", tripId)
     .eq("student_id", studentId)
+    .is("voided_at", null)
     .in("event_type", ["subio", "manual", "bajo"]);
 
   if (error) {
@@ -77,7 +84,7 @@ export async function registerDropoffAttendance(
     throw new Error("La salida del alumno ya fue registrada.");
   }
 
-  return registerAttendance(tripId, studentId, "bajo");
+  return registerAttendance(tripId, studentId, "bajo", scan);
 }
 
 export async function getAttendanceByTrip(tripId: string): Promise<AttendanceRecord[]> {
@@ -94,11 +101,23 @@ export async function getAttendanceByTrip(tripId: string): Promise<AttendanceRec
   return data;
 }
 
+export async function voidAttendanceRecord(recordId: string, reason: string): Promise<void> {
+  const { error } = await supabase.rpc("void_attendance_record", {
+    p_record_id: recordId,
+    p_reason: reason,
+  });
+
+  if (error) {
+    throw new Error(error.message || "No se pudo anular el registro.");
+  }
+}
+
 export async function getPendingDropoffStudents(tripId: string): Promise<PendingDropoffStudent[]> {
   const { data: attendanceRows, error: attendanceError } = await supabase
     .from("bus_attendance_records")
     .select("student_id, event_type")
     .eq("trip_id", tripId)
+    .is("voided_at", null)
     .in("event_type", ["subio", "bajo", "manual", "ausente"]);
 
   if (attendanceError) {
@@ -123,7 +142,7 @@ export async function getPendingDropoffStudents(tripId: string): Promise<Pending
     return [];
   }
 
-  const { data: students, error: studentsError } = await supabase
+  const { data: students, error: studentsError } = await supabasePublic
     .from("social_bus_escolar")
     .select("id, nombre_alumno, codigo, direccion")
     .in("id", pendingIds);

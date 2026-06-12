@@ -39,8 +39,28 @@
           }
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#1C3284"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Bus Escolar necesita tu ubicación mientras conduces para que los apoderados vean la ruta aproximada del bus.",
+          "locationAlwaysAndWhenInUsePermission": "Bus Escolar usa tu ubicación solo durante el viaje activo para informar a los apoderados.",
+          "isAndroidBackgroundLocationEnabled": false
+        }
+      ]
     ],
+    "extra": {
+      "eas": {
+        "projectId": "CONFIGURE-WITH-EAS-PROJECT-ID"
+      }
+    },
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true

@@ -1,339 +1,164 @@
-# BusControl QR
+# BusControl — Transporte escolar municipal
 
 <p align="center">
-  <strong>Sistema de control de asistencia escolar para transporte municipal usando QR</strong><br />
-  Registro de subida, salida y marcado manual con reglas de viaje ida/vuelta.
+  <strong>Control de asistencia, portal de apoderados, push y GPS para buses escolares</strong><br />
+  Vocabulario operativo: <strong>recojo</strong> (casas → colegio) y <strong>retorno</strong> (colegio → casas).
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Estado-V1%20funcional-22c55e" alt="Estado V1 funcional" />
-  <img src="https://img.shields.io/badge/Stack-Expo%20%7C%20Supabase-0ea5e9" alt="Stack Expo y Supabase" />
-  <img src="https://img.shields.io/badge/Arquitectura-Modular-8b5cf6" alt="Arquitectura modular" />
+  <img src="https://img.shields.io/badge/Stack-Expo%2054%20%7C%20Supabase-0ea5e9" alt="Stack" />
+  <img src="https://img.shields.io/badge/Schema-buscontrol-8b5cf6" alt="Schema buscontrol" />
 </p>
 
 ---
 
-## 1. Vision del proyecto
+## Qué es
 
-BusControl busca resolver un problema operativo real: registrar asistencia de alumnos en rutas escolares de forma rapida, confiable y auditable.
+App móvil **Expo/React Native** con backend **Supabase** (`buscontrol` + padrón `public.social_bus_escolar`). Soporta varios roles en una sola app:
 
-El enfoque es incremental:
-
-- Primero una **V1 funcional en campo** (MVP usable por chofer/asistente).
-- Luego escalar capacidades en versiones sucesivas sin caer en sobreingenieria.
-
----
-
-## 2. Que problema resuelve
-
-En operacion diaria, los equipos necesitan:
-
-- Saber quien subio al bus.
-- Saber quien bajo del bus.
-- Evitar registros duplicados o inconsistentes.
-- Tener trazabilidad por viaje y operador.
-
-BusControl cubre eso con reglas de negocio y persistencia en Supabase.
+| Rol | Uso |
+|-----|-----|
+| **Chofer** | Inicia/cierra viaje, escanea QR, publica GPS |
+| **Asistenta** | Escanea en segundo celular (mismo viaje) |
+| **Padre** | Ve estado de hijos, mapa del bus, notificaciones push |
+| **Coordinador** | Mismos permisos operativos que chofer (V1); altas vía Supabase Studio |
 
 ---
 
-## 3. Alcance actual (V1)
-
-### Flujo operativo principal
-
-1. Login de operador.
-2. Inicio de viaje (`ida` o `vuelta`).
-3. Escaneo QR o busqueda manual por `codigo`.
-4. Confirmacion y registro de asistencia.
-5. Vista de lista del viaje con estado por alumno.
-6. Registro de salida de alumnos.
-7. Cierre de viaje con alerta si quedan alumnos sin salida.
-
-### Pantallas V1
-
-`Login -> Iniciar viaje -> Escanear QR -> Lista del viaje -> Cerrar viaje`
-
----
-
-## 4. Arquitectura y organizacion del codigo
-
-### Capas
-
-1. **UI / Presentacion**  
-   `mobile/app/**` y `mobile/src/components/**`
-2. **Reglas de negocio (servicios)**  
-   `mobile/src/services/**`
-3. **Estado de sesion/viaje**  
-   `mobile/src/stores/tripStore.ts`
-4. **Acceso a datos**  
-   `mobile/src/lib/supabase.ts` + Supabase/PostgreSQL
-
-### Estructura principal
+## Arquitectura mobile (`features/`)
 
 ```text
 mobile/
-  app/
-    (auth)/login.tsx
-    (app)/(tabs)/scan.tsx
-    (app)/(tabs)/scan-tab.tsx
-    (app)/(tabs)/roster.tsx
-    (app)/close-trip.tsx
+  app/                          # Rutas Expo Router
+    (auth)/login
+    (ops)/(tabs)/               # Chofer / asistenta
+      trip, scanner, roster, close-trip, profile
+    (parent)/(tabs)/            # Apoderados
+      home, map, profile
+    (parent)/child/[id]
   src/
-    services/
-      auth.ts
-      students.ts
-      trips.ts
-      attendace.ts
-      tripRoster.ts
-    stores/tripStore.ts
-    components/
-    lib/supabase.ts
-    types/index.ts
+    core/                       # Supabase, rutas, tema
+    features/
+      auth/                     # Login, permissions
+      profile/
+      trips/                    # Viajes, roster, escaneo, offline
+      parent/                   # Portal padres, mapa, timeline
+      notifications/            # Push tokens y preferencias
 ```
 
----
-
-## 5. Modelo de datos real (actual)
-
-> Nota: la implementacion usa `bus_trips` y `bus_attendance_records` (no `trips` / `attendance_records`).
-
-### `social_bus_escolar` (existente)
-
-Base de alumnos.
-
-Campos clave usados:
-
-- `id`
-- `nombre_alumno`
-- `codigo`
-- datos complementarios (dni, colegio, apoderado, direccion)
-
-### `bus_trips`
-
-Representa un viaje operativo.
-
-Campos clave:
-
-- `id`
-- `direction`: `ida | vuelta`
-- `status`: `active | completed`
-- `started_at`, `ended_at`
-- `operator_id` (FK a `auth.users`)
-- `trip_date`
-
-### `bus_attendance_records`
-
-Eventos de asistencia por alumno y viaje.
-
-Campos clave:
-
-- `id`
-- `trip_id` (FK a `bus_trips`)
-- `student_id` (FK a `social_bus_escolar`)
-- `event_type`: `boarded | alighted | manual`
-- `scanned_at`
-
-Restriccion clave:
-
-- `UNIQUE (trip_id, student_id, event_type)` para evitar duplicados del mismo evento.
+Capas por feature: `domain/` (reglas puras) → `services/` → `hooks/` → `screens/` / `components/`.
 
 ---
 
-## 6. Reglas de negocio implementadas
+## Modelo de datos (resumen)
 
-- No se inicia `vuelta` sin `ida` completada del mismo operador y mismo dia.
-- Un operador no puede tener dos viajes `active` simultaneos.
-- Si el QR/codigo no existe: mensaje **"Alumno no encontrado"**.
-- Si hay duplicado por `23505`: mensaje **"Ya registrado"**.
-- La salida (`alighted`) solo se permite si ya hubo `boarded` o `manual`.
-- Al cerrar viaje, si hay alumnos sin salida, se exige confirmacion explicita.
+| Tabla | Propósito |
+|-------|-----------|
+| `bus_trips` | Viaje activo; `direction`: `recojo` \| `retorno` |
+| `bus_attendance_records` | Eventos: `subio`, `bajo`, `ausente`, `manual` |
+| `app_profiles` | Rol app: `chofer`, `asistenta`, `padre`, `coordinador` |
+| `bus_crew_assignments` | Operador ↔ bus por fecha |
+| `bus_guardians` + `bus_student_guardians` | Apoderados (catálogo municipal) |
+| `device_push_tokens` | Tokens Expo push |
+| `bus_trip_locations` | Puntos GPS del viaje activo |
 
----
-
-## 7. Funcionalidades entregadas en V1
-
-- Login con Supabase Auth.
-- Inicio/cierre de viaje.
-- Escaneo QR.
-- Registro manual por codigo.
-- Modal de confirmacion de alumno antes de registrar asistencia.
-- Lista de asistencia con estados visuales.
-- Marcado manual y registro de salida desde roster.
-- Cierre seguro con alerta de pendientes.
-- Ajustes responsive/safe-area para mejorar uso en distintos celulares.
+Migraciones: ver [`supabase/README.md`](supabase/README.md).
 
 ---
 
-## 8. Roadmap por versiones
-
-### Vista ejecutiva
-
-| Version | Objetivo                    | Resultado esperado                                                   |
-| ------- | --------------------------- | -------------------------------------------------------------------- |
-| **V1**  | Operacion base en campo     | Registrar asistencia y salida por viaje con reglas de integridad     |
-| **V2**  | Consolidar operacion diaria | Mejor validacion visual, historial y gestion de casos no registrados |
-| **V3**  | Escalar a multi-bus         | Soporte robusto por unidad, operador y conectividad limitada         |
-| **V4**  | Plataforma integral         | Ecosistema completo para coordinacion y familias                     |
-
-### V1 - MVP operativo (actual)
-
-**Objetivo**  
-Tener una app movil usable en campo con flujo completo de viaje y control basico de integridad.
-
-**Incluye**
-
-- Login.
-- Inicio de viaje (`ida`/`vuelta`) con regla de negocio.
-- Escaneo QR + registro manual.
-- Lista del viaje con estado por alumno.
-- Registro de salida (`alighted`).
-- Cierre de viaje con validacion de pendientes.
-
-**Datos**
-
-- Uso de `bus_trips` + `bus_attendance_records`.
-- Integridad referencial por FK.
-- Control de duplicados por `UNIQUE`.
-
-**Criterio de cierre**
-
-- Flujo end-to-end operativo: login -> iniciar -> registrar -> listar -> cerrar.
-
-### V2 - Consolidacion operativa
-
-**Objetivo**  
-Reducir friccion en campo y cubrir excepciones reales del dia a dia.
-
-**Meta funcional**
-
-- Foto de alumno en confirmacion/escaneo.
-- Historial corto por alumno (ultimos dias).
-- Evento de recogida por padre/tutor (ej. `parent_pickup`).
-- Alta temporal para alumno sin QR.
-- Panel web basico de coordinacion para revisar temporales.
-
-**Meta tecnica**
-
-- Endpoints/consultas optimizadas para historial.
-- Politicas de acceso refinadas para operador/coordinador.
-
-**Datos estimados**
-
-- Ampliacion de `social_bus_escolar` (ej. `photo_url`, `bus_id`).
-- Soporte para entidad temporal o estado `unregistered`.
-
-**Criterio de cierre**
-
-- El equipo puede operar sin bloquearse cuando hay alumnos sin carnet.
-
-### V3 - Escalamiento multi-bus
-
-**Objetivo**  
-Soportar operacion simultanea de varias unidades y operadores con trazabilidad completa.
-
-**Meta funcional**
-
-- Gestion de buses y asignacion de operadores.
-- Modo offline parcial con sincronizacion.
-- Renovacion/invalidez de QR.
-- Reportes de operacion por bus/ruta/periodo.
-
-**Meta tecnica**
-
-- Estrategia de sincronizacion y resolucion de conflictos.
-- RLS por bus y rol de usuario.
-
-**Datos estimados**
-
-- Tablas `buses`, `bus_operators` y relaciones operativas.
-
-**Criterio de cierre**
-
-- Operacion estable en escenario de multiples rutas y conectividad variable.
-
-### V4 - Plataforma integral
-
-**Objetivo**  
-Convertir BusControl en una plataforma completa de transporte escolar municipal.
-
-**Meta funcional**
-
-- App/portal para familias.
-- Seguimiento GPS por eventos.
-- Alertas automaticas.
-- Calendarios y excepciones operativas.
-
-**Meta tecnica**
-
-- Automatizacion de notificaciones y monitoreo.
-- Observabilidad operacional y reporteria avanzada.
-
-**Criterio de cierre**
-
-- Sistema integral con visibilidad completa para operadores, coordinacion y familias.
-
----
-
-## 9. Instalacion y ejecucion
+## Instalación local
 
 ### Requisitos
 
 - Node.js 18+
-- npm
-- Expo Go
+- Expo Go o EAS Build para push/GPS en dispositivo real
 
-### Configuracion
+### Variables
 
-En `mobile/.env`:
+`mobile/.env`:
 
 ```env
-EXPO_PUBLIC_SUPABASE_URL=...
+EXPO_PUBLIC_SUPABASE_URL=https://...
 EXPO_PUBLIC_SUPABASE_ANON_KEY=...
 ```
 
-### Ejecutar
+### Comandos
 
 ```bash
 cd mobile
 npm install
-npm run start
+npm run start          # LAN
+npm run start:tunnel   # túnel (Expo Go remoto)
+npm test               # tests dominio (Jest)
 ```
 
-`npm run start` usa `expo start --tunnel`.
+---
+
+## Build producción (EAS)
+
+1. `npm install -g eas-cli` y `eas login`
+2. En `mobile/app.json` → `extra.eas.projectId` (crear proyecto con `eas init`)
+3. Configurar secretos en EAS: `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+4. Android APK municipal:
+
+```bash
+cd mobile
+eas build --profile production --platform android
+```
+
+Perfiles en [`mobile/eas.json`](mobile/eas.json): `development`, `preview`, `production`.
 
 ---
 
-## 10. Validacion manual recomendada (smoke test)
+## Documentación operativa
 
-1. Login valido.
-2. Iniciar viaje `ida`.
-3. Escanear QR valido.
-4. Repetir QR (debe mostrar "Ya registrado").
-5. Probar codigo inexistente (debe mostrar "Alumno no encontrado").
-6. Registrar manual desde lista.
-7. Registrar salida.
-8. Cerrar viaje con y sin pendientes.
-9. Iniciar `vuelta` solo tras `ida` completada.
+| Documento | Contenido |
+|-----------|-----------|
+| [`docs/PLAN-IMPLEMENTACION-MULTI-ROL.md`](docs/PLAN-IMPLEMENTACION-MULTI-ROL.md) | Plan por fases 0–6 |
+| [`docs/MANUAL-OPERADORES.md`](docs/MANUAL-OPERADORES.md) | 2 celulares, offline, deshacer, anular |
+| [`docs/MANUAL-COORDINACION.md`](docs/MANUAL-COORDINACION.md) | Altas padres/crew, verificación DNI |
+| [`supabase/functions/send-attendance-push/README.md`](supabase/functions/send-attendance-push/README.md) | Webhook push |
 
 ---
 
-## 11. Estado del proyecto
+## Tests unitarios (Fase 6.2)
 
-| Componente          | Estado          |
-| ------------------- | --------------- |
-| Flujo V1 de negocio | ✅ Operativo    |
-| UI responsive base  | ✅ Aplicada     |
-| Versiones V2+       | ⏳ Planificadas |
+```bash
+cd mobile && npm test
+```
+
+Cubre reglas de:
+
+- `permissions.test.ts` — capacidades por rol
+- `student-status.mapper.test.ts` — etiquetas portal padres
+- `attendance.rules.test.ts` — subida/bajada/ausente
 
 ---
 
-## 12. Principio de desarrollo
+## Smoke test rápido
 
-> **Primero que funcione en campo, luego que escale sin romper reglas de negocio.**
+**Operadores:** login chofer → iniciar recojo → escanear → lista → bajar en colegio → cerrar.
 
-Esto evita codigo espagueti y prioriza:
+**Padres:** login padre → ver hijo en inicio → abrir mapa con viaje activo → recibir push al escanear.
 
-- modularidad por servicios,
-- separacion de responsabilidades,
-- validaciones explicitas,
-- y trazabilidad de eventos.
+**Coordinación:** alta en `bus_guardians` + `bus_student_guardians` → padre ve hijos.
+
+---
+
+## Estado del proyecto
+
+| Fase | Tema | Estado repo |
+|------|------|-------------|
+| 0–2 | Multi-rol, offline, anular | Implementado |
+| 3 | Portal padres | Implementado |
+| 4 | Push | Implementado (+ deploy webhook) |
+| 5 | GPS | Implementado (+ Maps API key Android) |
+| 6 | Consolidación | En curso — tests, EAS, manuales, observabilidad |
+
+**Criterio piloto Fase 6:** 1 bus real, 2 semanas, sin incidentes de datos; APK en distribución interna municipal.
+
+---
+
+## Principio
+
+> Primero que funcione en campo con datos confiables; luego escalar sin romper reglas de negocio.

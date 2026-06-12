@@ -1,0 +1,41 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "ios": {
+        "simulator": false
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "CONFIGURE_IN_EAS_SECRETS",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "CONFIGURE_IN_EAS_SECRETS"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "CONFIGURE_IN_EAS_SECRETS",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "CONFIGURE_IN_EAS_SECRETS"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
