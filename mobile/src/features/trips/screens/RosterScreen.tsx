@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { Fragment, useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { HelperText, Searchbar, Text, Button } from "react-native-paper";
@@ -12,17 +12,55 @@ import { RosterStudentRow } from "@/src/features/trips/components/roster/RosterS
 import { ROSTER_ROW_HEIGHT } from "@/src/features/trips/components/roster/rosterRowTheme";
 import { RosterSyncBanner } from "@/src/features/trips/components/roster/RosterSyncBanner";
 import { useTripRoster, type RosterViewMode } from "@/src/features/trips/hooks/useTripRoster";
+import {
+  getDropoffLabel,
+  getRosterCompletedEmptyMessage,
+  getRosterListHeaderLabel,
+  getRosterOnboardFilterLabel,
+  getRosterPendingEmptyMessage,
+  getRosterPendingFilterLabel,
+  getRosterScreenSubtitle,
+} from "@/src/features/trips/domain/trip-labels";
+import type { TripDirection } from "@/src/features/trips/types";
 import type { TripRosterItem } from "@/src/features/trips/services/trip-roster.service";
 import { useTripStore } from "@/src/features/trips/store/tripStore";
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
 import { useScrollBottomPadding } from "@/src/core/theme/useScrollBottomPadding";
 import { useScreenPerfMark } from "@/src/shared/hooks/useScreenPerfMark";
 
-type DriverFilter = {
-  id: RosterViewMode;
-  label: string;
-  count: number;
-};
+function buildChipFilters(direction: TripDirection) {
+  const dropoffLabel = getDropoffLabel(direction);
+  const pendingLabel = getRosterPendingFilterLabel(direction);
+
+  return [
+    { id: "all" as const, label: "Todos" },
+    {
+      id: "pending" as const,
+      label: (count: number) => `${pendingLabel} (${count})`,
+    },
+    {
+      id: "completed" as const,
+      label: (count: number) => `${dropoffLabel} (${count})`,
+    },
+  ];
+}
+
+type StatFilterId = Extract<RosterViewMode, "pending" | "onboard" | "completed">;
+
+const ROSTER_STAT_FILTER_IDS: StatFilterId[] = ["pending", "onboard", "completed"];
+
+function getStatFilterLabel(id: StatFilterId, direction: TripDirection): string {
+  switch (id) {
+    case "pending":
+      return getRosterPendingFilterLabel(direction);
+    case "onboard":
+      return getRosterOnboardFilterLabel(direction);
+    case "completed":
+      return getDropoffLabel(direction);
+    default:
+      return id;
+  }
+}
 
 export default function RosterScreen() {
   useScreenPerfMark("roster");
@@ -68,6 +106,10 @@ export default function RosterScreen() {
           ...tokens.typography.title2,
           color: colors.textTitle,
         },
+        subtitle: {
+          ...tokens.typography.caption,
+          color: colors.textMuted,
+        },
         searchToggle: {
           width: 40,
           height: 40,
@@ -97,16 +139,6 @@ export default function RosterScreen() {
         filterButtonActive: {
           backgroundColor: colors.surfaceCard,
         },
-        filterButtonHighlight: {
-          backgroundColor: colors.feedbackWarningBg,
-        },
-        filterValue: {
-          ...tokens.typography.title3,
-          color: colors.textTitle,
-        },
-        filterValueHighlight: {
-          color: colors.attendancePending,
-        },
         filterLabel: {
           ...tokens.typography.caption,
           color: colors.textMuted,
@@ -125,6 +157,59 @@ export default function RosterScreen() {
         filterLabelActive: {
           color: colors.textTitle,
           fontWeight: "600",
+        },
+        statsBar: {
+          flexDirection: "row",
+          backgroundColor: colors.primary,
+          borderRadius: tokens.radius.md,
+          overflow: "hidden",
+        },
+        statCell: {
+          flex: 1,
+          alignItems: "center",
+          paddingVertical: tokens.spacing.md,
+          gap: 2,
+          minWidth: 0,
+        },
+        statCellActive: {
+          backgroundColor: "rgba(255, 255, 255, 0.14)",
+        },
+        statDivider: {
+          width: 1,
+          backgroundColor: "rgba(255, 255, 255, 0.2)",
+          marginVertical: tokens.spacing.sm,
+        },
+        statValue: {
+          ...tokens.typography.title3,
+          color: colors.textOnPrimary,
+        },
+        statLabel: {
+          ...tokens.typography.overline,
+          color: "rgba(255, 255, 255, 0.75)",
+          letterSpacing: 0.3,
+          textAlign: "center",
+          fontSize: 10,
+        },
+        statLabelActive: {
+          color: colors.textOnPrimary,
+        },
+        listHeader: {
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingHorizontal: tokens.spacing.md,
+          paddingVertical: tokens.spacing.sm,
+          backgroundColor: colors.surfaceTrack,
+          borderBottomWidth: 1,
+          borderBottomColor: colors.borderMuted,
+        },
+        listHeaderText: {
+          ...tokens.typography.label,
+          color: colors.textMuted,
+        },
+        listHeaderCount: {
+          ...tokens.typography.caption,
+          color: colors.textMuted,
         },
         search: {
           backgroundColor: colors.surfaceCard,
@@ -183,35 +268,49 @@ export default function RosterScreen() {
     [colors, tokens],
   );
 
-  const driverFilters = useMemo((): DriverFilter[] => {
-    const pendingLabel = roster.isAfternoonReturn ? "Faltan" : "Pendientes";
-    const onboardLabel = roster.isAfternoonReturn ? "A bordo" : "En bus";
-
-    const filters: DriverFilter[] = [
-      {
-        id: "pending",
-        label: pendingLabel,
-        count: roster.stats.pendingCount,
-      },
-      {
-        id: "onboard",
-        label: onboardLabel,
-        count: roster.stats.onboardCount,
-      },
-      {
-        id: "all",
-        label: "Todos",
-        count:
-          roster.useSuggestedLevelFilter && roster.suggestedNivel
-            ? roster.suggestedLevelMatchCount
-            : roster.totalStudentCount,
-      },
-    ];
-
-    return filters;
-  }, [roster.isAfternoonReturn, roster.totalStudentCount, roster.stats, roster.suggestedLevelMatchCount, roster.suggestedNivel, roster.useSuggestedLevelFilter]);
+  const statCountByMode = useCallback(
+    (mode: StatFilterId) => {
+      switch (mode) {
+        case "onboard":
+          return roster.stats.onboardCount;
+        case "pending":
+          return roster.stats.pendingCount;
+        case "completed":
+          return roster.stats.completedCount;
+        default:
+          return 0;
+      }
+    },
+    [roster.stats],
+  );
 
   const tripDirection = activeTrip?.direction ?? "recojo";
+  const chipFilters = useMemo(() => buildChipFilters(tripDirection), [tripDirection]);
+  const statFilters = useMemo(() => ROSTER_STAT_FILTER_IDS, []);
+
+  const listHeaderLabel = useMemo(
+    () => getRosterListHeaderLabel(roster.viewMode, tripDirection),
+    [roster.viewMode, tripDirection],
+  );
+
+  const rosterSubtitle = useMemo(() => {
+    if (!activeTrip) {
+      return "";
+    }
+    const total =
+      roster.useSuggestedLevelFilter && roster.suggestedNivel
+        ? roster.suggestedLevelMatchCount
+        : roster.totalStudentCount;
+    return getRosterScreenSubtitle(activeTrip, total);
+  }, [
+    activeTrip,
+    roster.suggestedLevelMatchCount,
+    roster.suggestedNivel,
+    roster.totalStudentCount,
+    roster.useSuggestedLevelFilter,
+  ]);
+
+  const totalShown = roster.filteredItems.length;
   const isAfternoonReturn = roster.isAfternoonReturn;
   const viewMode = roster.viewMode;
   const rowTheme = useMemo(() => ({ colors, tokens }), [colors, tokens]);
@@ -279,14 +378,10 @@ export default function RosterScreen() {
 
   const emptyBodyByMode: Record<RosterViewMode, string> = {
     all: "No hay alumnos que coincidan con la búsqueda.",
-    pending: roster.isAfternoonReturn
-      ? "Todos los alumnos ya fueron escaneados."
-      : "Todos los alumnos ya registraron asistencia.",
-    onboard: "Nadie está a bordo en este momento.",
-    completed: roster.isAfternoonReturn
-      ? "Aún no hay alumnos registrados en casa o ausentes."
-      : "Aún no hay alumnos registrados en colegio o ausentes.",
-    attended: "Aún no hay estudiantes con asistencia registrada.",
+    pending: getRosterPendingEmptyMessage(tripDirection),
+    onboard: `Nadie está ${tripDirection === "retorno" ? "a bordo" : "en el bus"} en este momento.`,
+    completed: getRosterCompletedEmptyMessage(tripDirection),
+    attended: "Aún no hay estudiantes con registro de asistencia.",
     prioritarios: "No hay prioritarios pendientes de escaneo.",
   };
 
@@ -309,7 +404,10 @@ export default function RosterScreen() {
               <Text style={styles.title}>Prioritarios</Text>
             </Pressable>
           ) : (
-            <Text style={styles.title}>Lista</Text>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={styles.title}>Lista</Text>
+              {rosterSubtitle ? <Text style={styles.subtitle}>{rosterSubtitle}</Text> : null}
+            </View>
           )}
           <Pressable
             style={[
@@ -333,23 +431,59 @@ export default function RosterScreen() {
         </View>
 
         {roster.viewMode !== "prioritarios" ? (
-          <View style={styles.filterBar}>
-            {driverFilters.map((filter) => {
-              const isActive = roster.viewMode === filter.id;
-              return (
-                <Pressable
-                  key={filter.id}
-                  style={[styles.filterButton, isActive && styles.filterButtonActive]}
-                  onPress={() => roster.setViewMode(filter.id)}
-                >
-                  <Text style={styles.filterValue}>{filter.count}</Text>
-                  <Text style={[styles.filterLabel, isActive && styles.filterLabelActive]}>
-                    {filter.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <>
+            <View style={styles.statsBar}>
+              {statFilters.map((statId, index) => {
+                const isActive = roster.viewMode === statId;
+                const count = statCountByMode(statId);
+
+                return (
+                  <Fragment key={statId}>
+                    {index > 0 ? <View style={styles.statDivider} /> : null}
+                    <Pressable
+                      style={[styles.statCell, isActive && styles.statCellActive]}
+                      onPress={() => roster.setViewMode(statId)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: isActive }}
+                    >
+                      <Text style={styles.statValue}>{count}</Text>
+                      <Text style={[styles.statLabel, isActive && styles.statLabelActive]}>
+                        {getStatFilterLabel(statId, tripDirection)}
+                      </Text>
+                    </Pressable>
+                  </Fragment>
+                );
+              })}
+            </View>
+
+            <View style={styles.filterBar}>
+              {chipFilters.map((filter) => {
+                const isActive = roster.viewMode === filter.id;
+                const chipCount =
+                  filter.id === "pending"
+                    ? roster.stats.pendingCount
+                    : filter.id === "completed"
+                      ? roster.stats.completedCount
+                      : roster.totalStudentCount;
+                const chipLabel =
+                  filter.id === "all" ? filter.label : filter.label(chipCount);
+
+                return (
+                  <Pressable
+                    key={filter.id}
+                    style={[styles.filterButton, isActive && styles.filterButtonActive]}
+                    onPress={() => roster.setViewMode(filter.id)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isActive }}
+                  >
+                    <Text style={[styles.filterLabel, isActive && styles.filterLabelActive]}>
+                      {chipLabel}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </>
         ) : null}
 
         {roster.suggestedNivel ? (
@@ -433,6 +567,10 @@ export default function RosterScreen() {
           </View>
         ) : (
           <View style={styles.listCard}>
+            <View style={styles.listHeader}>
+              <Text style={styles.listHeaderText}>{listHeaderLabel}</Text>
+              <Text style={styles.listHeaderCount}>{totalShown} mostrados</Text>
+            </View>
             <FlatList
               data={roster.filteredItems}
               keyExtractor={keyExtractor}

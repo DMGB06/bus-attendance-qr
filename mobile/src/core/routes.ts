@@ -16,3 +16,6 @@ export const PARENT_ROUTES = {
 export const AUTH_ROUTES = {
   login: "/(auth)/login",
 } as const;
+
+/** Destinos válidos tras login (ops o padre). */
+export type PostLoginHref = typeof OPS_ROUTES.trip | typeof PARENT_ROUTES.home;

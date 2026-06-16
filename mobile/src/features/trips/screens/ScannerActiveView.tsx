@@ -43,9 +43,10 @@ export function ScannerActiveView({ activeTrip }: ScannerActiveViewProps) {
   const shouldMountCamera =
     isFocused &&
     isScannerMode &&
-    !attendance.isConfirmModalVisible &&
     !attendance.isSearching &&
     !attendance.isRegistering;
+  const cameraScanningEnabled =
+    shouldMountCamera && !attendance.isConfirmModalVisible;
 
   const styles = useMemo(
     () =>
@@ -233,7 +234,7 @@ export function ScannerActiveView({ activeTrip }: ScannerActiveViewProps) {
           <View style={styles.cameraSlot}>
             {shouldMountCamera ? (
               <ScannerCamera
-                scanningEnabled
+                scanningEnabled={cameraScanningEnabled}
                 onBarcodeScanned={attendance.handleBarcodeScanned}
               />
             ) : (
@@ -246,9 +247,7 @@ export function ScannerActiveView({ activeTrip }: ScannerActiveViewProps) {
                 <Text style={styles.cameraPlaceholderText}>
                   {!isFocused
                     ? "Cámara pausada — vuelve a la pestaña Escáner para continuar."
-                    : attendance.isConfirmModalVisible
-                      ? "Confirma o cancela el registro para volver a escanear."
-                      : "Preparando escaneo…"}
+                    : "Preparando escaneo…"}
                 </Text>
               </View>
             )}

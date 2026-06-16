@@ -45,6 +45,7 @@ export function ScannerCamera({
           justifyContent: "center",
           alignItems: "center",
           backgroundColor: colors.scannerOverlay,
+          pointerEvents: "none",
         },
         scanRegion: {
           width: "74%",
@@ -122,7 +123,7 @@ export function ScannerCamera({
         barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
         onBarcodeScanned={scanningEnabled ? onBarcodeScanned : undefined}
       />
-      <View style={styles.overlay} pointerEvents="none">
+      <View style={styles.overlay}>
         <View style={styles.scanRegion}>
           <View style={[styles.corner, styles.topLeft]} />
           <View style={[styles.corner, styles.topRight]} />

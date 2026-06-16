@@ -8,6 +8,8 @@ import { DEFAULT_MAP_REGION } from "@/src/features/trips/domain/location.constan
 import { formatLocationAge } from "@/src/features/trips/domain/location-labels";
 import type { ParentBusLocation } from "@/src/features/parent/types/bus-location";
 
+const MAP_FOOTER_INSET = 96;
+
 type ParentBusMapProps = {
   locations: ParentBusLocation[];
   selectedTripId: string | null;
@@ -24,13 +26,20 @@ export function ParentBusMap({ locations, selectedTripId }: ParentBusMapProps) {
       StyleSheet.create({
         container: {
           flex: 1,
+          minHeight: 0,
           borderRadius: tokens.radius.xl,
           overflow: "hidden",
           borderWidth: 1,
           borderColor: colors.surfaceCardBorder,
+          backgroundColor: colors.surfaceCard,
+        },
+        mapClip: {
+          ...StyleSheet.absoluteFillObject,
+          borderRadius: tokens.radius.xl,
+          overflow: "hidden",
         },
         map: {
-          flex: 1,
+          ...StyleSheet.absoluteFillObject,
         },
         footer: {
           position: "absolute",
@@ -43,6 +52,11 @@ export function ParentBusMap({ locations, selectedTripId }: ParentBusMapProps) {
           borderColor: colors.surfaceCardBorder,
           padding: tokens.spacing.md,
           gap: tokens.spacing.xs,
+          elevation: 4,
+          shadowColor: "#000",
+          shadowOpacity: 0.08,
+          shadowRadius: 8,
+          shadowOffset: { width: 0, height: 2 },
         },
         footerTitle: {
           ...tokens.typography.bodyStrong,
@@ -67,21 +81,29 @@ export function ParentBusMap({ locations, selectedTripId }: ParentBusMapProps) {
 
   return (
     <View style={styles.container}>
-      <MapView
-        style={styles.map}
-        provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
-        initialRegion={region}
-        region={region}
-      >
-        {locations.map((location) => (
-          <Marker
-            key={location.tripId}
-            coordinate={{ latitude: location.lat, longitude: location.lng }}
-            title="Bus escolar"
-            description={location.studentNames.join(", ")}
-          />
-        ))}
-      </MapView>
+      <View style={styles.mapClip} collapsable={false}>
+        <MapView
+          style={styles.map}
+          provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
+          initialRegion={region}
+          region={region}
+          mapPadding={{
+            top: tokens.spacing.sm,
+            right: tokens.spacing.sm,
+            bottom: MAP_FOOTER_INSET,
+            left: tokens.spacing.sm,
+          }}
+        >
+          {locations.map((location) => (
+            <Marker
+              key={location.tripId}
+              coordinate={{ latitude: location.lat, longitude: location.lng }}
+              title="Bus escolar"
+              description={location.studentNames.join(", ")}
+            />
+          ))}
+        </MapView>
+      </View>
 
       {selectedLocation ? (
         <View style={styles.footer}>

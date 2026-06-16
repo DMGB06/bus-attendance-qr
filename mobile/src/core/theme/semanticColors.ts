@@ -125,6 +125,7 @@ export type SemanticColors = {
 
   modalSheetBg: string;
   modalSheetBorder: string;
+  modalBackdrop: string;
   modalHandle: string;
   modalTitle: string;
   modalSubtitle: string;
@@ -272,6 +273,7 @@ export const lightSemanticColors: SemanticColors = {
 
   modalSheetBg: "#FFFFFF",
   modalSheetBorder: "rgba(28, 50, 132, 0.12)",
+  modalBackdrop: "rgba(21, 39, 102, 0.45)",
   modalHandle: "rgba(255, 204, 0, 0.75)",
   modalTitle: "#1C3284",
   modalSubtitle: "#6A7A94",
@@ -418,6 +420,7 @@ export const darkSemanticColors: SemanticColors = {
 
   modalSheetBg: "#1C2130",
   modalSheetBorder: "rgba(255, 255, 255, 0.08)",
+  modalBackdrop: "rgba(0, 0, 0, 0.55)",
   modalHandle: "rgba(230, 184, 0, 0.45)",
   modalTitle: "#ECEFF4",
   modalSubtitle: "#7A8499",
@@ -497,6 +500,7 @@ export const highContrastSemanticColors: SemanticColors = {
   feedbackWarningGlyph: "#1C3284",
 
   modalSubtitle: "#333333",
+  modalBackdrop: "rgba(0, 0, 0, 0.5)",
   authFooter: "#333333",
   authBottomNote: "#333333",
   authInputPlaceholder: "#444444",

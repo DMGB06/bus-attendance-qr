@@ -7,11 +7,12 @@ import {
   resolveScannerEventForStudent,
   type ResolvedScannerEvent,
 } from "@/src/features/trips/domain/scanner-event.rules";
-import { findStudentInStudentList, searchStudentsInStudentList } from "@/src/features/trips/services/students-cache.service";
+import { findStudentInStudentList } from "@/src/features/trips/services/students-cache.service";
 import {
   findStudentByLookup,
   searchStudentsByName,
 } from "@/src/features/trips/services/students.service";
+import { loadCachedStudents } from "@/src/features/trips/storage/roster-cache.storage";
 import { rosterStoreActions, useRosterItems } from "@/src/features/trips/store/rosterStore";
 import type { Student, TripDirection } from "@/src/features/trips/types";
 
@@ -20,7 +21,6 @@ export type ScannerViewMode = "scanner" | "manual";
 
 const SCAN_DEBOUNCE_MS = 800;
 const CANCEL_RESCAN_SUPPRESS_MS = 3000;
-const MANUAL_SEARCH_DEBOUNCE_MS = 300;
 export const MANUAL_SEARCH_MIN_CHARS = 2;
 
 type ScanRecord = {
@@ -309,14 +309,13 @@ export function useStudentAttendance(
       lockScan();
 
       try {
-        const localCandidates = rosterStudents.length
-          ? searchStudentsInStudentList(rosterStudents, normalizedName, 8)
-          : [];
+        let searchPool = rosterStudents;
+        if (!searchPool.length) {
+          const cached = await loadCachedStudents();
+          searchPool = cached?.students ?? [];
+        }
 
-        const candidates =
-          localCandidates.length > 0
-            ? localCandidates
-            : await searchStudentsByName(normalizedName, 8, rosterStudents);
+        const candidates = await searchStudentsByName(normalizedName, 8, searchPool);
 
         if (manualSearchRequestRef.current !== requestId) {
           return;
@@ -365,30 +364,6 @@ export function useStudentAttendance(
     }
     await runManualSearch();
   }, [isSearching, runManualSearch]);
-
-  useEffect(() => {
-    if (viewMode !== "manual") {
-      return;
-    }
-
-    const trimmed = manualName.trim();
-    if (trimmed.length < MANUAL_SEARCH_MIN_CHARS) {
-      manualSearchRequestRef.current += 1;
-      setManualCandidates([]);
-      setLookupState("idle");
-      releaseScanLock();
-      if (trimmed.length === 0) {
-        setInfoMessage(null);
-      }
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      void runManualSearch(trimmed);
-    }, MANUAL_SEARCH_DEBOUNCE_MS);
-
-    return () => clearTimeout(timer);
-  }, [manualName, viewMode, runManualSearch, releaseScanLock]);
 
   const handleConfirmAttendance = useCallback(async () => {
     if (!tripId || !student) {
@@ -455,13 +430,18 @@ export function useStudentAttendance(
     releaseScanLock,
   ]);
 
-  const handleManualNameChange = useCallback((value: string) => {
-    setManualName(value);
-    setErrorMessage(null);
-    if (value.trim().length >= MANUAL_SEARCH_MIN_CHARS) {
+  const handleManualNameChange = useCallback(
+    (value: string) => {
+      manualSearchRequestRef.current += 1;
+      setManualName(value);
+      setManualCandidates([]);
+      setLookupState("idle");
+      setErrorMessage(null);
       setInfoMessage(null);
-    }
-  }, []);
+      releaseScanLock();
+    },
+    [releaseScanLock],
+  );
 
   useEffect(() => {
     if (!student) {

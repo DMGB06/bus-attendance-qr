@@ -118,6 +118,11 @@ export async function searchStudentsByName(
     }
   }
 
+  const cachedResults = await searchStudentsInCache(normalizedName, limit);
+  if (cachedResults.length) {
+    return cachedResults;
+  }
+
   const escapedName = escapeIlikePattern(normalizedName);
   const { data, error } = await supabasePublic
     .from("social_bus_escolar")

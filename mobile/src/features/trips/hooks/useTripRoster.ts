@@ -45,7 +45,7 @@ export function useTripRoster(tripId: string | undefined) {
   const items = useRosterItems(tripId);
   const rosterMeta = useRosterMeta(tripId);
   const itemStats = useRosterItemStats(tripId);
-  const [viewMode, setViewMode] = useState<RosterViewMode>("pending");
+  const [viewMode, setViewMode] = useState<RosterViewMode>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [isMarkingStudentId, setIsMarkingStudentId] = useState<string | null>(null);
@@ -64,7 +64,7 @@ export function useTripRoster(tripId: string | undefined) {
       return;
     }
 
-    setViewMode("pending");
+    setViewMode("all");
     setSearchQuery("");
     setUseSuggestedLevelFilter(true);
   }, [tripId]);

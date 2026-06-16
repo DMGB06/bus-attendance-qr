@@ -4,6 +4,7 @@ import { Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
+import { useScrollBottomPadding } from "@/src/core/theme/useScrollBottomPadding";
 import { ParentBusMap } from "@/src/features/parent/components/ParentBusMap";
 import { ParentMapEmptyState } from "@/src/features/parent/components/ParentMapEmptyState";
 import { useParentBusLocations } from "@/src/features/parent/hooks/useParentBusLocations";
@@ -11,6 +12,7 @@ import { AppScrollView } from "@/src/shared/ui/AppScrollView";
 
 export default function ParentMapScreen() {
   const { colors, tokens } = useAppTheme();
+  const scrollBottom = useScrollBottomPadding(tokens.spacing.md);
   const { locations, loading, refreshing, error, hasActiveTrip, waitingForGps, refresh } =
     useParentBusLocations();
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
@@ -76,7 +78,7 @@ export default function ParentMapScreen() {
         },
         mapWrap: {
           flex: 1,
-          minHeight: 320,
+          minHeight: 0,
         },
         error: {
           ...tokens.typography.body,
@@ -162,7 +164,7 @@ export default function ParentMapScreen() {
 
   return (
     <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>
-      <View style={styles.content}>
+      <View style={[styles.content, { paddingBottom: scrollBottom }]}>
         <View style={styles.intro}>
           <Text style={styles.title}>Ubicación del bus</Text>
           <Text style={styles.subtitle}>

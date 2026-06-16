@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
+import { supabaseAuthStorage } from "@/src/core/config/supabase-auth-storage";
 import type { Database } from "@/src/types/database";
 
 const rawSupabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim();
@@ -17,16 +18,26 @@ export const hasSupabaseConfig = Boolean(
 const supabaseUrl = hasSupabaseConfig ? normalizedSupabaseUrl! : "https://example.supabase.co";
 const supabaseAnonKey = hasSupabaseConfig ? rawSupabaseAnonKey! : "public-anon-key";
 
+const sharedAuthOptions = {
+  auth: {
+    storage: supabaseAuthStorage,
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false,
+    storageKey: "buscontrol-auth",
+  },
+} as const;
+
 /** Operaciones BusControl: viajes, asistencia, app_profiles, etc. */
 export const supabase: SupabaseClient<Database, "buscontrol"> = createClient<Database, "buscontrol">(
   supabaseUrl,
   supabaseAnonKey,
-  { db: { schema: "buscontrol" } },
+  { db: { schema: "buscontrol" }, ...sharedAuthOptions },
 );
 
 /** Padrón municipal compartido (solo lectura en V1). */
 export const supabasePublic: SupabaseClient<Database, "public"> = createClient<Database, "public">(
   supabaseUrl,
   supabaseAnonKey,
-  { db: { schema: "public" } },
+  { db: { schema: "public" }, ...sharedAuthOptions },
 );

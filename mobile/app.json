@@ -22,7 +22,7 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "output": "static",
+      "bundler": "metro",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
@@ -56,11 +56,6 @@
         }
       ]
     ],
-    "extra": {
-      "eas": {
-        "projectId": "CONFIGURE-WITH-EAS-PROJECT-ID"
-      }
-    },
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true

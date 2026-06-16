@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Button, HelperText, Modal, Portal, Text } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -38,12 +38,15 @@ export function StudentConfirmModal({
     () =>
       StyleSheet.create({
         modalContainer: {
-          justifyContent: "flex-end",
-          margin: 0,
           flex: 1,
+          margin: 0,
+        },
+        modalOverlay: {
+          backgroundColor: "transparent",
         },
         modalBackdrop: {
-          backgroundColor: colors.scannerRootBg,
+          ...StyleSheet.absoluteFillObject,
+          backgroundColor: colors.modalBackdrop,
         },
         sheet: {
           backgroundColor: colors.modalSheetBg,
@@ -53,6 +56,8 @@ export function StudentConfirmModal({
           borderColor: colors.modalSheetBorder,
           borderBottomWidth: 0,
           overflow: "hidden",
+          marginTop: "auto",
+          zIndex: 1,
         },
         sheetHeader: {
           backgroundColor: colors.modalStudentBannerBg,
@@ -128,13 +133,25 @@ export function StudentConfirmModal({
     <Portal>
       <Modal
         visible={visible && Boolean(student)}
+        style={styles.modalOverlay}
         onDismiss={() => {
           if (!isSubmitting) {
             onDismiss();
           }
         }}
-        contentContainerStyle={[styles.modalContainer, styles.modalBackdrop]}
+        contentContainerStyle={styles.modalContainer}
       >
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Cerrar confirmación"
+          disabled={isSubmitting}
+          onPress={() => {
+            if (!isSubmitting) {
+              onDismiss();
+            }
+          }}
+          style={styles.modalBackdrop}
+        />
         <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, tokens.spacing.lg) }]}>
           {student ? (
             <>

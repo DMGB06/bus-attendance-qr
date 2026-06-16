@@ -1,11 +1,5 @@
 import { useCallback, useMemo } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  View,
-} from "react-native";
+import { ActivityIndicator, RefreshControl, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -21,13 +15,56 @@ import { ChildTimelineList } from "@/src/features/parent/components/ChildTimelin
 import { useChildDetail } from "@/src/features/parent/hooks/useChildDetail";
 import { StudentCard } from "@/src/features/trips/components/StudentCard";
 import { formatTurnTypeLabel } from "@/src/features/trips/domain/trip-labels";
+import type { NivelEducativo } from "@/src/features/trips/types";
+import type { ParentStatusTone } from "@/src/features/parent/types";
+import { AppParentStackHeader } from "@/src/shared/ui/AppParentStackHeader";
 import { AppScrollView } from "@/src/shared/ui/AppScrollView";
+import { useScrollBottomPadding } from "@/src/core/theme/useScrollBottomPadding";
+
+function formatNivelLabel(nivel: NivelEducativo | null | undefined): string | null {
+  if (nivel === "primaria") {
+    return "Primaria";
+  }
+  if (nivel === "secundaria") {
+    return "Secundaria";
+  }
+  return null;
+}
+
+function statusPanelColors(
+  tone: ParentStatusTone,
+  colors: ReturnType<typeof useAppTheme>["colors"],
+) {
+  switch (tone) {
+    case "completed":
+      return {
+        backgroundColor: "rgba(22, 101, 52, 0.08)",
+        borderColor: "rgba(22, 101, 52, 0.2)",
+      };
+    case "onboard":
+      return {
+        backgroundColor: colors.primarySoftBg,
+        borderColor: "rgba(28, 50, 132, 0.16)",
+      };
+    case "absent":
+      return {
+        backgroundColor: colors.feedbackWarningBg,
+        borderColor: "rgba(197, 48, 48, 0.18)",
+      };
+    default:
+      return {
+        backgroundColor: colors.surfaceTrack,
+        borderColor: colors.surfaceCardBorder,
+      };
+  }
+}
 
 export default function ChildDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string | string[] }>();
   const studentId = Array.isArray(params.id) ? params.id[0] : params.id;
   const { colors, tokens } = useAppTheme();
+  const scrollBottom = useScrollBottomPadding(tokens.spacing.lg, true);
   const { child, timeline, loading, refreshing, error, refresh } = useChildDetail(studentId);
 
   const handleRefresh = useCallback(() => {
@@ -41,25 +78,6 @@ export default function ChildDetailScreen() {
           flex: 1,
           backgroundColor: colors.screenSolid,
         },
-        topBar: {
-          flexDirection: "row",
-          alignItems: "center",
-          paddingHorizontal: tokens.spacing.md,
-          paddingVertical: tokens.spacing.sm,
-          gap: tokens.spacing.sm,
-        },
-        backButton: {
-          width: 40,
-          height: 40,
-          borderRadius: tokens.radius.full,
-          alignItems: "center",
-          justifyContent: "center",
-        },
-        topTitle: {
-          flex: 1,
-          ...tokens.typography.headline,
-          color: colors.textTitle,
-        },
         loadingContainer: {
           flex: 1,
           justifyContent: "center",
@@ -67,7 +85,7 @@ export default function ChildDetailScreen() {
         },
         content: {
           paddingHorizontal: tokens.spacing.lg,
-          paddingBottom: tokens.spacing.lg,
+          paddingTop: tokens.spacing.lg,
           gap: tokens.spacing.lg,
         },
         heroCard: {
@@ -75,41 +93,87 @@ export default function ChildDetailScreen() {
           borderRadius: tokens.radius.xl,
           borderWidth: 1,
           borderColor: colors.surfaceCardBorder,
+          overflow: "hidden",
+        },
+        heroTop: {
           padding: tokens.spacing.lg,
           gap: tokens.spacing.md,
         },
         heroRow: {
           flexDirection: "row",
-          alignItems: "center",
+          alignItems: "flex-start",
           gap: tokens.spacing.md,
         },
         heroAvatar: {
-          width: 56,
-          height: 56,
+          width: 48,
+          height: 48,
           borderRadius: tokens.radius.full,
           backgroundColor: colors.primarySoftBg,
           alignItems: "center",
           justifyContent: "center",
+          marginTop: 2,
         },
         heroText: {
           flex: 1,
+          minWidth: 0,
           gap: tokens.spacing.xs,
         },
         name: {
           ...tokens.typography.title2,
           color: colors.textTitle,
         },
-        meta: {
+        school: {
+          ...tokens.typography.caption,
+          color: colors.textBody,
+          lineHeight: 18,
+        },
+        code: {
           ...tokens.typography.caption,
           color: colors.textMuted,
         },
-        statusTitle: {
-          ...tokens.typography.bodyStrong,
-          color: colors.textTitle,
+        metaChip: {
+          alignSelf: "flex-start",
+          borderRadius: tokens.radius.full,
+          paddingHorizontal: tokens.spacing.sm,
+          paddingVertical: 2,
+          backgroundColor: colors.surfaceTrack,
+          marginTop: tokens.spacing.xs,
+        },
+        metaChipText: {
+          ...tokens.typography.caption,
+          color: colors.textMuted,
+        },
+        statusPanel: {
+          marginHorizontal: tokens.spacing.lg,
+          marginTop: tokens.spacing.sm,
+          marginBottom: tokens.spacing.lg,
+          borderRadius: tokens.radius.lg,
+          borderWidth: 1,
+          padding: tokens.spacing.md,
+          gap: tokens.spacing.sm,
         },
         statusSubtitle: {
           ...tokens.typography.body,
-          color: colors.textBody,
+          color: colors.textTitle,
+        },
+        metaRow: {
+          flexDirection: "row",
+          flexWrap: "wrap",
+          alignItems: "center",
+          gap: tokens.spacing.xs,
+        },
+        metaItem: {
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 4,
+        },
+        metaText: {
+          ...tokens.typography.caption,
+          color: colors.textMuted,
+        },
+        metaDot: {
+          ...tokens.typography.caption,
+          color: colors.textMuted,
         },
         sectionTitle: {
           ...tokens.typography.headline,
@@ -129,7 +193,8 @@ export default function ChildDetailScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>
+        <AppParentStackHeader onBack={() => router.back()} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator animating size={36} color={colors.primary} />
         </View>
@@ -140,12 +205,7 @@ export default function ChildDetailScreen() {
   if (!child) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.topBar}>
-          <Pressable onPress={() => router.back()} style={styles.backButton}>
-            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textTitle} />
-          </Pressable>
-          <Text style={styles.topTitle}>Detalle</Text>
-        </View>
+        <AppParentStackHeader onBack={() => router.back()} title="Detalle" />
         <View style={styles.content}>
           <Text style={styles.error}>{error ?? "No se encontró el alumno."}</Text>
         </View>
@@ -158,27 +218,18 @@ export default function ChildDetailScreen() {
     child.todayStatus?.direction ?? child.activeTrip?.direction ?? null,
   );
   const lastUpdated = formatLastUpdatedAt(child.todayStatus?.last_event_at);
+  const nivelLabel = formatNivelLabel(child.student.nivel_educativo);
+  const panelColors = statusPanelColors(presentation.tone, colors);
   const segmentLabel = child.activeTrip?.turn_type
     ? formatTurnTypeLabel(child.activeTrip.turn_type)
     : null;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.topBar}>
-        <Pressable
-          onPress={() => router.back()}
-          style={styles.backButton}
-          accessibilityLabel="Volver"
-        >
-          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textTitle} />
-        </Pressable>
-        <Text style={styles.topTitle} numberOfLines={1}>
-          {child.student.nombre_alumno}
-        </Text>
-      </View>
+    <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>
+      <AppParentStackHeader onBack={() => router.back()} />
 
       <AppScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: scrollBottom }]}
         omitTabBarInset
         refreshControl={
           <RefreshControl
@@ -190,23 +241,57 @@ export default function ChildDetailScreen() {
         }
       >
         <View style={styles.heroCard}>
-          <View style={styles.heroRow}>
-            <View style={styles.heroAvatar}>
-              <ChildStatusIcon icon={presentation.icon} tone={presentation.tone} />
-            </View>
-            <View style={styles.heroText}>
-              <Text style={styles.name}>{child.student.nombre_alumno}</Text>
-              <Text style={styles.meta}>
-                {[child.student.colegio, child.student.codigo].filter(Boolean).join(" · ")}
-              </Text>
+          <View style={styles.heroTop}>
+            <View style={styles.heroRow}>
+              <View style={styles.heroAvatar}>
+                <ChildStatusIcon icon={presentation.icon} tone={presentation.tone} />
+              </View>
+              <View style={styles.heroText}>
+                <Text style={styles.name}>{child.student.nombre_alumno}</Text>
+                {child.student.colegio ? (
+                  <Text style={styles.school}>{child.student.colegio}</Text>
+                ) : null}
+                {child.student.codigo ? (
+                  <Text style={styles.code}>Código {child.student.codigo}</Text>
+                ) : null}
+                {nivelLabel ? (
+                  <View style={styles.metaChip}>
+                    <Text style={styles.metaChipText}>{nivelLabel}</Text>
+                  </View>
+                ) : null}
+              </View>
             </View>
           </View>
 
-          <ChildStatusBadge label={presentation.label} tone={presentation.tone} />
-          <Text style={styles.statusTitle}>{presentation.label}</Text>
-          <Text style={styles.statusSubtitle}>{presentation.subtitle}</Text>
-          {segmentLabel ? <Text style={styles.meta}>Tramo hoy: {segmentLabel}</Text> : null}
-          {lastUpdated ? <Text style={styles.meta}>Actualizado a las {lastUpdated}</Text> : null}
+          <View
+            style={[
+              styles.statusPanel,
+              {
+                backgroundColor: panelColors.backgroundColor,
+                borderColor: panelColors.borderColor,
+              },
+            ]}
+          >
+            <ChildStatusBadge label={presentation.label} tone={presentation.tone} />
+            <Text style={styles.statusSubtitle}>{presentation.subtitle}</Text>
+            {segmentLabel || lastUpdated ? (
+              <View style={styles.metaRow}>
+                {segmentLabel ? (
+                  <View style={styles.metaItem}>
+                    <MaterialCommunityIcons name="routes" size={14} color={colors.textMuted} />
+                    <Text style={styles.metaText}>{segmentLabel}</Text>
+                  </View>
+                ) : null}
+                {segmentLabel && lastUpdated ? <Text style={styles.metaDot}>·</Text> : null}
+                {lastUpdated ? (
+                  <View style={styles.metaItem}>
+                    <MaterialCommunityIcons name="clock-outline" size={14} color={colors.textMuted} />
+                    <Text style={styles.metaText}>Actualizado {lastUpdated}</Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
+          </View>
         </View>
 
         <View style={styles.section}>

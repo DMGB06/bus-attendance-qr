@@ -6,6 +6,18 @@ function normalizeLookup(value: string) {
   return value.trim();
 }
 
+function normalizeForNameSearch(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function nameSearchTokens(value: string): string[] {
+  return normalizeForNameSearch(value).split(/\s+/).filter(Boolean);
+}
+
 function matchStudentByCode(students: Student[], code: string): Student | null {
   const normalized = normalizeLookup(code);
   if (!normalized) {
@@ -45,13 +57,17 @@ export function searchStudentsInStudentList(
   name: string,
   limit = 8,
 ): Student[] {
-  const normalized = normalizeLookup(name).toLowerCase();
-  if (!normalized || !students.length) {
+  const tokens = nameSearchTokens(name);
+  if (!tokens.length || !students.length) {
     return [];
   }
 
   return students
-    .filter((student) => student.nombre_alumno.toLowerCase().includes(normalized))
+    .filter((student) => {
+      const haystack = normalizeForNameSearch(student.nombre_alumno ?? "");
+      const codigo = normalizeForNameSearch(student.codigo ?? "");
+      return tokens.every((token) => haystack.includes(token) || codigo.includes(token));
+    })
     .sort((a, b) => a.nombre_alumno.localeCompare(b.nombre_alumno, "es"))
     .slice(0, limit);
 }

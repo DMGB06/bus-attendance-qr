@@ -1,17 +1,15 @@
 import Constants from "expo-constants";
 import * as Device from "expo-device";
-import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+/** Push remoto no funciona en Expo Go (SDK 53+). Requiere development build o APK EAS. */
+export function isExpoGo(): boolean {
+  return Constants.appOwnership === "expo";
+}
+
+export function isPushAvailable(): boolean {
+  return Device.isDevice && !isExpoGo();
+}
 
 function getExpoProjectId(): string | null {
   const projectId =
@@ -19,11 +17,46 @@ function getExpoProjectId(): string | null {
     Constants.easConfig?.projectId ??
     null;
 
-  return typeof projectId === "string" && projectId.length > 0 ? projectId : null;
+  if (typeof projectId !== "string" || projectId.length === 0) {
+    return null;
+  }
+
+  if (projectId === "CONFIGURE-WITH-EAS-PROJECT-ID") {
+    return null;
+  }
+
+  return projectId;
 }
 
-async function ensureAndroidChannel(): Promise<void> {
-  if (Platform.OS !== "android") {
+let notificationHandlerConfigured = false;
+
+async function loadNotificationsModule() {
+  if (!isPushAvailable()) {
+    return null;
+  }
+
+  const Notifications = await import("expo-notifications");
+
+  if (!notificationHandlerConfigured) {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+    notificationHandlerConfigured = true;
+  }
+
+  return Notifications;
+}
+
+async function ensureAndroidChannel(
+  Notifications: Awaited<ReturnType<typeof loadNotificationsModule>>,
+): Promise<void> {
+  if (!Notifications || Platform.OS !== "android") {
     return;
   }
 
@@ -36,11 +69,16 @@ async function ensureAndroidChannel(): Promise<void> {
 }
 
 export async function requestPushPermissions(): Promise<boolean> {
-  if (!Device.isDevice) {
+  if (!isPushAvailable()) {
     return false;
   }
 
-  await ensureAndroidChannel();
+  const Notifications = await loadNotificationsModule();
+  if (!Notifications) {
+    return false;
+  }
+
+  await ensureAndroidChannel(Notifications);
 
   const current = await Notifications.getPermissionsAsync();
   if (current.granted || current.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL) {
@@ -55,7 +93,7 @@ export async function requestPushPermissions(): Promise<boolean> {
 }
 
 export async function getExpoPushToken(): Promise<string | null> {
-  if (!Device.isDevice) {
+  if (!isPushAvailable()) {
     return null;
   }
 
@@ -65,6 +103,11 @@ export async function getExpoPushToken(): Promise<string | null> {
     console.warn(
       "[push] Falta extra.eas.projectId en app.json. Configura EAS para recibir push en producción.",
     );
+    return null;
+  }
+
+  const Notifications = await loadNotificationsModule();
+  if (!Notifications) {
     return null;
   }
 

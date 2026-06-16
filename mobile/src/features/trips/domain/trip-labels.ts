@@ -34,6 +34,45 @@ export function getDropoffLabel(direction: TripDirection): string {
   return direction === "recojo" ? "En colegio" : "En casa";
 }
 
+export function getRosterPendingFilterLabel(direction: TripDirection): string {
+  return direction === "retorno" ? "Faltan" : "Pendientes";
+}
+
+export function getRosterOnboardFilterLabel(direction: TripDirection): string {
+  return direction === "retorno" ? "A bordo" : "En bus";
+}
+
+export function getRosterPendingEmptyMessage(direction: TripDirection): string {
+  return direction === "retorno"
+    ? "Todos los alumnos ya fueron escaneados al subir."
+    : "Todos los alumnos ya subieron al bus.";
+}
+
+export function getRosterCompletedEmptyMessage(direction: TripDirection): string {
+  const place = direction === "recojo" ? "colegio" : "casa";
+  return `Aún no hay alumnos registrados en ${place} o ausentes.`;
+}
+
+export function getRosterListHeaderLabel(
+  viewMode: "all" | "pending" | "onboard" | "completed" | "attended" | "prioritarios",
+  direction: TripDirection,
+): string {
+  switch (viewMode) {
+    case "pending":
+      return getRosterPendingFilterLabel(direction);
+    case "onboard":
+      return getRosterOnboardFilterLabel(direction);
+    case "completed":
+      return getDropoffLabel(direction);
+    case "attended":
+      return "Con registro";
+    case "prioritarios":
+      return "Prioritarios";
+    default:
+      return "Alumnos";
+  }
+}
+
 export function getDropoffActionLabel(direction: TripDirection): string {
   return direction === "recojo" ? "Marcar en colegio" : "Marcar en casa";
 }

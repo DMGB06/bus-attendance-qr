@@ -5,7 +5,7 @@ import {
 } from "@/src/features/trips/domain/attendance-sync.rules";
 import type { QueuedAttendanceWrite } from "@/src/features/trips/storage/attendance-queue.storage";
 import type { AttendanceRecord, Student } from "@/src/features/trips/types";
-import type { TripRosterItem, TripRosterStatus } from "@/src/features/trips/services/trip-roster.service";
+import type { TripRosterItem, TripRosterStatus } from "@/src/features/trips/types/trip-roster";
 
 export function groupAttendanceByStudent(
   records: AttendanceRecord[],

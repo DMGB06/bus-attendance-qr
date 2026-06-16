@@ -52,7 +52,7 @@ export function ManualRegister({
         }}
       />
       <HelperText type="info" visible={trimmedLength > 0 && !canSearch}>
-        Escribe al menos {MANUAL_SEARCH_MIN_CHARS} caracteres para buscar.
+        Escribe al menos {MANUAL_SEARCH_MIN_CHARS} caracteres y pulsa Buscar por nombre.
       </HelperText>
       <Button
         mode="contained"

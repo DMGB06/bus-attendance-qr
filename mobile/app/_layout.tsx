@@ -58,7 +58,7 @@ export default function RootLayout() {
       if (!isMounted) {
         return;
       }
-      setSession(nextSession);
+      setSession(nextSession ?? null);
     });
 
     return () => {
@@ -102,7 +102,7 @@ export default function RootLayout() {
   const inAuthGroup = rootSegment === '(auth)';
   const inOpsGroup = rootSegment === '(ops)';
   const inParentGroup = rootSegment === '(parent)';
-  const waitingForRoute = Boolean(session) && !routeReady;
+  const waitingForRoute = Boolean(session) && !routeReady && !postLoginHref;
   const showBootLoader = !fontsLoaded || isBootLoading || waitingForRoute;
 
   if (showBootLoader) {
@@ -119,17 +119,19 @@ export default function RootLayout() {
     return <Redirect href={AUTH_ROUTES.login} />;
   }
 
+  if (session && postLoginHref && inAuthGroup) {
+    return (
+      <SafeAreaProvider>
+        <AppThemeProvider>
+          <Redirect href={postLoginHref} />
+        </AppThemeProvider>
+      </SafeAreaProvider>
+    );
+  }
+
   if (session && postLoginHref && !inAuthGroup) {
     const wantsParent = postLoginHref.startsWith('/(parent)');
     const wantsOps = postLoginHref.startsWith('/(ops)');
-
-    if (wantsParent && !inParentGroup) {
-      return <Redirect href={postLoginHref} />;
-    }
-
-    if (wantsOps && !inOpsGroup) {
-      return <Redirect href={postLoginHref} />;
-    }
 
     if (wantsParent && inOpsGroup) {
       return <Redirect href={postLoginHref} />;

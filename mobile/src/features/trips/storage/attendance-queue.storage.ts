@@ -123,3 +123,11 @@ export async function findQueuedWrite(
     ) ?? null
   );
 }
+
+export async function clearAttendanceQueue(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(QUEUE_KEY);
+  } catch {
+    /* non-fatal */
+  }
+}

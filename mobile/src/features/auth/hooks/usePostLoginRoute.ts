@@ -1,55 +1,73 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { Session } from "@supabase/supabase-js";
 
-import { isParentRole } from "@/src/features/auth/domain/permissions";
-import { getUser } from "@/src/features/auth/services/auth.service";
-import { AUTH_ROUTES, OPS_ROUTES, PARENT_ROUTES } from "@/src/core/routes";
-import { getProfileById } from "@/src/features/profile/services/profile.service";
+import { AUTH_ROUTES, OPS_ROUTES, PARENT_ROUTES, type PostLoginHref } from "@/src/core/routes";
+import { resolvePostLoginHref } from "@/src/features/auth/services/post-login-route.service";
 
 type PostLoginRouteState = {
   ready: boolean;
-  href: string | null;
+  href: PostLoginHref | null;
 };
 
-export function usePostLoginRoute(session: unknown): PostLoginRouteState {
-  const [ready, setReady] = useState(!session);
-  const [href, setHref] = useState<string | null>(null);
+const PROFILE_ROUTE_TIMEOUT_MS = 12_000;
+
+export function usePostLoginRoute(session: Session | null): PostLoginRouteState {
+  const sessionUserId = session?.user?.id ?? null;
+  const resolvedUserIdRef = useRef<string | null>(null);
+  const [ready, setReady] = useState(!sessionUserId);
+  const [href, setHref] = useState<PostLoginHref | null>(null);
 
   useEffect(() => {
-    if (!session) {
+    if (!sessionUserId) {
+      resolvedUserIdRef.current = null;
       setHref(null);
       setReady(true);
       return;
     }
 
+    if (resolvedUserIdRef.current === sessionUserId) {
+      setReady(true);
+      return;
+    }
+
     let mounted = true;
+    setHref(null);
     setReady(false);
 
-    void (async () => {
-      try {
-        const user = await getUser();
-        const profile = user ? await getProfileById(user.id) : null;
-        const nextHref = isParentRole(profile?.app_role)
-          ? PARENT_ROUTES.home
-          : OPS_ROUTES.trip;
-
-        if (mounted) {
-          setHref(nextHref);
-        }
-      } catch {
-        if (mounted) {
-          setHref(OPS_ROUTES.trip);
-        }
-      } finally {
-        if (mounted) {
-          setReady(true);
-        }
+    const finish = (nextHref: PostLoginHref) => {
+      if (!mounted) {
+        return;
       }
-    })();
+      resolvedUserIdRef.current = sessionUserId;
+      setHref(nextHref);
+      setReady(true);
+    };
+
+    const timeoutId = setTimeout(() => {
+      if (!mounted || resolvedUserIdRef.current === sessionUserId) {
+        return;
+      }
+
+      void resolvePostLoginHref(sessionUserId)
+        .then(finish)
+        .catch(() => finish(OPS_ROUTES.trip));
+    }, PROFILE_ROUTE_TIMEOUT_MS);
+
+    void resolvePostLoginHref(sessionUserId)
+      .then((nextHref) => {
+        clearTimeout(timeoutId);
+        finish(nextHref);
+      })
+      .catch(() => {
+        clearTimeout(timeoutId);
+        finish(OPS_ROUTES.trip);
+      });
 
     return () => {
       mounted = false;
+      clearTimeout(timeoutId);
     };
-  }, [session]);
+  }, [sessionUserId]);
 
   return { ready, href };
 }

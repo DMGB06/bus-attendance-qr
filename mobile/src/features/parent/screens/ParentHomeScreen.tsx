@@ -46,6 +46,7 @@ export default function ParentHomeScreen() {
         },
         intro: {
           gap: tokens.spacing.xs,
+          marginBottom: tokens.spacing.xs,
         },
         title: {
           ...tokens.typography.title2,

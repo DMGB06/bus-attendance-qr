@@ -62,3 +62,11 @@ export function getCapabilitiesForRole(appRole: AppRole | null | undefined): App
 export function isParentRole(appRole: AppRole | null | undefined): boolean {
   return appRole === AppRole.PADRE;
 }
+
+export function isOpsRole(appRole: AppRole | null | undefined): boolean {
+  return (
+    appRole === AppRole.CHOFER ||
+    appRole === AppRole.ASISTENTA ||
+    appRole === AppRole.COORDINADOR
+  );
+}

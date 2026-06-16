@@ -6,22 +6,12 @@ import {
 } from "@/src/features/trips/services/attendance.service";
 import { getScanContextForCurrentUser } from "@/src/features/trips/services/crew.service";
 import { buildTripRosterItems } from "@/src/features/trips/domain/trip-roster.builder";
-import { buildRosterItemsFromSources } from "@/src/features/trips/services/attendance-registration.service";
+import { buildRosterItemsFromSources } from "@/src/features/trips/services/trip-roster-merge.service";
 import { saveCachedStudents, saveCachedTripAttendance } from "@/src/features/trips/storage/roster-cache.storage";
+import type { TripRosterItem, TripRosterStatus } from "@/src/features/trips/types/trip-roster";
 import type { AttendanceRecord, Student } from "@/src/features/trips/types";
 
-export type TripRosterStatus = "pending" | "onboard" | "completed";
-
-export type TripRosterItem = {
-  student: Student;
-  attendance: AttendanceRecord | null;
-  status: TripRosterStatus;
-  hasAttendance: boolean;
-  canMarkManual: boolean;
-  canMarkExit: boolean;
-  isPendingSync: boolean;
-  pendingScannedBy: string | null;
-};
+export type { TripRosterItem, TripRosterStatus };
 
 export async function getTripRosterRaw(tripId: string): Promise<{
   students: Student[];

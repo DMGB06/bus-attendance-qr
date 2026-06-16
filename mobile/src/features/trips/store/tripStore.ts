@@ -70,3 +70,8 @@ export function useTripStore(): TripState & TripStoreActions {
     hydrateActiveTrip,
   };
 }
+
+export const tripStoreActions = {
+  getActiveTripId: () => getSnapshot().activeTrip?.id ?? null,
+  clearActiveTrip,
+};

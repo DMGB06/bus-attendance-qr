@@ -39,7 +39,8 @@ export function ChildStatusBadge({ label, tone }: ChildStatusBadgeProps) {
           backgroundColor: colors.primarySoftBg,
         },
         badgeText: {
-          ...tokens.typography.overline,
+          ...tokens.typography.label,
+          fontWeight: "600",
           color: colors.attendanceLabel,
         },
         badgeTextAbsent: {
@@ -72,7 +73,7 @@ export function ChildStatusBadge({ label, tone }: ChildStatusBadgeProps) {
 
   return (
     <View style={[styles.badge, variantStyle]}>
-      <Text style={textStyle}>{label.toUpperCase()}</Text>
+      <Text style={textStyle}>{label}</Text>
     </View>
   );
 }

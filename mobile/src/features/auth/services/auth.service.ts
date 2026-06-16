@@ -1,4 +1,5 @@
 import { supabase } from "@/src/core/config/supabase";
+import { clearLocalSessionData } from "@/src/features/auth/services/session-cleanup.service";
 
 export const login = async (email: string, password: string) => {
   const { data, error } = await supabase.auth.signInWithPassword({
@@ -18,8 +19,10 @@ export const requestPasswordReset = async (email: string) => {
 };
 
 export const logout = async () => {
-  const { error } = await supabase.auth.signOut();
+  const { error } = await supabase.auth.signOut({ scope: "local" });
   if (error) throw error;
+
+  await clearLocalSessionData();
 };
 
 export const getUser = async () => {

@@ -8,6 +8,7 @@ import {
 import {
   getExpoPushToken,
   getPushPlatformLabel,
+  isPushAvailable,
   requestPushPermissions,
 } from "@/src/features/notifications/services/push-permissions.service";
 import { toSafeLogMessage } from "@/src/shared/utils/safe-log";
@@ -25,7 +26,7 @@ export function usePushTokenRegistration({
   const registeredForUserRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!enabled || !userId) {
+    if (!enabled || !userId || !isPushAvailable()) {
       return;
     }
 
