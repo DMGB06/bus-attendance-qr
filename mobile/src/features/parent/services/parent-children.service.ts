@@ -2,11 +2,13 @@ import { supabase } from "@/src/core/config/supabase";
 import { getStudentsByIds } from "@/src/features/trips/services/students.service";
 import { getGuardianLinksForUser } from "@/src/features/parent/services/guardians.service";
 import { getTodayDateIso } from "@/src/features/parent/utils/date";
+import { filterValidUuids, isUuid } from "@/src/shared/utils/uuid";
 import type { ParentChildSummary, StudentTripStatus } from "@/src/features/parent/types";
 import type { Trip } from "@/src/features/trips/types";
 
 async function fetchTodayStatuses(studentIds: string[]): Promise<StudentTripStatus[]> {
-  if (!studentIds.length) {
+  const validIds = filterValidUuids(studentIds);
+  if (!validIds.length) {
     return [];
   }
 
@@ -14,7 +16,7 @@ async function fetchTodayStatuses(studentIds: string[]): Promise<StudentTripStat
   const { data, error } = await supabase
     .from("student_trip_status")
     .select("*")
-    .in("student_id", studentIds)
+    .in("student_id", validIds)
     .eq("trip_date", today);
 
   if (error) {
@@ -25,11 +27,12 @@ async function fetchTodayStatuses(studentIds: string[]): Promise<StudentTripStat
 }
 
 async function fetchTripsByIds(tripIds: string[]): Promise<Trip[]> {
-  if (!tripIds.length) {
+  const validIds = filterValidUuids(tripIds);
+  if (!validIds.length) {
     return [];
   }
 
-  const { data, error } = await supabase.from("bus_trips").select("*").in("id", tripIds);
+  const { data, error } = await supabase.from("bus_trips").select("*").in("id", validIds);
 
   if (error) {
     throw new Error("No se pudieron cargar los viajes del día.");
@@ -39,6 +42,10 @@ async function fetchTripsByIds(tripIds: string[]): Promise<Trip[]> {
 }
 
 export async function getParentChildrenWithStatus(userId: string): Promise<ParentChildSummary[]> {
+  if (!isUuid(userId)) {
+    return [];
+  }
+
   const links = await getGuardianLinksForUser(userId);
 
   if (!links.length) {

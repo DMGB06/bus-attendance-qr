@@ -114,7 +114,9 @@ Perfiles en [`mobile/eas.json`](mobile/eas.json): `development`, `preview`, `pro
 
 | Documento | Contenido |
 |-----------|-----------|
+| [`docs/PROYECTO-COMPLETO.md`](docs/PROYECTO-COMPLETO.md) | **Guía técnica completa** — stack, BD, arquitectura, flujos |
 | [`docs/PLAN-IMPLEMENTACION-MULTI-ROL.md`](docs/PLAN-IMPLEMENTACION-MULTI-ROL.md) | Plan por fases 0–6 |
+| [`docs/PLAN-SEGURIDAD.md`](docs/PLAN-SEGURIDAD.md) | Endurecimiento RLS, RPCs, checklist pre-piloto |
 | [`docs/MANUAL-OPERADORES.md`](docs/MANUAL-OPERADORES.md) | 2 celulares, offline, deshacer, anular |
 | [`docs/MANUAL-COORDINACION.md`](docs/MANUAL-COORDINACION.md) | Altas padres/crew, verificación DNI |
 | [`supabase/functions/send-attendance-push/README.md`](supabase/functions/send-attendance-push/README.md) | Webhook push |

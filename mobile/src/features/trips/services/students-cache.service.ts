@@ -1,8 +1,6 @@
 import { loadCachedStudents } from "@/src/features/trips/storage/roster-cache.storage";
+import { isUuid } from "@/src/shared/utils/uuid";
 import type { Student } from "@/src/features/trips/types";
-
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function normalizeLookup(value: string) {
   return value.trim();
@@ -34,7 +32,7 @@ export function findStudentInStudentList(students: Student[], lookup: string): S
     return byCode;
   }
 
-  if (UUID_REGEX.test(normalized)) {
+  if (isUuid(normalized)) {
     return students.find((student) => student.id === normalized) ?? null;
   }
 

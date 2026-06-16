@@ -1,5 +1,7 @@
 import { supabasePublic } from "@/src/core/config/supabase";
+import { escapeIlikePattern, sanitizeIlikeSearchTerm } from "@/src/shared/utils/ilike";
 import { perfAsync } from "@/src/shared/utils/perfMark";
+import { filterValidUuids, isUuid } from "@/src/shared/utils/uuid";
 import {
   findStudentInCache,
   findStudentInStudentList,
@@ -8,15 +10,8 @@ import {
 } from "@/src/features/trips/services/students-cache.service";
 import type { Student } from "@/src/features/trips/types";
 
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
 function normalizeLookup(value: string) {
   return value.trim();
-}
-
-function isUuid(value: string) {
-  return UUID_REGEX.test(value);
 }
 
 export async function findStudentByCode(code: string): Promise<Student | null> {
@@ -111,7 +106,7 @@ export async function searchStudentsByName(
   limit = 8,
   localStudents?: Student[],
 ): Promise<Student[]> {
-  const normalizedName = normalizeLookup(name);
+  const normalizedName = sanitizeIlikeSearchTerm(name);
   if (!normalizedName) {
     return [];
   }
@@ -123,10 +118,11 @@ export async function searchStudentsByName(
     }
   }
 
+  const escapedName = escapeIlikePattern(normalizedName);
   const { data, error } = await supabasePublic
     .from("social_bus_escolar")
     .select("*")
-    .ilike("nombre_alumno", `%${normalizedName}%`)
+    .ilike("nombre_alumno", `%${escapedName}%`)
     .order("nombre_alumno", { ascending: true })
     .limit(limit);
 
@@ -139,7 +135,7 @@ export async function searchStudentsByName(
 
 export async function getStudentById(id: string): Promise<Student | null> {
   const normalizedId = normalizeLookup(id);
-  if (!normalizedId) {
+  if (!normalizedId || !isUuid(normalizedId)) {
     return null;
   }
 
@@ -157,7 +153,7 @@ export async function getStudentById(id: string): Promise<Student | null> {
 }
 
 export async function getStudentsByIds(ids: string[]): Promise<Student[]> {
-  const normalizedIds = [...new Set(ids.map(normalizeLookup).filter(Boolean))];
+  const normalizedIds = filterValidUuids(ids);
 
   if (!normalizedIds.length) {
     return [];

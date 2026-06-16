@@ -6,19 +6,17 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
 import { ManualRegister } from "@/src/features/trips/components/ManualRegister";
 import { StudentCandidateList } from "@/src/features/trips/components/scanner/StudentCandidateList";
+import { isUuid } from "@/src/shared/utils/uuid";
 import type { ResolvedScannerEvent } from "@/src/features/trips/domain/scanner-event.rules";
 import type { ScannerViewMode } from "@/src/features/trips/hooks/useStudentAttendance";
 import type { Student, TripDirection } from "@/src/features/trips/types";
-
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function formatScannedLabel(value: string) {
   const trimmed = value.trim();
   if (!trimmed) {
     return null;
   }
-  if (UUID_REGEX.test(trimmed)) {
+  if (isUuid(trimmed)) {
     return "Identificador QR reconocido";
   }
   if (/^BU\d+/i.test(trimmed)) {

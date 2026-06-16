@@ -58,17 +58,11 @@ export async function getProfileById(id: string): Promise<AppProfile | null> {
 }
 
 export async function updateProfile(id: string, payload: UpdateAppProfile): Promise<AppProfile> {
-  const dbPayload: UpdateAppProfile = {};
-  if (payload.email !== undefined) dbPayload.email = payload.email;
-  if (payload.full_name !== undefined) dbPayload.full_name = payload.full_name;
-  if (payload.phone !== undefined) dbPayload.phone = payload.phone;
+  const { data, error } = await supabase.rpc("update_own_profile", {
+    p_full_name: payload.full_name ?? null,
+    p_phone: payload.phone ?? null,
+  });
 
-  const { data, error } = await supabase
-    .from("app_profiles")
-    .update(dbPayload)
-    .eq("id", id)
-    .select()
-    .single();
   if (error) {
     throw new Error(error.message);
   }

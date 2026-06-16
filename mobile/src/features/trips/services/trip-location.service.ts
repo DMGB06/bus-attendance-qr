@@ -1,5 +1,6 @@
 import { supabase } from "@/src/core/config/supabase";
 import { getUser } from "@/src/features/auth/services/auth.service";
+import { isUuid } from "@/src/shared/utils/uuid";
 import type { TripLocationPoint } from "@/src/features/trips/types";
 
 type PublishLocationInput = {
@@ -13,38 +14,24 @@ export async function publishDriverLocation({
   lat,
   lng,
 }: PublishLocationInput): Promise<void> {
+  if (!isUuid(tripId)) {
+    throw new Error("Identificador de viaje inválido.");
+  }
+
   const user = await getUser();
 
   if (!user) {
     throw new Error("Debes iniciar sesión para publicar ubicación.");
   }
 
-  const recordedAt = new Date().toISOString();
-
-  const { error: insertError } = await supabase.from("bus_trip_locations").insert({
-    trip_id: tripId,
-    lat,
-    lng,
-    recorded_at: recordedAt,
-    recorded_by: user.id,
+  const { error } = await supabase.rpc("publish_driver_location", {
+    p_trip_id: tripId,
+    p_lat: lat,
+    p_lng: lng,
   });
 
-  if (insertError) {
-    throw new Error("No se pudo guardar el punto GPS del viaje.");
-  }
-
-  const { error: updateError } = await supabase
-    .from("bus_trips")
-    .update({
-      last_lat: lat,
-      last_lng: lng,
-      last_location_at: recordedAt,
-    })
-    .eq("id", tripId)
-    .eq("status", "active");
-
-  if (updateError) {
-    throw new Error("No se pudo actualizar la ubicación del viaje.");
+  if (error) {
+    throw new Error(error.message || "No se pudo guardar el punto GPS del viaje.");
   }
 }
 

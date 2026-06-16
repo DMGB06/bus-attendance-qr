@@ -52,31 +52,9 @@ export function ParentBusMap({ locations, selectedTripId }: ParentBusMapProps) {
           ...tokens.typography.caption,
           color: colors.textMuted,
         },
-        webFallback: {
-          flex: 1,
-          alignItems: "center",
-          justifyContent: "center",
-          padding: tokens.spacing.lg,
-          backgroundColor: colors.surfaceCard,
-        },
-        webText: {
-          ...tokens.typography.body,
-          color: colors.textBody,
-          textAlign: "center",
-        },
       }),
     [colors, tokens],
   );
-
-  if (Platform.OS === "web") {
-    return (
-      <View style={styles.webFallback}>
-        <Text style={styles.webText}>
-          El mapa en vivo está disponible en la app móvil Android/iOS.
-        </Text>
-      </View>
-    );
-  }
 
   const region = selectedLocation
     ? {

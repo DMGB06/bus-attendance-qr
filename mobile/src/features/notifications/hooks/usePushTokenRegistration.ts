@@ -10,6 +10,7 @@ import {
   getPushPlatformLabel,
   requestPushPermissions,
 } from "@/src/features/notifications/services/push-permissions.service";
+import { toSafeLogMessage } from "@/src/shared/utils/safe-log";
 
 type UsePushTokenRegistrationOptions = {
   session: Session | null;
@@ -52,7 +53,7 @@ export function usePushTokenRegistration({
 
         registeredForUserRef.current = userId;
       } catch (error) {
-        console.warn("[push] No se pudo registrar el token:", error);
+        console.warn("[push] No se pudo registrar el token:", toSafeLogMessage(error));
       }
     })();
 
@@ -70,7 +71,10 @@ export function usePushTokenRegistration({
     registeredForUserRef.current = null;
 
     void deactivatePushTokensForUser(previousUserId).catch((error) => {
-      console.warn("[push] No se pudo desactivar el token al cerrar sesión:", error);
+      console.warn(
+        "[push] No se pudo desactivar el token al cerrar sesión:",
+        toSafeLogMessage(error),
+      );
     });
   }, [session]);
 }

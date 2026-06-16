@@ -9,8 +9,8 @@ export type PendingDropoffStudent = {
   direccion: string | null;
 };
 
-function mapAttendanceInsertError(code?: string) {
-  if (code === "23505") {
+function mapAttendanceRpcError(message?: string, code?: string) {
+  if (code === "23505" || message?.includes("Ya registrado")) {
     return "Ya registrado";
   }
 
@@ -18,7 +18,7 @@ function mapAttendanceInsertError(code?: string) {
     return "No se pudo registrar: alumno o viaje inválido.";
   }
 
-  return "No se pudo registrar la asistencia.";
+  return message || "No se pudo registrar la asistencia.";
 }
 
 export async function registerAttendance(
@@ -27,24 +27,18 @@ export async function registerAttendance(
   eventType: AttendanceEventType,
   scan?: ScanContext,
 ): Promise<AttendanceRecord> {
-  const { data, error } = await supabase
-    .from("bus_attendance_records")
-    .insert({
-      trip_id: tripId,
-      student_id: studentId,
-      event_type: eventType,
-      scanned_at: new Date().toISOString(),
-      scanned_by: scan?.scannedBy ?? null,
-      scan_role: scan?.scanRole ?? null,
-    })
-    .select("*")
-    .single();
+  const { data, error } = await supabase.rpc("register_attendance", {
+    p_trip_id: tripId,
+    p_student_id: studentId,
+    p_event_type: eventType,
+    p_scan_role: scan?.scanRole ?? null,
+  });
 
   if (error || !data) {
-    throw new Error(mapAttendanceInsertError(error?.code));
+    throw new Error(mapAttendanceRpcError(error?.message, error?.code));
   }
 
-  return data;
+  return data as AttendanceRecord;
 }
 
 export async function markManualAttendance(
@@ -60,30 +54,6 @@ export async function registerDropoffAttendance(
   studentId: string,
   scan?: ScanContext,
 ): Promise<AttendanceRecord> {
-  const { data: attendanceRows, error } = await supabase
-    .from("bus_attendance_records")
-    .select("event_type")
-    .eq("trip_id", tripId)
-    .eq("student_id", studentId)
-    .is("voided_at", null)
-    .in("event_type", ["subio", "manual", "bajo"]);
-
-  if (error) {
-    throw new Error("No se pudo validar la salida del alumno.");
-  }
-
-  const hasBoarding = (attendanceRows ?? []).some(
-    (attendance) => attendance.event_type === "subio" || attendance.event_type === "manual",
-  );
-  if (!hasBoarding) {
-    throw new Error("Primero debes registrar la asistencia de entrada del alumno.");
-  }
-
-  const hasDropoff = (attendanceRows ?? []).some((attendance) => attendance.event_type === "bajo");
-  if (hasDropoff) {
-    throw new Error("La salida del alumno ya fue registrada.");
-  }
-
   return registerAttendance(tripId, studentId, "bajo", scan);
 }
 

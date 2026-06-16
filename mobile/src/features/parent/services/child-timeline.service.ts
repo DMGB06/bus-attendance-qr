@@ -1,9 +1,13 @@
 import { supabase } from "@/src/core/config/supabase";
 import { getTodayDateIso } from "@/src/features/parent/utils/date";
+import { isUuid } from "@/src/shared/utils/uuid";
 import type { ChildTimelineEvent } from "@/src/features/parent/types";
 import type { Trip } from "@/src/features/trips/types";
 
 export async function getChildTimelineToday(studentId: string): Promise<ChildTimelineEvent[]> {
+  if (!isUuid(studentId)) {
+    return [];
+  }
   const today = getTodayDateIso();
 
   const { data: records, error: recordsError } = await supabase
