@@ -27,8 +27,7 @@
     "production": {
       "autoIncrement": true,
       "android": {
-        "buildType": "apk",
-        "enableProguardInReleaseBuilds": true
+        "buildType": "apk"
       },
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "CONFIGURE_IN_EAS_SECRETS",
