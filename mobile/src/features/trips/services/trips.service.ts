@@ -108,6 +108,11 @@ export async function startTrip(turnType: TurnType): Promise<Trip> {
   return data as Trip;
 }
 
+export function isTripAlreadyClosedError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes("Viaje no encontrado o ya cerrado");
+}
+
 export async function closeTrip(tripId: string): Promise<void> {
   if (!isUuid(tripId)) {
     throw new Error("Identificador de viaje inválido.");

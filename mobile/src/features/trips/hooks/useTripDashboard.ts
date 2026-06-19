@@ -1,17 +1,42 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
+import { isOperatorPermissionError } from "@/src/features/trips/domain/operator-permission-errors";
 import { getErrorMessage } from "@/src/shared/utils/errors";
 import { confirmBulkDropoff } from "@/src/features/trips/utils/rosterConfirmations";
-import { rosterStoreActions, useRosterItemStats } from "@/src/features/trips/store/rosterStore";
+import {
+  rosterStoreActions,
+  useRosterItemStats,
+  useRosterMeta,
+} from "@/src/features/trips/store/rosterStore";
 import type { Trip } from "@/src/features/trips/types";
 
 export function useTripDashboard(activeTrip: Trip | null) {
   const tripId = activeTrip?.id;
   const stats = useRosterItemStats(tripId);
+  const rosterMeta = useRosterMeta(tripId);
   const [isBulkDropping, setIsBulkDropping] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
 
   const totalOnboardCount = stats.onboardCount;
+
+  useEffect(() => {
+    if (!bulkError) {
+      return;
+    }
+
+    if (totalOnboardCount === 0 && !isOperatorPermissionError(bulkError)) {
+      setBulkError(null);
+      return;
+    }
+
+    if (
+      isOperatorPermissionError(bulkError) &&
+      rosterMeta.pendingSyncCount === 0 &&
+      !rosterMeta.errorMessage
+    ) {
+      setBulkError(null);
+    }
+  }, [bulkError, rosterMeta.errorMessage, rosterMeta.pendingSyncCount, totalOnboardCount]);
 
   const handleBulkDropoff = useCallback(async () => {
     if (!tripId || !activeTrip || isBulkDropping || totalOnboardCount === 0) {

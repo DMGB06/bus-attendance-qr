@@ -186,6 +186,9 @@ export function createTripScreenStyles(
     actionButtonContent: {
       height: tokens.layout.buttonHeight - 4,
     },
+    historyButton: {
+      borderRadius: tokens.radius.md,
+    },
     warning: {
       flexDirection: 'row',
       alignItems: 'flex-start',

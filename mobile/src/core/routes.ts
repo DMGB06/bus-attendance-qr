@@ -4,6 +4,7 @@ export const OPS_ROUTES = {
   roster: "/(ops)/(tabs)/roster",
   profile: "/(ops)/(tabs)/profile",
   closeTrip: "/(ops)/(tabs)/close-trip",
+  activity: "/(ops)/(tabs)/activity",
 } as const;
 
 export const PARENT_ROUTES = {

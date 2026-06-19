@@ -1,5 +1,7 @@
 import { isPrioritaryStudent } from "@/src/features/trips/domain/trip-priority.rules";
+import { matchesSuggestedLevelFilter } from "@/src/features/trips/domain/student-level.rules";
 import type { TripRosterItem } from "@/src/features/trips/services/trip-roster.service";
+import type { NivelEducativo } from "@/src/features/trips/types";
 
 const STATUS_SORT_ORDER: Record<TripRosterItem["status"], number> = {
   pending: 0,
@@ -27,10 +29,25 @@ function sortByName(items: TripRosterItem[]): TripRosterItem[] {
   );
 }
 
+function compareSuggestedNivel(
+  left: TripRosterItem,
+  right: TripRosterItem,
+  suggestedNivel: NivelEducativo | null | undefined,
+): number {
+  if (!suggestedNivel) {
+    return 0;
+  }
+
+  const leftRank = matchesSuggestedLevelFilter(left.student, suggestedNivel) ? 0 : 1;
+  const rightRank = matchesSuggestedLevelFilter(right.student, suggestedNivel) ? 0 : 1;
+  return leftRank - rightRank;
+}
+
 function sortAllItems(
   items: TripRosterItem[],
   morningRiderIds: Set<string>,
   isAfternoonReturn: boolean,
+  suggestedNivel?: NivelEducativo | null,
 ): TripRosterItem[] {
   return [...items].sort((a, b) => {
     if (isAfternoonReturn) {
@@ -40,6 +57,12 @@ function sortAllItems(
         return aPriority - bPriority;
       }
     }
+
+    const nivelDiff = compareSuggestedNivel(a, b, suggestedNivel);
+    if (nivelDiff !== 0) {
+      return nivelDiff;
+    }
+
     const statusDiff = STATUS_SORT_ORDER[a.status] - STATUS_SORT_ORDER[b.status];
     if (statusDiff !== 0) {
       return statusDiff;
@@ -60,6 +83,7 @@ export function buildRosterItemBuckets(
   items: TripRosterItem[],
   morningRiderIds: Set<string>,
   isAfternoonReturn: boolean,
+  suggestedNivel?: NivelEducativo | null,
 ): RosterItemBuckets {
   const pending: TripRosterItem[] = [];
   const onboard: TripRosterItem[] = [];
@@ -91,7 +115,7 @@ export function buildRosterItemBuckets(
     attended,
     prioritarios,
     byViewMode: {
-      all: sortAllItems(items, morningRiderIds, isAfternoonReturn),
+      all: sortAllItems(items, morningRiderIds, isAfternoonReturn, suggestedNivel),
       pending: sortByName(pending),
       onboard: sortByName(onboard),
       completed: sortByScannedDesc(completed),

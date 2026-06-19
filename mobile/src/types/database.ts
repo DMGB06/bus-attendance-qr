@@ -263,6 +263,24 @@ export type Database = {
         Args: { p_record_id: string; p_reason: string };
         Returns: AttendanceRecord;
       };
+      get_operator_activity_range: {
+        Args: { p_start_date: string; p_end_date: string };
+        Returns: {
+          record_id: string;
+          trip_id: string;
+          trip_date: string;
+          trip_direction: string;
+          turn_type: string | null;
+          trip_status: string;
+          student_id: string;
+          student_name: string;
+          event_type: string;
+          scanned_at: string | null;
+          scanned_by: string | null;
+          voided_at: string | null;
+          is_offline_sync: boolean;
+        }[];
+      };
     };
     Enums: {
       app_role: AppRole;

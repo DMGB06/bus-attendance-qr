@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { OPS_ROUTES } from '@/src/core/routes';
 import { useAppCapabilities } from '@/src/features/auth/hooks/useAppCapabilities';
+import { MorningRiderReminderBanner } from '@/src/features/trips/components/MorningRiderReminderBanner';
 import {
   AFTERNOON_TURN_OPTIONS,
   type AfternoonTurnType,
@@ -14,9 +15,13 @@ import {
 import {
   formatTripTitle,
   getSuggestedLevelFilterHint,
+  getTripDashboardStatLabels,
   getTripSegmentSubtitle,
 } from '@/src/features/trips/domain/trip-labels';
+import { useMorningRiderSummary } from '@/src/features/trips/hooks/useMorningRiderSummary';
 import { WaitingForDriverView } from '@/src/features/trips/components/WaitingForDriverView';
+import { TripDailyChecklist } from '@/src/features/trips/components/TripDailyChecklist';
+import type { DailyChecklistContext } from '@/src/features/trips/domain/trip-daily-checklist';
 import { useTripDashboard } from '@/src/features/trips/hooks/useTripDashboard';
 import { createTripScreenStyles } from '@/src/features/trips/screens/tripScreen.styles';
 import {
@@ -24,7 +29,9 @@ import {
   startTrip,
 } from '@/src/features/trips/services/trips.service';
 import type { OperationalBusContext } from '@/src/features/trips/services/crew.service';
+import { useRosterItems } from '@/src/features/trips/store/rosterStore';
 import { useTripStore } from '@/src/features/trips/store/tripStore';
+import { requestRosterView } from '@/src/features/trips/utils/roster-navigation';
 import { getErrorMessage } from '@/src/shared/utils/errors';
 import type { TurnType } from '@/src/features/trips/types';
 import { useAppTheme } from '@/src/core/theme/ThemeProvider';
@@ -39,9 +46,48 @@ export default function TripScreen() {
   const { activeTrip, setActiveTrip, hydrateActiveTrip } = useTripStore();
   const { capabilities } = useAppCapabilities();
   const dashboard = useTripDashboard(activeTrip);
-  const { colors, tokens } = useAppTheme();
+  const rosterItems = useRosterItems(activeTrip?.id);
   const [period, setPeriod] = useState<TripPeriod>('mañana');
   const [afternoonTurn, setAfternoonTurn] = useState<AfternoonTurnType>('tarde_primaria');
+  const morningRiders = useMorningRiderSummary(
+    activeTrip?.trip_date,
+    activeTrip?.direction,
+    rosterItems,
+  );
+  const dashboardStatLabels = useMemo(
+    () => getTripDashboardStatLabels(activeTrip?.direction ?? 'recojo'),
+    [activeTrip?.direction],
+  );
+  const checklistContext = useMemo((): DailyChecklistContext => {
+    if (!activeTrip) {
+      return {
+        hasActiveTrip: false,
+        direction: null,
+        onboardCount: 0,
+        pendingCount: 0,
+        completedCount: 0,
+        morningRiderPendingCount: 0,
+        setupPeriod: period,
+      };
+    }
+
+    return {
+      hasActiveTrip: true,
+      direction: activeTrip.direction,
+      onboardCount: dashboard.stats.onboardCount,
+      pendingCount: dashboard.stats.pendingCount,
+      completedCount: dashboard.stats.completedCount,
+      morningRiderPendingCount: morningRiders.count,
+    };
+  }, [
+    activeTrip,
+    dashboard.stats.completedCount,
+    dashboard.stats.onboardCount,
+    dashboard.stats.pendingCount,
+    morningRiders.count,
+    period,
+  ]);
+  const { colors, tokens } = useAppTheme();
   const [isStartingTrip, setIsStartingTrip] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [operationalContext, setOperationalContext] = useState<
@@ -50,6 +96,19 @@ export default function TripScreen() {
   const [isWaitingRefresh, setIsWaitingRefresh] = useState(false);
 
   const styles = useMemo(() => createTripScreenStyles(colors, tokens), [colors, tokens]);
+
+  const historyFooter = capabilities.canViewRoster ? (
+    <Button
+      mode="outlined"
+      icon="history"
+      textColor={colors.primary}
+      onPress={() => router.push(OPS_ROUTES.activity)}
+      style={styles.historyButton}
+      contentStyle={styles.actionButtonContent}
+    >
+      Ver historial (7 días)
+    </Button>
+  ) : null;
 
   useEffect(() => {
     void getOperationalContext().then((context) => {
@@ -116,6 +175,7 @@ export default function TripScreen() {
           isRefreshing={false}
           title="Sin bus asignado"
           body="No tienes una unidad asignada para hoy. Pide al coordinador que te registre en BUS-01."
+          footer={historyFooter}
         />
       );
     }
@@ -124,6 +184,7 @@ export default function TripScreen() {
       <WaitingForDriverView
         busLabel={operationalContext.busLabel}
         isRefreshing={isWaitingRefresh}
+        footer={historyFooter}
       />
     );
   }
@@ -257,6 +318,8 @@ export default function TripScreen() {
                   </HelperText>
                 ) : null}
 
+                <TripDailyChecklist context={checklistContext} />
+
                 {capabilities.canStartTrip ? (
                   <Button
                     mode="contained"
@@ -278,17 +341,30 @@ export default function TripScreen() {
                 <View style={styles.statsRow}>
                   <View style={styles.statChip}>
                     <Text style={styles.statValue}>{dashboard.stats.onboardCount}</Text>
-                    <Text style={styles.statLabel}>A bordo</Text>
+                    <Text style={styles.statLabel}>{dashboardStatLabels.onboard}</Text>
                   </View>
                   <View style={styles.statChip}>
                     <Text style={styles.statValue}>{dashboard.stats.pendingCount}</Text>
-                    <Text style={styles.statLabel}>Pendientes</Text>
+                    <Text style={styles.statLabel}>{dashboardStatLabels.pending}</Text>
                   </View>
                   <View style={styles.statChip}>
-                    <Text style={styles.statValue}>{dashboard.stats.attendedCount}</Text>
-                    <Text style={styles.statLabel}>Registrados</Text>
+                    <Text style={styles.statValue}>{dashboard.stats.completedCount}</Text>
+                    <Text style={styles.statLabel}>{dashboardStatLabels.third}</Text>
                   </View>
                 </View>
+
+                {morningRiders.isVisible ? (
+                  <MorningRiderReminderBanner
+                    count={morningRiders.count}
+                    preview={morningRiders.preview}
+                    onPress={() => {
+                      requestRosterView('prioritarios');
+                      router.push(OPS_ROUTES.roster);
+                    }}
+                  />
+                ) : null}
+
+                <TripDailyChecklist context={checklistContext} />
 
                 <View style={styles.sectionDivider} />
 
@@ -374,6 +450,8 @@ export default function TripScreen() {
               </View>
             </View>
           ) : null}
+
+          {historyFooter}
         </View>
       </AppScrollView>
     </SafeAreaView>

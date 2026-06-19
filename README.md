@@ -89,8 +89,23 @@ cd mobile
 npm install
 npm run start          # LAN
 npm run start:tunnel   # túnel (Expo Go remoto)
+npm run lint           # revisión de código (ESLint)
 npm test               # tests dominio (Jest)
 ```
+
+---
+
+## Lint y CI (GitHub Actions)
+
+**Lint** (`npm run lint` en `mobile/`) revisa el código TypeScript/React con ESLint: imports sin usar, hooks mal declarados, etc. No compila la app; solo avisa de problemas. Config: [`mobile/eslint.config.js`](mobile/eslint.config.js).
+
+**GitHub Actions** (`.github/workflows/ci.yml`) corre automáticamente en cada push o pull request a `main`:
+
+1. Instala dependencias en `mobile/`
+2. Ejecuta `npm run lint`
+3. Ejecuta `npm test`
+
+Si algo falla, el PR aparece con ❌ en GitHub. Para ver el detalle: pestaña **Actions** del repositorio → workflow **CI**.
 
 ---
 
@@ -117,6 +132,7 @@ Perfiles en [`mobile/eas.json`](mobile/eas.json): `development`, `preview`, `pro
 | [`docs/PROYECTO-COMPLETO.md`](docs/PROYECTO-COMPLETO.md) | **Guía técnica completa** — stack, BD, arquitectura, flujos |
 | [`docs/PLAN-IMPLEMENTACION-MULTI-ROL.md`](docs/PLAN-IMPLEMENTACION-MULTI-ROL.md) | Plan por fases 0–6 |
 | [`docs/PLAN-SEGURIDAD.md`](docs/PLAN-SEGURIDAD.md) | Endurecimiento RLS, RPCs, checklist pre-piloto |
+| [`docs/PLAN-HISTORIAL-OPERADOR.md`](docs/PLAN-HISTORIAL-OPERADOR.md) | Historial 7 días chofer/asistenta (MVP + búsqueda) |
 | [`docs/MANUAL-OPERADORES.md`](docs/MANUAL-OPERADORES.md) | 2 celulares, offline, deshacer, anular |
 | [`docs/MANUAL-COORDINACION.md`](docs/MANUAL-COORDINACION.md) | Altas padres/crew, verificación DNI |
 | [`supabase/functions/send-attendance-push/README.md`](supabase/functions/send-attendance-push/README.md) | Webhook push |

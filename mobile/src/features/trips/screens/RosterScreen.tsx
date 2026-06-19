@@ -6,8 +6,8 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { useNetworkStatus } from "@/src/core/connectivity/useNetworkStatus";
 import { NoActiveTripView } from "@/src/features/trips/components/NoActiveTripView";
-import { RosterAfternoonBanner } from "@/src/features/trips/components/roster/RosterAfternoonBanner";
-import { RosterLevelSuggestionBanner } from "@/src/features/trips/components/roster/RosterLevelSuggestionBanner";
+import { MorningRiderReminderBanner } from "@/src/features/trips/components/MorningRiderReminderBanner";
+import { RosterTurnHintBanner } from "@/src/features/trips/components/roster/RosterTurnHintBanner";
 import { RosterStudentRow } from "@/src/features/trips/components/roster/RosterStudentRow";
 import { ROSTER_ROW_HEIGHT } from "@/src/features/trips/components/roster/rosterRowTheme";
 import { RosterSyncBanner } from "@/src/features/trips/components/roster/RosterSyncBanner";
@@ -19,6 +19,7 @@ import {
   getRosterOnboardFilterLabel,
   getRosterPendingEmptyMessage,
   getRosterPendingFilterLabel,
+  getMorningRidersEmptyMessage,
   getRosterScreenSubtitle,
 } from "@/src/features/trips/domain/trip-labels";
 import type { TripDirection } from "@/src/features/trips/types";
@@ -297,18 +298,8 @@ export default function RosterScreen() {
     if (!activeTrip) {
       return "";
     }
-    const total =
-      roster.useSuggestedLevelFilter && roster.suggestedNivel
-        ? roster.suggestedLevelMatchCount
-        : roster.totalStudentCount;
-    return getRosterScreenSubtitle(activeTrip, total);
-  }, [
-    activeTrip,
-    roster.suggestedLevelMatchCount,
-    roster.suggestedNivel,
-    roster.totalStudentCount,
-    roster.useSuggestedLevelFilter,
-  ]);
+    return getRosterScreenSubtitle(activeTrip, roster.totalStudentCount);
+  }, [activeTrip, roster.totalStudentCount]);
 
   const totalShown = roster.filteredItems.length;
   const isAfternoonReturn = roster.isAfternoonReturn;
@@ -382,7 +373,7 @@ export default function RosterScreen() {
     onboard: `Nadie está ${tripDirection === "retorno" ? "a bordo" : "en el bus"} en este momento.`,
     completed: getRosterCompletedEmptyMessage(tripDirection),
     attended: "Aún no hay estudiantes con registro de asistencia.",
-    prioritarios: "No hay prioritarios pendientes de escaneo.",
+    prioritarios: getMorningRidersEmptyMessage(),
   };
 
   const emptyBody = emptyBodyByMode[roster.viewMode];
@@ -401,7 +392,7 @@ export default function RosterScreen() {
               accessibilityRole="button"
             >
               <MaterialCommunityIcons name="chevron-left" size={24} color={colors.primary} />
-              <Text style={styles.title}>Prioritarios</Text>
+              <Text style={styles.title}>Vino en la mañana</Text>
             </Pressable>
           ) : (
             <View style={{ flex: 1, gap: 2 }}>
@@ -486,23 +477,14 @@ export default function RosterScreen() {
           </>
         ) : null}
 
-        {roster.suggestedNivel ? (
-          <RosterLevelSuggestionBanner
-            suggestedNivel={roster.suggestedNivel}
-            visibleCount={roster.suggestedLevelMatchCount}
-            totalCount={roster.totalStudentCount}
-            withLevelDataCount={roster.withLevelDataCount}
-            isActive={roster.useSuggestedLevelFilter}
-            onToggle={() => roster.setUseSuggestedLevelFilter(!roster.useSuggestedLevelFilter)}
-          />
-        ) : null}
+        <RosterTurnHintBanner turnType={activeTrip.turn_type} />
 
         {roster.isAfternoonReturn ? (
-          <RosterAfternoonBanner
-            prioritariosCount={roster.stats.prioritariosCount}
-            prioritariosPreview={roster.prioritariosPreview}
+          <MorningRiderReminderBanner
+            count={roster.stats.morningRiderPendingCount}
+            preview={roster.morningRidersPreview}
             onPress={
-              roster.stats.prioritariosCount > 0
+              roster.stats.morningRiderPendingCount > 0
                 ? () => roster.setViewMode("prioritarios")
                 : undefined
             }

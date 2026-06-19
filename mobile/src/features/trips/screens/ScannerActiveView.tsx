@@ -4,15 +4,21 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useCameraPermissions } from "expo-camera";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
+import { useRouter } from "expo-router";
 import { Text } from "react-native-paper";
 
+import { OPS_ROUTES } from "@/src/core/routes";
+import { MorningRiderReminderBanner } from "@/src/features/trips/components/MorningRiderReminderBanner";
 import { StudentConfirmModal } from "@/src/features/trips/components/StudentConfirmModal";
 import { ScannerCamera } from "@/src/features/trips/components/scanner/ScannerCamera";
 import { ScannerControlPanel } from "@/src/features/trips/components/scanner/ScannerControlPanel";
 import { ScannerStatusCard } from "@/src/features/trips/components/scanner/ScannerStatusCard";
 import { getScannerAutoModeHint } from "@/src/features/trips/domain/scanner-event.rules";
 import { useStudentAttendance, type ScannerViewMode } from "@/src/features/trips/hooks/useStudentAttendance";
+import { useMorningRiderSummary } from "@/src/features/trips/hooks/useMorningRiderSummary";
 import type { Trip } from "@/src/features/trips/types";
+import { useRosterItems } from "@/src/features/trips/store/rosterStore";
+import { requestRosterView } from "@/src/features/trips/utils/roster-navigation";
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
 import { AppScrollView } from "@/src/shared/ui/AppScrollView";
 import { useScreenPerfMark } from "@/src/shared/hooks/useScreenPerfMark";
@@ -34,9 +40,16 @@ type ScannerActiveViewProps = {
 
 export function ScannerActiveView({ activeTrip }: ScannerActiveViewProps) {
   useScreenPerfMark("scanner");
+  const router = useRouter();
   const isFocused = useIsFocused();
   const { colors, tokens } = useAppTheme();
   const [permission, requestPermission] = useCameraPermissions();
+  const rosterItems = useRosterItems(activeTrip.id);
+  const morningRiders = useMorningRiderSummary(
+    activeTrip.trip_date,
+    activeTrip.direction,
+    rosterItems,
+  );
   const attendance = useStudentAttendance(activeTrip.id, activeTrip.direction);
   const scannerModeHint = getScannerAutoModeHint(activeTrip.direction);
   const isScannerMode = attendance.viewMode === "scanner";
@@ -229,6 +242,17 @@ export function ScannerActiveView({ activeTrip }: ScannerActiveViewProps) {
             {isScannerMode ? scannerModeHint : "Búsqueda manual"}
           </Text>
         </View>
+
+        {morningRiders.isVisible ? (
+          <MorningRiderReminderBanner
+            count={morningRiders.count}
+            preview={morningRiders.preview}
+            onPress={() => {
+              requestRosterView("prioritarios");
+              router.push(OPS_ROUTES.roster);
+            }}
+          />
+        ) : null}
 
         {isScannerMode ? (
           <View style={styles.cameraSlot}>

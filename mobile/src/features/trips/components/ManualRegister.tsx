@@ -43,7 +43,8 @@ export function ManualRegister({
         onChangeText={onManualNameChange}
         autoCapitalize="words"
         autoCorrect={false}
-        editable={!isSearching && !isRegistering}
+        editable={!isRegistering}
+        disabled={isRegistering}
         returnKeyType="search"
         onSubmitEditing={() => {
           if (canSearch) {

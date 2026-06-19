@@ -11,11 +11,9 @@ import {
   isMorningRider,
 } from "@/src/features/trips/domain/trip-priority.rules";
 import {
-  countStudentsWithNivelData,
-  countSuggestedLevelMatches,
   getSuggestedNivelForTurn,
-  matchesSuggestedLevelFilter,
 } from "@/src/features/trips/domain/student-level.rules";
+import { isOperatorPermissionError } from "@/src/features/trips/domain/operator-permission-errors";
 import {
   getDropoffQueuedMessage,
   getDropoffRegisteredMessage,
@@ -28,6 +26,7 @@ import {
   buildRosterItemBuckets,
   filterRosterItemsByQuery,
 } from "@/src/features/trips/utils/roster-filter.utils";
+import { consumePendingRosterView } from "@/src/features/trips/utils/roster-navigation";
 import {
   confirmBulkDropoff,
   confirmStudentAbsent,
@@ -53,7 +52,6 @@ export function useTripRoster(tripId: string | undefined) {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isBulkDropping, setIsBulkDropping] = useState(false);
   const [morningRiderIds, setMorningRiderIds] = useState<Set<string>>(new Set());
-  const [useSuggestedLevelFilter, setUseSuggestedLevelFilter] = useState(true);
   const morningHintsLoadedForDateRef = useRef<string | null>(null);
 
   const isAfternoonReturn = activeTrip?.direction === "retorno";
@@ -64,14 +62,17 @@ export function useTripRoster(tripId: string | undefined) {
       return;
     }
 
-    setViewMode("all");
+    const pendingView = consumePendingRosterView();
+    setViewMode(pendingView ?? "all");
     setSearchQuery("");
-    setUseSuggestedLevelFilter(true);
+    setInfoMessage((previous) => (isOperatorPermissionError(previous) ? null : previous));
   }, [tripId]);
 
   useEffect(() => {
-    setUseSuggestedLevelFilter(true);
-  }, [suggestedNivel, tripId]);
+    if (!rosterMeta.errorMessage && rosterMeta.pendingSyncCount === 0) {
+      setInfoMessage((previous) => (isOperatorPermissionError(previous) ? null : previous));
+    }
+  }, [rosterMeta.errorMessage, rosterMeta.pendingSyncCount]);
 
   useEffect(() => {
     if (!isAfternoonReturn || !activeTrip?.trip_date) {
@@ -96,23 +97,30 @@ export function useTripRoster(tripId: string | undefined) {
     }
   }, [isAfternoonReturn, viewMode]);
 
-  const levelScopedItems = useMemo(() => {
-    if (!useSuggestedLevelFilter || !suggestedNivel) {
-      return items;
-    }
-    return items.filter((item) => matchesSuggestedLevelFilter(item.student, suggestedNivel));
-  }, [items, suggestedNivel, useSuggestedLevelFilter]);
-
-  const withLevelDataCount = useMemo(
-    () => countStudentsWithNivelData(items.map((item) => item.student)),
-    [items],
+  const itemBuckets = useMemo(
+    () => buildRosterItemBuckets(items, morningRiderIds, isAfternoonReturn, suggestedNivel),
+    [items, morningRiderIds, isAfternoonReturn, suggestedNivel],
   );
+
+  const stats = useMemo(
+    () => ({
+      attendedCount: itemBuckets.attended.length,
+      onboardCount: itemBuckets.onboard.length,
+      completedCount: itemBuckets.completed.length,
+      pendingCount: itemBuckets.pending.length,
+      morningRiderPendingCount: itemBuckets.prioritarios.length,
+    }),
+    [itemBuckets],
+  );
+
+  const totalOnboardCount = itemStats.onboardCount;
 
   const loadRoster = useCallback(async () => {
     if (!tripId) {
       return;
     }
     await rosterStoreActions.refreshTripRoster(tripId, { force: true });
+    setInfoMessage((previous) => (isOperatorPermissionError(previous) ? null : previous));
 
     if (isAfternoonReturn && activeTrip?.trip_date) {
       invalidateMorningAttendanceHints(activeTrip.trip_date);
@@ -312,12 +320,11 @@ export function useTripRoster(tripId: string | undefined) {
       return;
     }
 
-    const onboardCount = itemStats.onboardCount;
-    if (onboardCount === 0) {
+    if (totalOnboardCount === 0) {
       return;
     }
 
-    const isConfirmed = await confirmBulkDropoff(onboardCount, activeTrip.direction);
+    const isConfirmed = await confirmBulkDropoff(totalOnboardCount, activeTrip.direction);
     if (!isConfirmed) {
       return;
     }
@@ -341,12 +348,7 @@ export function useTripRoster(tripId: string | undefined) {
     } finally {
       setIsBulkDropping(false);
     }
-  }, [tripId, activeTrip, isBulkDropping, itemStats.onboardCount]);
-
-  const itemBuckets = useMemo(
-    () => buildRosterItemBuckets(levelScopedItems, morningRiderIds, isAfternoonReturn),
-    [levelScopedItems, morningRiderIds, isAfternoonReturn],
-  );
+  }, [tripId, activeTrip, isBulkDropping, totalOnboardCount]);
 
   const filteredItems = useMemo(() => {
     const baseItems = itemBuckets.byViewMode[viewMode];
@@ -355,24 +357,7 @@ export function useTripRoster(tripId: string | undefined) {
 
   const prioritariosItems = itemBuckets.prioritarios;
 
-  const stats = useMemo(
-    () => ({
-      attendedCount: itemBuckets.attended.length,
-      onboardCount: itemBuckets.onboard.length,
-      completedCount: itemBuckets.completed.length,
-      pendingCount: itemBuckets.pending.length,
-      prioritariosCount: itemBuckets.prioritarios.length,
-    }),
-    [itemBuckets],
-  );
-
-  const suggestedLevelMatchCount = useMemo(
-    () =>
-      suggestedNivel ? countSuggestedLevelMatches(items, suggestedNivel) : items.length,
-    [items, suggestedNivel],
-  );
-
-  const prioritariosPreview = useMemo(
+  const morningRidersPreview = useMemo(
     () =>
       prioritariosItems
         .slice(0, 4)
@@ -406,14 +391,10 @@ export function useTripRoster(tripId: string | undefined) {
     morningRiderIds,
     isMorningRider: isMorningRiderForStudent,
     stats,
-    prioritariosPreview,
+    morningRidersPreview,
     suggestedNivel,
-    useSuggestedLevelFilter,
-    setUseSuggestedLevelFilter,
-    withLevelDataCount,
-    suggestedLevelMatchCount,
     totalStudentCount: itemStats.totalCount,
-    totalOnboardCount: itemStats.onboardCount,
+    totalOnboardCount,
     loadRoster,
     handleExitMark,
     handleMarkAbsent,

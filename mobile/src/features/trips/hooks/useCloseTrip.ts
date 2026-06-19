@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "expo-router";
 
 import { OPS_ROUTES } from "@/src/core/routes";
@@ -13,8 +13,12 @@ import {
   flushPendingAttendanceForClose,
 } from "@/src/features/trips/services/close-trip.service";
 import { loadCloseTripValidation } from "@/src/features/trips/services/close-trip-validation.service";
-import { closeTrip } from "@/src/features/trips/services/trips.service";
-import { rosterStoreActions, useRosterItems } from "@/src/features/trips/store/rosterStore";
+import { closeTrip, getActiveTripForCurrentUser, isTripAlreadyClosedError } from "@/src/features/trips/services/trips.service";
+import {
+  getRosterSnapshot,
+  rosterStoreActions,
+  useRosterItems,
+} from "@/src/features/trips/store/rosterStore";
 import { useTripStore } from "@/src/features/trips/store/tripStore";
 import {
   confirmCloseWithPendingStudents,
@@ -30,31 +34,36 @@ const EMPTY_VALIDATION: CloseTripValidationResult = {
 
 export function useCloseTrip() {
   const router = useRouter();
-  const { activeTrip, clearActiveTrip } = useTripStore();
+  const { activeTrip, clearActiveTrip, setActiveTrip } = useTripStore();
   const rosterItems = useRosterItems(activeTrip?.id);
-  const rosterItemsForValidation = useMemo(
-    () => (rosterItems.length > 0 ? rosterItems : undefined),
-    [rosterItems],
-  );
+  const hadRosterItemsRef = useRef(false);
   const [isClosing, setIsClosing] = useState(false);
   const [isLoadingValidation, setIsLoadingValidation] = useState(false);
   const [validation, setValidation] = useState<CloseTripValidationResult>(EMPTY_VALIDATION);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  const reloadValidation = useCallback(async () => {
+  const reloadValidation = useCallback(async (options?: { silent?: boolean }) => {
     if (!activeTrip) {
       setValidation(EMPTY_VALIDATION);
       setValidationError(null);
       return;
     }
 
-    setIsLoadingValidation(true);
+    const snapshot = getRosterSnapshot();
+    const prefetchedRoster =
+      snapshot.tripId === activeTrip.id && snapshot.items.length > 0
+        ? snapshot.items
+        : undefined;
+
+    if (!options?.silent) {
+      setIsLoadingValidation(true);
+    }
     setValidationError(null);
 
     try {
       const nextValidation = await loadCloseTripValidation(activeTrip, {
-        rosterItems: rosterItemsForValidation,
+        rosterItems: prefetchedRoster,
       });
       setValidation(nextValidation);
     } catch (error: unknown) {
@@ -65,11 +74,33 @@ export function useCloseTrip() {
     } finally {
       setIsLoadingValidation(false);
     }
-  }, [activeTrip, rosterItemsForValidation]);
+  }, [activeTrip]);
 
   useEffect(() => {
+    hadRosterItemsRef.current = false;
     void reloadValidation();
   }, [reloadValidation]);
+
+  useEffect(() => {
+    if (!activeTrip || rosterItems.length === 0) {
+      return;
+    }
+
+    if (!hadRosterItemsRef.current) {
+      hadRosterItemsRef.current = true;
+      void reloadValidation({ silent: true });
+    }
+  }, [activeTrip, rosterItems.length, reloadValidation]);
+
+  const finishCloseLocally = useCallback(
+    async (tripId: string) => {
+      rosterStoreActions.clearRosterStore();
+      await cleanupTripAfterClose(tripId);
+      clearActiveTrip();
+      router.replace(OPS_ROUTES.trip);
+    },
+    [clearActiveTrip, router],
+  );
 
   const handleCloseTrip = useCallback(async () => {
     if (!activeTrip) {
@@ -82,8 +113,13 @@ export function useCloseTrip() {
     setIsClosing(true);
 
     try {
+      const snapshot = getRosterSnapshot();
+      const prefetchedRoster =
+        snapshot.tripId === activeTrip.id && snapshot.items.length > 0
+          ? snapshot.items
+          : undefined;
       const latestValidation = await loadCloseTripValidation(activeTrip, {
-        rosterItems: rosterItemsForValidation,
+        rosterItems: prefetchedRoster,
       });
       setValidation(latestValidation);
 
@@ -113,18 +149,37 @@ export function useCloseTrip() {
         }
       }
 
-      await closeTrip(tripId);
+      const freshTrip = await getActiveTripForCurrentUser();
+      if (!freshTrip) {
+        await finishCloseLocally(tripId);
+        return;
+      }
 
-      rosterStoreActions.clearRosterStore();
-      await cleanupTripAfterClose(tripId);
-      clearActiveTrip();
-      router.replace(OPS_ROUTES.trip);
+      if (freshTrip.id !== activeTrip.id) {
+        setActiveTrip(freshTrip);
+      }
+
+      try {
+        await closeTrip(freshTrip.id);
+      } catch (error: unknown) {
+        if (isTripAlreadyClosedError(error)) {
+          await finishCloseLocally(freshTrip.id);
+          return;
+        }
+        throw error;
+      }
+
+      await finishCloseLocally(freshTrip.id);
     } catch (error: unknown) {
       setErrorMessage(getErrorMessage(error, "No se pudo cerrar el viaje."));
     } finally {
       setIsClosing(false);
     }
-  }, [activeTrip, clearActiveTrip, router, rosterItemsForValidation]);
+  }, [
+    activeTrip,
+    finishCloseLocally,
+    setActiveTrip,
+  ]);
 
   return {
     activeTrip,

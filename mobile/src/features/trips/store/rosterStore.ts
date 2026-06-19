@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { InteractionManager } from "react-native";
 
+import { isOperatorPermissionError } from "@/src/features/trips/domain/operator-permission-errors";
 import { perfStart } from "@/src/shared/utils/perfMark";
 import { patchRosterItemsForBulkDropoff, patchRosterItemsForEvent } from "@/src/features/trips/domain/trip-roster.optimistic";
 import {
@@ -398,10 +399,15 @@ async function bulkRegisterDropoff(
     await updatePendingSyncCount(tripId);
     await refreshTripRoster(tripId, { silent: true });
 
-    if (failedCount > 0) {
-      const registered = eligible.length - failedCount;
+    const stillOnboardCount = eligible.filter((studentId) => {
+      const item = state.items.find((entry) => entry.student.id === studentId);
+      return item?.status === "onboard";
+    }).length;
+
+    if (failedCount > 0 && stillOnboardCount > 0) {
+      const registered = eligible.length - stillOnboardCount;
       throw new Error(
-        `Se registraron ${registered} de ${eligible.length}. ${failedCount} alumno(s) siguen a bordo — revísalos en la lista.`,
+        `Se registraron ${registered} de ${eligible.length}. ${stillOnboardCount} alumno(s) siguen a bordo — revísalos en la lista.`,
       );
     }
 
@@ -415,6 +421,11 @@ async function bulkRegisterDropoff(
 async function syncPendingWrites(tripId: string): Promise<void> {
   await flushAttendanceQueue(tripId);
   await refreshTripRoster(tripId, { silent: true });
+
+  const pendingSyncCount = await countPendingForTrip(tripId);
+  if (pendingSyncCount === 0 && isOperatorPermissionError(state.errorMessage)) {
+    setState({ errorMessage: null });
+  }
 }
 
 async function undoPendingRegistration(

@@ -39,7 +39,49 @@ function getTodayDate() {
   return new Date().toISOString().split("T")[0];
 }
 
+function isOperatorAppRole(role: AppRole | null | undefined): boolean {
+  return role === AppRole.CHOFER || role === AppRole.ASISTENTA || role === AppRole.COORDINADOR;
+}
+
+function crewRoleForAppRole(role: AppRole | null | undefined): CrewRole {
+  return role === AppRole.ASISTENTA ? "asistenta" : "chofer";
+}
+
+/** Piloto Cerro Azul: exactamente 1 bus_units activo (alineado con migración 020). */
+export async function isSingleBusPilotMode(): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("bus_units")
+    .select("id")
+    .eq("is_active", true);
+
+  if (error) {
+    return false;
+  }
+
+  return (data?.length ?? 0) === 1;
+}
+
+async function getSingleActivePilotBus(): Promise<BusUnit | null> {
+  const { data, error } = await supabase
+    .from("bus_units")
+    .select("id, code, plate, label, is_active")
+    .eq("is_active", true)
+    .order("code")
+    .limit(2);
+
+  if (error || !data || data.length !== 1) {
+    return null;
+  }
+
+  return data[0] as BusUnit;
+}
+
 async function getDefaultBusUnit(): Promise<BusUnit | null> {
+  const pilotBus = await getSingleActivePilotBus();
+  if (pilotBus) {
+    return pilotBus;
+  }
+
   const { data, error } = await supabase
     .from("bus_units")
     .select("id, code, plate, label, is_active")
@@ -52,6 +94,25 @@ async function getDefaultBusUnit(): Promise<BusUnit | null> {
   }
 
   return data as BusUnit | null;
+}
+
+async function resolvePilotAssignment(
+  userId: string,
+  appRole: AppRole | null,
+): Promise<{ bus: BusUnit; crewRole: CrewRole } | null> {
+  if (!isOperatorAppRole(appRole)) {
+    return null;
+  }
+
+  const pilotBus = await getSingleActivePilotBus();
+  if (!pilotBus) {
+    return null;
+  }
+
+  return {
+    bus: pilotBus,
+    crewRole: crewRoleForAppRole(appRole),
+  };
 }
 
 export async function getAssignedBusForToday(userId?: string): Promise<{
@@ -77,28 +138,29 @@ export async function getAssignedBusForToday(userId?: string): Promise<{
     throw new Error("No se pudo consultar la asignación de bus.");
   }
 
-  if (!assignment) {
-    return null;
+  if (assignment) {
+    const { data: bus, error: busError } = await supabase
+      .from("bus_units")
+      .select("id, code, plate, label, is_active")
+      .eq("id", assignment.bus_id)
+      .maybeSingle();
+
+    if (busError) {
+      throw new Error("No se pudo consultar la unidad asignada.");
+    }
+
+    if (!bus) {
+      return null;
+    }
+
+    return {
+      bus: bus as BusUnit,
+      crewRole: assignment.crew_role as CrewRole,
+    };
   }
 
-  const { data: bus, error: busError } = await supabase
-    .from("bus_units")
-    .select("id, code, plate, label, is_active")
-    .eq("id", assignment.bus_id)
-    .maybeSingle();
-
-  if (busError) {
-    throw new Error("No se pudo consultar la unidad asignada.");
-  }
-
-  if (!bus) {
-    return null;
-  }
-
-  return {
-    bus: bus as BusUnit,
-    crewRole: assignment.crew_role as CrewRole,
-  };
+  const profile = await getProfileById(uid);
+  return resolvePilotAssignment(uid, profile?.app_role ?? null);
 }
 
 export async function getCrewForBus(
@@ -148,8 +210,15 @@ export async function resolveOperationalBusContext(
     return null;
   }
 
-  if (appRole === AppRole.ASISTENTA) {
-    return null;
+  const pilotAssignment = await resolvePilotAssignment(uid, appRole);
+  if (pilotAssignment) {
+    return {
+      busId: pilotAssignment.bus.id,
+      busCode: pilotAssignment.bus.code,
+      busLabel: pilotAssignment.bus.label,
+      crewRole: pilotAssignment.crewRole,
+      appRole,
+    };
   }
 
   const defaultBus = await getDefaultBusUnit();
@@ -161,7 +230,7 @@ export async function resolveOperationalBusContext(
     busId: defaultBus.id,
     busCode: defaultBus.code,
     busLabel: defaultBus.label,
-    crewRole: appRole === AppRole.ASISTENTA ? "asistenta" : "chofer",
+    crewRole: crewRoleForAppRole(appRole),
     appRole,
   };
 }

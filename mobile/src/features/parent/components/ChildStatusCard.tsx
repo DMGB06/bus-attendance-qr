@@ -8,7 +8,7 @@ import {
   formatLastUpdatedAt,
   mapStudentTripStatusToPresentation,
 } from "@/src/features/parent/domain/student-status.mapper";
-import { ChildStatusBadge, ChildStatusIcon } from "@/src/features/parent/components/ChildStatusBadge";
+import { ChildStatusIcon } from "@/src/features/parent/components/ChildStatusBadge";
 import type { ParentChildSummary, ParentStatusTone } from "@/src/features/parent/types";
 import type { NivelEducativo } from "@/src/features/trips/types";
 import { formatTurnTypeLabel } from "@/src/features/trips/domain/trip-labels";
@@ -28,35 +28,51 @@ function formatNivelLabel(nivel: NivelEducativo | null | undefined): string | nu
   return null;
 }
 
-function statusPanelColors(
+function studentInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) {
+    return "?";
+  }
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+  return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
+}
+
+function statusStripTheme(
   tone: ParentStatusTone,
   colors: ReturnType<typeof useAppTheme>["colors"],
 ) {
   switch (tone) {
     case "completed":
       return {
-        backgroundColor: "rgba(22, 101, 52, 0.08)",
-        borderColor: "rgba(22, 101, 52, 0.2)",
+        backgroundColor: "rgba(22, 101, 52, 0.07)",
+        accentColor: colors.attendanceCompleted,
+        labelColor: colors.textTitle,
       };
     case "onboard":
       return {
         backgroundColor: colors.primarySoftBg,
-        borderColor: "rgba(28, 50, 132, 0.16)",
+        accentColor: colors.primary,
+        labelColor: colors.textTitle,
       };
     case "absent":
       return {
         backgroundColor: colors.feedbackWarningBg,
-        borderColor: "rgba(197, 48, 48, 0.18)",
+        accentColor: colors.feedbackError,
+        labelColor: colors.textTitle,
       };
     case "pending":
       return {
-        backgroundColor: colors.surfaceTrack,
-        borderColor: colors.surfaceCardBorder,
+        backgroundColor: "rgba(28, 50, 132, 0.06)",
+        accentColor: colors.primary,
+        labelColor: colors.primarySoftText,
       };
     default:
       return {
         backgroundColor: colors.surfaceTrack,
-        borderColor: colors.surfaceCardBorder,
+        accentColor: colors.textMuted,
+        labelColor: colors.textTitle,
       };
   }
 }
@@ -69,7 +85,8 @@ export function ChildStatusCard({ item, onPress }: ChildStatusCardProps) {
   );
   const lastUpdated = formatLastUpdatedAt(item.todayStatus?.last_event_at);
   const nivelLabel = formatNivelLabel(item.student.nivel_educativo);
-  const panelColors = statusPanelColors(presentation.tone, colors);
+  const stripTheme = statusStripTheme(presentation.tone, colors);
+  const initials = studentInitials(item.student.nombre_alumno);
 
   const segmentLabel = item.activeTrip?.turn_type
     ? formatTurnTypeLabel(item.activeTrip.turn_type)
@@ -89,41 +106,37 @@ export function ChildStatusCard({ item, onPress }: ChildStatusCardProps) {
           borderColor: colors.surfaceCardBorder,
           overflow: "hidden",
         },
-        topSection: {
-          padding: tokens.spacing.lg,
-          gap: tokens.spacing.md,
-        },
-        headerRow: {
+        identitySection: {
           flexDirection: "row",
-          alignItems: "flex-start",
+          alignItems: "center",
           gap: tokens.spacing.md,
+          paddingHorizontal: tokens.spacing.lg,
+          paddingTop: tokens.spacing.lg,
+          paddingBottom: tokens.spacing.md,
         },
         avatar: {
-          width: 48,
-          height: 48,
-          borderRadius: tokens.radius.full,
+          width: 52,
+          height: 52,
+          borderRadius: tokens.radius.lg,
           backgroundColor: colors.primarySoftBg,
           alignItems: "center",
           justifyContent: "center",
-          marginTop: 2,
+          borderWidth: 1,
+          borderColor: "rgba(28, 50, 132, 0.1)",
         },
-        headerBody: {
+        avatarText: {
+          ...tokens.typography.headline,
+          color: colors.primarySoftText,
+          letterSpacing: 0.5,
+        },
+        identityBody: {
           flex: 1,
           minWidth: 0,
-          gap: tokens.spacing.xs,
-        },
-        nameRow: {
-          flexDirection: "row",
-          alignItems: "flex-start",
-          gap: tokens.spacing.sm,
+          gap: 4,
         },
         name: {
-          flex: 1,
           ...tokens.typography.title3,
           color: colors.textTitle,
-        },
-        chevron: {
-          marginTop: 2,
         },
         school: {
           ...tokens.typography.caption,
@@ -139,24 +152,57 @@ export function ChildStatusCard({ item, onPress }: ChildStatusCardProps) {
         metaChip: {
           borderRadius: tokens.radius.full,
           paddingHorizontal: tokens.spacing.sm,
-          paddingVertical: 2,
+          paddingVertical: 3,
           backgroundColor: colors.surfaceTrack,
+          borderWidth: 1,
+          borderColor: colors.surfaceCardBorder,
         },
         metaChipText: {
           ...tokens.typography.caption,
           color: colors.textMuted,
+          fontWeight: "500",
         },
-        statusPanel: {
-          marginHorizontal: tokens.spacing.lg,
-          marginBottom: tokens.spacing.lg,
-          borderRadius: tokens.radius.lg,
+        chevron: {
+          marginLeft: tokens.spacing.xs,
+        },
+        statusStrip: {
+          flexDirection: "row",
+          alignItems: "flex-start",
+          gap: tokens.spacing.md,
+          paddingVertical: tokens.spacing.md,
+          paddingHorizontal: tokens.spacing.lg,
+          borderTopWidth: 1,
+          borderTopColor: colors.surfaceDivider,
+        },
+        statusAccent: {
+          width: 4,
+          alignSelf: "stretch",
+          borderRadius: tokens.radius.full,
+          marginVertical: 2,
+        },
+        statusIconWrap: {
+          width: 40,
+          height: 40,
+          borderRadius: tokens.radius.full,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: colors.surfaceCard,
           borderWidth: 1,
-          padding: tokens.spacing.md,
-          gap: tokens.spacing.sm,
+          borderColor: colors.surfaceCardBorder,
+        },
+        statusTextCol: {
+          flex: 1,
+          minWidth: 0,
+          gap: 4,
+          paddingTop: 2,
+        },
+        statusLabel: {
+          ...tokens.typography.headline,
         },
         statusSubtitle: {
           ...tokens.typography.body,
-          color: colors.textTitle,
+          color: colors.textBody,
+          lineHeight: 20,
         },
         metaRow: {
           flexDirection: "row",
@@ -191,67 +237,75 @@ export function ChildStatusCard({ item, onPress }: ChildStatusCardProps) {
       accessibilityRole="button"
       accessibilityLabel={`Ver estado de ${item.student.nombre_alumno}`}
     >
-      <View style={styles.topSection}>
-        <View style={styles.headerRow}>
-          <View style={styles.avatar}>
-            <ChildStatusIcon icon={presentation.icon} tone={presentation.tone} />
-          </View>
-
-          <View style={styles.headerBody}>
-            <View style={styles.nameRow}>
-              <Text style={styles.name}>{item.student.nombre_alumno}</Text>
-              <MaterialCommunityIcons
-                name="chevron-right"
-                size={22}
-                color={colors.textMuted}
-                style={styles.chevron}
-              />
-            </View>
-
-            {item.student.colegio ? (
-              <Text style={styles.school}>{item.student.colegio}</Text>
-            ) : null}
-
-            {nivelLabel ? (
-              <View style={styles.chipRow}>
-                <View style={styles.metaChip}>
-                  <Text style={styles.metaChipText}>{nivelLabel}</Text>
-                </View>
-              </View>
-            ) : null}
-          </View>
+      <View style={styles.identitySection}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{initials}</Text>
         </View>
+
+        <View style={styles.identityBody}>
+          <Text style={styles.name} numberOfLines={2}>
+            {item.student.nombre_alumno}
+          </Text>
+
+          {item.student.colegio ? (
+            <Text style={styles.school} numberOfLines={2}>
+              {item.student.colegio}
+            </Text>
+          ) : null}
+
+          {nivelLabel ? (
+            <View style={styles.chipRow}>
+              <View style={styles.metaChip}>
+                <Text style={styles.metaChipText}>{nivelLabel}</Text>
+              </View>
+            </View>
+          ) : null}
+        </View>
+
+        <MaterialCommunityIcons
+          name="chevron-right"
+          size={24}
+          color={colors.textMuted}
+          style={styles.chevron}
+        />
       </View>
 
       <View
         style={[
-          styles.statusPanel,
-          {
-            backgroundColor: panelColors.backgroundColor,
-            borderColor: panelColors.borderColor,
-          },
+          styles.statusStrip,
+          { backgroundColor: stripTheme.backgroundColor },
         ]}
       >
-        <ChildStatusBadge label={presentation.label} tone={presentation.tone} />
-        <Text style={styles.statusSubtitle}>{presentation.subtitle}</Text>
+        <View style={[styles.statusAccent, { backgroundColor: stripTheme.accentColor }]} />
 
-        {segmentLabel || lastUpdated ? (
-          <View style={styles.metaRow}>
-            {segmentLabel ? (
-              <View style={styles.metaItem}>
-                <MaterialCommunityIcons name="routes" size={14} color={colors.textMuted} />
-                <Text style={styles.metaText}>{segmentLabel}</Text>
-              </View>
-            ) : null}
-            {segmentLabel && lastUpdated ? <Text style={styles.metaDot}>·</Text> : null}
-            {lastUpdated ? (
-              <View style={styles.metaItem}>
-                <MaterialCommunityIcons name="clock-outline" size={14} color={colors.textMuted} />
-                <Text style={styles.metaText}>Actualizado {lastUpdated}</Text>
-              </View>
-            ) : null}
-          </View>
-        ) : null}
+        <View style={styles.statusIconWrap}>
+          <ChildStatusIcon icon={presentation.icon} tone={presentation.tone} />
+        </View>
+
+        <View style={styles.statusTextCol}>
+          <Text style={[styles.statusLabel, { color: stripTheme.labelColor }]}>
+            {presentation.label}
+          </Text>
+          <Text style={styles.statusSubtitle}>{presentation.subtitle}</Text>
+
+          {segmentLabel || lastUpdated ? (
+            <View style={styles.metaRow}>
+              {segmentLabel ? (
+                <View style={styles.metaItem}>
+                  <MaterialCommunityIcons name="routes" size={14} color={colors.textMuted} />
+                  <Text style={styles.metaText}>{segmentLabel}</Text>
+                </View>
+              ) : null}
+              {segmentLabel && lastUpdated ? <Text style={styles.metaDot}>·</Text> : null}
+              {lastUpdated ? (
+                <View style={styles.metaItem}>
+                  <MaterialCommunityIcons name="clock-outline" size={14} color={colors.textMuted} />
+                  <Text style={styles.metaText}>Actualizado {lastUpdated}</Text>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
+        </View>
       </View>
     </Pressable>
   );

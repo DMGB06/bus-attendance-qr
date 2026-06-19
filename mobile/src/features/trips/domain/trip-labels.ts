@@ -67,7 +67,7 @@ export function getRosterListHeaderLabel(
     case "attended":
       return "Con registro";
     case "prioritarios":
-      return "Prioritarios";
+      return "Vino en la mañana";
     default:
       return "Alumnos";
   }
@@ -193,8 +193,31 @@ export function getCloseTripOnboardSectionTitle(direction: TripDirection, count:
 
 export function getCloseTripPrioritariosSectionTitle(count: number): string {
   return count === 1
-    ? "1 prioritario sin escanear al subir"
-    : `${count} prioritarios sin escanear al subir`;
+    ? "1 alumno vino en la mañana y falta escanear al subir"
+    : `${count} alumnos vinieron en la mañana y faltan escanear al subir`;
+}
+
+export function getMorningRiderReminderMessage(count: number, preview: string[]): string {
+  const previewLine = preview.length > 0 ? `: ${preview.join(", ")}` : "";
+  if (count === 1) {
+    return `1 alumno vino en la mañana y falta escanear${previewLine}`;
+  }
+  return `${count} alumnos vinieron en la mañana y faltan escanear${previewLine}`;
+}
+
+export function getMorningRidersEmptyMessage(): string {
+  return "No hay alumnos pendientes que hayan venido en la mañana.";
+}
+
+export function getTripDashboardStatLabels(direction: TripDirection): {
+  onboard: string;
+  pending: string;
+  third: string;
+} {
+  if (direction === "retorno") {
+    return { onboard: "A bordo", pending: "Faltan", third: "En casa" };
+  }
+  return { onboard: "En bus", pending: "Pendientes", third: "En colegio" };
 }
 
 export function getCloseTripReadyMessage(direction: TripDirection): string {
@@ -223,4 +246,16 @@ export function getSuggestedLevelFilterHint(turnType: TurnType | null | undefine
     return "Sugerencia: secundaria (+ sin nivel).";
   }
   return null;
+}
+
+/** Aviso informativo en Lista — no oculta alumnos de otro nivel. */
+export function getTurnLevelHintMessage(turnType: TurnType | null | undefined): string | null {
+  switch (turnType) {
+    case "tarde_primaria":
+      return "Viaje tarde primaria. La mayoría suele ser primaria; todos los alumnos siguen en la lista.";
+    case "tarde_secundaria":
+      return "Viaje tarde secundaria. La mayoría suele ser secundaria; todos los alumnos siguen en la lista.";
+    default:
+      return null;
+  }
 }

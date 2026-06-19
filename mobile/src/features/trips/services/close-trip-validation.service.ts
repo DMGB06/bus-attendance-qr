@@ -21,6 +21,7 @@ import type { Trip } from "@/src/features/trips/types";
 import { withTimeout } from "@/src/shared/utils/withTimeout";
 
 const ROSTER_LOAD_TIMEOUT_MS = 8_000;
+const MORNING_HINTS_TIMEOUT_MS = 6_000;
 
 export type LoadCloseTripValidationOptions = {
   /** Roster ya hidratado en memoria (p. ej. desde `useRosterItems`). */
@@ -102,9 +103,11 @@ export async function loadCloseTripValidation(
         const endHints = perfStart("loadCloseTripValidation.morningHints", {
           tripDate: trip.trip_date,
         });
-        const morningRiderIds = await getMorningAttendanceHints(trip.trip_date)
-          .catch(() => new Set<string>())
-          .finally(endHints);
+        const morningRiderIds = await withTimeout(
+          getMorningAttendanceHints(trip.trip_date).catch(() => new Set<string>()),
+          MORNING_HINTS_TIMEOUT_MS,
+          new Set<string>(),
+        ).finally(endHints);
         missingPrioritarios = mapPrioritarios(rosterItems, morningRiderIds);
       }
 

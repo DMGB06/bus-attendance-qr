@@ -15,12 +15,14 @@ import {
 import { loadCachedStudents } from "@/src/features/trips/storage/roster-cache.storage";
 import { rosterStoreActions, useRosterItems } from "@/src/features/trips/store/rosterStore";
 import type { Student, TripDirection } from "@/src/features/trips/types";
+import { withTimeout } from "@/src/shared/utils/withTimeout";
 
 export type LookupState = "idle" | "searching" | "found" | "not_found";
 export type ScannerViewMode = "scanner" | "manual";
 
 const SCAN_DEBOUNCE_MS = 800;
 const CANCEL_RESCAN_SUPPRESS_MS = 3000;
+const LOOKUP_TIMEOUT_MS = 8_000;
 export const MANUAL_SEARCH_MIN_CHARS = 2;
 
 type ScanRecord = {
@@ -210,7 +212,19 @@ export function useStudentAttendance(
         }
 
         setLookupState("searching");
-        const foundStudent = await findStudentByLookup(normalizedValue, rosterStudents);
+        const foundStudent = await withTimeout(
+          findStudentByLookup(normalizedValue, rosterStudents),
+          LOOKUP_TIMEOUT_MS,
+          null,
+        );
+
+        if (foundStudent === null) {
+          setLookupState("idle");
+          setIsConfirmModalVisible(false);
+          setErrorMessage("La búsqueda tardó demasiado. Revisa tu conexión e intenta de nuevo.");
+          releaseScanLock();
+          return;
+        }
 
         if (!foundStudent) {
           setLookupState("not_found");
@@ -315,9 +329,20 @@ export function useStudentAttendance(
           searchPool = cached?.students ?? [];
         }
 
-        const candidates = await searchStudentsByName(normalizedName, 8, searchPool);
+        const candidates = await withTimeout(
+          searchStudentsByName(normalizedName, 8, searchPool),
+          LOOKUP_TIMEOUT_MS,
+          null,
+        );
 
         if (manualSearchRequestRef.current !== requestId) {
+          return;
+        }
+
+        if (candidates === null) {
+          setLookupState("idle");
+          setErrorMessage("La búsqueda tardó demasiado. Revisa tu conexión e intenta de nuevo.");
+          releaseScanLock();
           return;
         }
 
@@ -359,11 +384,21 @@ export function useStudentAttendance(
   );
 
   const handleManualSearch = useCallback(async () => {
-    if (isSearching) {
-      return;
-    }
     await runManualSearch();
-  }, [isSearching, runManualSearch]);
+  }, [runManualSearch]);
+
+  const handleSetViewMode = useCallback(
+    (mode: ScannerViewMode) => {
+      manualSearchRequestRef.current += 1;
+      if (mode === "manual") {
+        setLookupState("idle");
+        setErrorMessage(null);
+        releaseScanLock();
+      }
+      setViewMode(mode);
+    },
+    [releaseScanLock],
+  );
 
   const handleConfirmAttendance = useCallback(async () => {
     if (!tripId || !student) {
@@ -416,7 +451,8 @@ export function useStudentAttendance(
       }
     } catch (error: unknown) {
       setSuccessMessage(null);
-      setErrorMessage(getErrorMessage(error, "No se pudo registrar la asistencia."));
+      const message = getErrorMessage(error, "No se pudo registrar la asistencia.");
+      setErrorMessage(message);
       releaseScanLock();
     } finally {
       setIsRegistering(false);
@@ -465,7 +501,7 @@ export function useStudentAttendance(
 
   return {
     viewMode,
-    setViewMode,
+    setViewMode: handleSetViewMode,
     isSearching,
     scannedValue,
     manualName,

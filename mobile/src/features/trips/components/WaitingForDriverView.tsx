@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -11,6 +11,7 @@ type WaitingForDriverViewProps = {
   isRefreshing?: boolean;
   title?: string;
   body?: string;
+  footer?: ReactNode;
 };
 
 export function WaitingForDriverView({
@@ -18,6 +19,7 @@ export function WaitingForDriverView({
   isRefreshing = false,
   title = "Esperando al chofer",
   body = "El chofer debe iniciar el viaje en su celular. Esta pantalla se actualizará sola.",
+  footer,
 }: WaitingForDriverViewProps) {
   const { colors, tokens } = useAppTheme();
 
@@ -50,6 +52,10 @@ export function WaitingForDriverView({
           color: colors.textMuted,
           textAlign: "center",
         },
+        footer: {
+          paddingHorizontal: tokens.spacing.xl,
+          paddingBottom: tokens.spacing.xl,
+        },
       }),
     [colors, tokens],
   );
@@ -65,6 +71,7 @@ export function WaitingForDriverView({
           <ActivityIndicator animating size="small" color={colors.primary} style={{ marginTop: 8 }} />
         ) : null}
       </View>
+      {footer ? <View style={styles.footer}>{footer}</View> : null}
     </SafeAreaView>
   );
 }

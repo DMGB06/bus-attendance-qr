@@ -32,7 +32,10 @@ export function mapStudentTripStatusToPresentation(
   if (!status || status === "pending") {
     return {
       label: resolvedDirection === "recojo" ? "Esperando recojo" : "Esperando retorno",
-      subtitle: "Aún no hay registro en el bus hoy",
+      subtitle:
+        resolvedDirection === "recojo"
+          ? "Sin registro en el bus todavía"
+          : "Sin registro de retorno todavía",
       tone: "pending",
       icon: "clock-outline",
     };

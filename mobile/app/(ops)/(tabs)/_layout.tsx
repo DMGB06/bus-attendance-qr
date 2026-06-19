@@ -139,6 +139,13 @@ export default function TabsLayout() {
             title: "Cerrar viaje",
           }}
         />
+        <Tabs.Screen
+          name="activity"
+          options={{
+            href: null,
+            title: "Historial",
+          }}
+        />
       </Tabs>
     </Fragment>
   );

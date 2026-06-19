@@ -12,6 +12,7 @@ import { getRosterSnapshot } from "@/src/features/trips/store/rosterStore";
 import { withTimeout } from "@/src/shared/utils/withTimeout";
 
 const PENDING_CHECK_TIMEOUT_MS = 8_000;
+const QUEUE_FLUSH_TIMEOUT_MS = 4_000;
 
 export const CLOSE_TRIP_CONNECTIVITY_WARNING =
   "Revisa tu conexión. Mostramos los datos guardados en el dispositivo.";
@@ -39,22 +40,38 @@ async function getCachedPendingDropoff(tripId: string): Promise<PendingDropoffSt
   return getOnboardStudentsFromRoster(cachedSnapshot.items);
 }
 
+function hasLocalRosterForTrip(tripId: string): boolean {
+  const rosterState = getRosterSnapshot();
+  return rosterState.tripId === tripId && rosterState.items.length > 0;
+}
+
+async function tryFlushQueueForClose(tripId: string): Promise<void> {
+  try {
+    await withTimeout(flushAttendanceQueue(tripId), QUEUE_FLUSH_TIMEOUT_MS, 0);
+  } catch {
+    /* Si la red falla, el roster local sigue siendo la mejor referencia disponible. */
+  }
+}
+
 /**
  * Alineado con la lista: el roster en memoria ya fusiona servidor + cola offline.
- * Se sincroniza la cola antes de consultar el servidor como respaldo.
+ * Con datos locales, responde al instante y sincroniza la cola en segundo plano.
  */
 export async function resolvePendingDropoffStudents(
   tripId: string,
 ): Promise<PendingDropoffResolution> {
-  try {
-    await flushAttendanceQueue(tripId);
-  } catch {
-    /* Si la red falla, el roster local sigue siendo la mejor referencia disponible. */
+  if (hasLocalRosterForTrip(tripId)) {
+    void tryFlushQueueForClose(tripId);
+    return {
+      students: getLocalPendingDropoff(tripId),
+      networkTimedOut: false,
+    };
   }
 
+  await tryFlushQueueForClose(tripId);
+
   const localPending = getLocalPendingDropoff(tripId);
-  const rosterState = getRosterSnapshot();
-  if (rosterState.tripId === tripId && rosterState.items.length > 0) {
+  if (hasLocalRosterForTrip(tripId)) {
     return { students: localPending, networkTimedOut: false };
   }
 
