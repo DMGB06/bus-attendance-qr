@@ -129,7 +129,9 @@ Perfiles en [`mobile/eas.json`](mobile/eas.json): `development`, `preview`, `pro
 
 | Documento | Contenido |
 |-----------|-----------|
+| [`docs/PLAN-PILOTO-LISTO.md`](docs/PLAN-PILOTO-LISTO.md) | **Plan maestro piloto** — logo, mapa, push, APK, checklist campo |
 | [`docs/PROYECTO-COMPLETO.md`](docs/PROYECTO-COMPLETO.md) | **Guía técnica completa** — stack, BD, arquitectura, flujos |
+| [`docs/PLAN-OPTIMIZACION-MOBILE.md`](docs/PLAN-OPTIMIZACION-MOBILE.md) | Batería, peso APK, rendimiento (Fases 0–4) |
 | [`docs/PLAN-IMPLEMENTACION-MULTI-ROL.md`](docs/PLAN-IMPLEMENTACION-MULTI-ROL.md) | Plan por fases 0–6 |
 | [`docs/PLAN-SEGURIDAD.md`](docs/PLAN-SEGURIDAD.md) | Endurecimiento RLS, RPCs, checklist pre-piloto |
 | [`docs/PLAN-HISTORIAL-OPERADOR.md`](docs/PLAN-HISTORIAL-OPERADOR.md) | Historial 7 días chofer/asistenta (MVP + búsqueda) |

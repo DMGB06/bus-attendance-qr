@@ -33,3 +33,11 @@ export type ActivityDayOption = {
   label: string;
   detailLabel: string;
 };
+
+export type ActivityStudentGroup = {
+  studentId: string;
+  studentName: string;
+  events: OperatorActivityRow[];
+  /** Clave estable para listas virtualizadas (viaje + alumno). */
+  listKey: string;
+};

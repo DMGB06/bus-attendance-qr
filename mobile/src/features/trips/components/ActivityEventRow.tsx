@@ -1,130 +1,136 @@
 import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
-import { Text } from "react-native-paper";
+import { Avatar, Text } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
-import { mapActivityEventLabel } from "@/src/features/trips/domain/activity-event.labels";
+import {
+  mapActivityEventLabelShort,
+  mapActivityEventTagLabel,
+} from "@/src/features/trips/domain/activity-event.labels";
+import {
+  formatActivityEventTime,
+  getActivityEventColors,
+  getStudentInitials,
+} from "@/src/features/trips/domain/activity-row.utils";
 import type { OperatorActivityRow } from "@/src/features/trips/types/activity.types";
+
+export const ACTIVITY_ROW_HEIGHT = 60;
 
 type ActivityEventRowProps = {
   event: OperatorActivityRow;
 };
 
-function formatEventTime(iso: string | null): string {
-  if (!iso) {
-    return "—";
-  }
-
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) {
-    return "—";
-  }
-
-  return date.toLocaleTimeString("es-PE", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 export function ActivityEventRow({ event }: ActivityEventRowProps) {
   const { colors, tokens } = useAppTheme();
   const isVoided = Boolean(event.voidedAt);
   const isOfflineSync = event.isOfflineSync;
+  const eventColors = getActivityEventColors(event.eventType, colors);
 
   const styles = useMemo(
     () =>
       StyleSheet.create({
         row: {
           flexDirection: "row",
-          alignItems: "flex-start",
-          gap: tokens.spacing.md,
+          alignItems: "center",
           backgroundColor: colors.surfaceListItem,
-          borderRadius: tokens.radius.lg,
-          padding: tokens.spacing.md,
-          borderWidth: 1,
-          borderColor: colors.surfaceCardBorder,
+          borderBottomWidth: 1,
+          borderBottomColor: colors.borderMuted,
+          borderLeftWidth: 4,
+          borderLeftColor: eventColors.stripe,
+          paddingLeft: tokens.spacing.md,
+          paddingRight: tokens.spacing.md,
+          paddingVertical: tokens.spacing.sm,
+          gap: tokens.spacing.md,
+          minHeight: ACTIVITY_ROW_HEIGHT,
           opacity: isVoided ? 0.72 : 1,
         },
-        timeColumn: {
-          minWidth: 48,
-          paddingTop: 2,
+        avatar: {
+          backgroundColor: colors.primary,
+        },
+        body: {
+          flex: 1,
+          gap: 2,
+          minWidth: 0,
+        },
+        name: {
+          ...tokens.typography.bodyStrong,
+          color: colors.textTitle,
+        },
+        action: {
+          ...tokens.typography.caption,
+          color: colors.textMuted,
+        },
+        trailing: {
+          alignItems: "flex-end",
+          justifyContent: "center",
+          gap: 4,
+          minWidth: 72,
         },
         time: {
           ...tokens.typography.bodyStrong,
           color: colors.textTitle,
         },
-        content: {
-          flex: 1,
-          gap: tokens.spacing.xs,
+        statusTag: {
+          backgroundColor: eventColors.tagBg,
+          borderRadius: tokens.radius.xs,
+          paddingHorizontal: tokens.spacing.sm,
+          paddingVertical: 4,
+          minWidth: 68,
+          alignItems: "center",
         },
-        studentName: {
-          ...tokens.typography.bodyStrong,
-          color: colors.textTitle,
-        },
-        eventLabel: {
-          ...tokens.typography.body,
-          color: colors.textBody,
+        statusTagText: {
+          ...tokens.typography.overline,
+          color: eventColors.tagText,
+          letterSpacing: 0.2,
+          textAlign: "center",
         },
         badgeRow: {
           flexDirection: "row",
           alignItems: "center",
-          flexWrap: "wrap",
-          gap: tokens.spacing.xs,
-          marginTop: tokens.spacing.xs,
+          gap: 4,
         },
-        voidBadge: {
+        badgeText: {
           ...tokens.typography.caption,
-          color: colors.attendancePending,
-          backgroundColor: "rgba(197, 48, 48, 0.1)",
-          borderRadius: tokens.radius.sm,
-          paddingHorizontal: tokens.spacing.sm,
-          paddingVertical: 2,
-          overflow: "hidden",
-        },
-        offlineBadge: {
-          ...tokens.typography.caption,
-          color: colors.feedbackWarningTitle,
-          backgroundColor: colors.feedbackWarningBg,
-          borderRadius: tokens.radius.sm,
-          paddingHorizontal: tokens.spacing.sm,
-          paddingVertical: 2,
-          overflow: "hidden",
+          fontSize: 10,
+          color: colors.textMuted,
         },
       }),
-    [colors, isVoided, tokens],
+    [colors, eventColors, isVoided, tokens],
   );
+
+  const initials = getStudentInitials(event.studentName);
+  const actionLabel = mapActivityEventLabelShort(event.eventType, event.tripDirection);
+  const tagLabel = isVoided ? "Anulado" : mapActivityEventTagLabel(event.eventType, event.tripDirection);
 
   return (
     <View style={styles.row}>
-      <View style={styles.timeColumn}>
-        <Text style={styles.time}>{formatEventTime(event.scannedAt)}</Text>
-      </View>
-      <View style={styles.content}>
-        <Text style={styles.studentName}>{event.studentName}</Text>
-        <Text style={styles.eventLabel}>
-          {mapActivityEventLabel(event.eventType, event.tripDirection, event.turnType)}
+      <Avatar.Text size={32} label={initials || "AL"} style={styles.avatar} />
+
+      <View style={styles.body}>
+        <Text style={styles.name} numberOfLines={1}>
+          {event.studentName}
         </Text>
-        {isVoided || isOfflineSync ? (
+        <Text style={styles.action} numberOfLines={1}>
+          {actionLabel}
+        </Text>
+        {isOfflineSync ? (
           <View style={styles.badgeRow}>
-            {isOfflineSync ? (
-              <>
-                <MaterialCommunityIcons
-                  name="cloud-sync-outline"
-                  size={14}
-                  color={colors.feedbackWarningTitle}
-                />
-                <Text style={styles.offlineBadge}>Offline</Text>
-              </>
-            ) : null}
-            {isVoided ? (
-              <>
-                <MaterialCommunityIcons name="cancel" size={14} color={colors.attendancePending} />
-                <Text style={styles.voidBadge}>Anulado</Text>
-              </>
-            ) : null}
+            <MaterialCommunityIcons
+              name="cloud-sync-outline"
+              size={12}
+              color={colors.feedbackWarningTitle}
+            />
+            <Text style={styles.badgeText}>Sync offline</Text>
           </View>
         ) : null}
+      </View>
+
+      <View style={styles.trailing}>
+        <Text style={styles.time}>{formatActivityEventTime(event.scannedAt)}</Text>
+        <View style={styles.statusTag}>
+          <Text style={styles.statusTagText}>{tagLabel}</Text>
+        </View>
       </View>
     </View>
   );

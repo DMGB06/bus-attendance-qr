@@ -27,6 +27,7 @@ import {
   filterRosterItemsByQuery,
 } from "@/src/features/trips/utils/roster-filter.utils";
 import { consumePendingRosterView } from "@/src/features/trips/utils/roster-navigation";
+import { useDebouncedValue } from "@/src/shared/hooks/useDebouncedValue";
 import {
   confirmBulkDropoff,
   confirmStudentAbsent,
@@ -38,6 +39,8 @@ import {
 
 export type RosterViewMode = "all" | "pending" | "onboard" | "completed" | "attended" | "prioritarios";
 
+const ROSTER_SEARCH_DEBOUNCE_MS = 250;
+
 export function useTripRoster(tripId: string | undefined) {
   const { activeTrip } = useTripStore();
   const { capabilities } = useAppCapabilities();
@@ -46,6 +49,7 @@ export function useTripRoster(tripId: string | undefined) {
   const itemStats = useRosterItemStats(tripId);
   const [viewMode, setViewMode] = useState<RosterViewMode>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebouncedValue(searchQuery, ROSTER_SEARCH_DEBOUNCE_MS);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [isMarkingStudentId, setIsMarkingStudentId] = useState<string | null>(null);
   const [isCorrectingStudentId, setIsCorrectingStudentId] = useState<string | null>(null);
@@ -352,8 +356,8 @@ export function useTripRoster(tripId: string | undefined) {
 
   const filteredItems = useMemo(() => {
     const baseItems = itemBuckets.byViewMode[viewMode];
-    return filterRosterItemsByQuery(baseItems, searchQuery);
-  }, [itemBuckets, viewMode, searchQuery]);
+    return filterRosterItemsByQuery(baseItems, debouncedSearchQuery);
+  }, [debouncedSearchQuery, itemBuckets, viewMode]);
 
   const prioritariosItems = itemBuckets.prioritarios;
 

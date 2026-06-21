@@ -1,4 +1,5 @@
 import { isLocalPendingRecord } from "@/src/features/trips/domain/attendance-sync.rules";
+import { shouldFlushAttendanceQueueBeforeRefresh } from "@/src/features/trips/domain/attendance-queue-flush.rules";
 import { registerAttendance, registerDropoffAttendance } from "@/src/features/trips/services/attendance.service";
 import { getScanContextForCurrentUser } from "@/src/features/trips/services/crew.service";
 import { perfAsync, perfStart } from "@/src/shared/utils/perfMark";
@@ -18,8 +19,9 @@ import {
 } from "@/src/features/trips/services/trip-roster-merge.service";
 import { getTripAttendanceOnly, getTripRosterRaw } from "@/src/features/trips/services/trip-roster.service";
 import type { TripRosterItem } from "@/src/features/trips/types/trip-roster";
-import type { AttendanceEventType, AttendanceRecord } from "@/src/features/trips/types";
+import type { AttendanceEventType } from "@/src/features/trips/types";
 import {
+  countPendingForTrip,
   enqueueAttendanceWrite,
   hasQueuedWrite,
   loadAttendanceQueue,
@@ -310,7 +312,12 @@ export async function refreshRosterFromNetwork(
   return perfAsync(
     "refreshRosterFromNetwork",
     async () => {
-      if (!options?.skipQueueFlush) {
+      if (
+        shouldFlushAttendanceQueueBeforeRefresh(
+          await countPendingForTrip(tripId),
+          options?.skipQueueFlush,
+        )
+      ) {
         const endFlush = perfStart("refreshRosterFromNetwork.flushQueue", { tripId });
         await flushAttendanceQueue(tripId);
         endFlush();
@@ -402,13 +409,13 @@ export async function applyOptimisticRegistration(
 export function collectBulkDropoffTargets(
   items: TripRosterItem[],
   studentIds?: string[],
-): { eligible: string[]; skipped: Array<{ studentId: string; reason: string }> } {
+): { eligible: string[]; skipped: { studentId: string; reason: string }[] } {
   const candidates = studentIds?.length
     ? studentIds
     : items.filter((item) => item.status === "onboard").map((item) => item.student.id);
 
   const eligible: string[] = [];
-  const skipped: Array<{ studentId: string; reason: string }> = [];
+  const skipped: { studentId: string; reason: string }[] = [];
 
   for (const studentId of candidates) {
     const error = validateRegistration(items, studentId, "bajo");

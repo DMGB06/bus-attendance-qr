@@ -15,6 +15,9 @@ import {
 import { getOperatorActivityWeek } from "@/src/features/trips/services/operator-activity.service";
 import { useTripStore } from "@/src/features/trips/store/tripStore";
 import type { ActivityDayGroup, ActivityDayOption } from "@/src/features/trips/types/activity.types";
+import { useDebouncedValue } from "@/src/shared/hooks/useDebouncedValue";
+
+const ACTIVITY_SEARCH_DEBOUNCE_MS = 250;
 
 type OperatorActivityHistoryState = {
   dayOptions: ActivityDayOption[];
@@ -38,6 +41,7 @@ export function useOperatorActivityHistory(): OperatorActivityHistoryState {
   const [dayOptions] = useState(() => buildDayOptions(todayIso));
   const [selectedDate, setSelectedDate] = useState(todayIso);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebouncedValue(searchQuery, ACTIVITY_SEARCH_DEBOUNCE_MS);
   const [groupedDays, setGroupedDays] = useState(() => groupActivityByDayAndTrip([], todayIso));
   const [assignedDates, setAssignedDates] = useState<Set<string>>(() => new Set());
   const [loading, setLoading] = useState(true);
@@ -45,7 +49,7 @@ export function useOperatorActivityHistory(): OperatorActivityHistoryState {
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
 
-  const isSearchActive = searchQuery.trim().length > 0;
+  const isSearchActive = debouncedSearchQuery.trim().length > 0;
 
   const loadWeek = useCallback(async (options?: { silent?: boolean }) => {
     const silent = options?.silent ?? false;
@@ -127,8 +131,8 @@ export function useOperatorActivityHistory(): OperatorActivityHistoryState {
   }, [activeTripId, loadWeek]);
 
   const filteredGroupedDays = useMemo(
-    () => filterGroupedDaysByStudentName(groupedDays, searchQuery),
-    [groupedDays, searchQuery],
+    () => filterGroupedDaysByStudentName(groupedDays, debouncedSearchQuery),
+    [groupedDays, debouncedSearchQuery],
   );
 
   const visibleDays = useMemo(() => {
@@ -152,7 +156,7 @@ export function useOperatorActivityHistory(): OperatorActivityHistoryState {
 
   const emptyMessage = useMemo(() => {
     if (isSearchActive) {
-      return getActivitySearchEmptyMessage(searchQuery);
+      return getActivitySearchEmptyMessage(debouncedSearchQuery);
     }
 
     if (!assignedDates.has(selectedDate)) {
@@ -160,7 +164,7 @@ export function useOperatorActivityHistory(): OperatorActivityHistoryState {
     }
 
     return "Sin registros este día.";
-  }, [assignedDates, isSearchActive, searchQuery, selectedDate]);
+  }, [assignedDates, debouncedSearchQuery, isSearchActive, selectedDate]);
 
   return {
     dayOptions,

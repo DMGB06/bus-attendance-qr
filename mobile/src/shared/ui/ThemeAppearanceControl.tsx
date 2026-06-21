@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -15,14 +15,6 @@ type ThemeAppearanceControlProps = {
 export function ThemeAppearanceControl({ variant = 'navbar' }: ThemeAppearanceControlProps) {
   const { toggleScheme } = useAppThemePreferences();
   const { isDark, colors, tokens } = useAppThemeVisual();
-  const trackW = tokens.layout.appearanceNavbarWidth;
-  const trackH = tokens.layout.appearanceNavbarHeight;
-  const knobSize = Math.round(trackH - 8);
-  const pad = 4;
-  const travel = trackW - knobSize - pad * 2;
-
-  // no animated knob — simple compact icon button
-
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -50,7 +42,7 @@ export function ThemeAppearanceControl({ variant = 'navbar' }: ThemeAppearanceCo
           borderWidth: 0,
         },
       }),
-    [colors, tokens, trackH, trackW, knobSize],
+    [colors, tokens],
   );
 
   async function handlePress() {

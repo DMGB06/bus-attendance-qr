@@ -26,7 +26,6 @@ import type { TripDirection } from "@/src/features/trips/types";
 import type { TripRosterItem } from "@/src/features/trips/services/trip-roster.service";
 import { useTripStore } from "@/src/features/trips/store/tripStore";
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
-import { useScrollBottomPadding } from "@/src/core/theme/useScrollBottomPadding";
 import { useScreenPerfMark } from "@/src/shared/hooks/useScreenPerfMark";
 
 function buildChipFilters(direction: TripDirection) {
@@ -65,9 +64,9 @@ function getStatFilterLabel(id: StatFilterId, direction: TripDirection): string 
 
 export default function RosterScreen() {
   useScreenPerfMark("roster");
-  const insets = useSafeAreaInsets();
   const { colors, tokens } = useAppTheme();
-  const scrollBottom = useScrollBottomPadding(tokens.spacing.md);
+  const insets = useSafeAreaInsets();
+  const tabBarInset = tokens.layout.tabBarBaseHeight + insets.bottom;
   const { activeTrip } = useTripStore();
   const { isOffline } = useNetworkStatus();
   const roster = useTripRoster(activeTrip?.id);
@@ -234,6 +233,9 @@ export default function RosterScreen() {
           borderColor: colors.borderMuted,
           overflow: "hidden",
         },
+        listFill: {
+          flex: 1,
+        },
         list: {
           paddingBottom: tokens.spacing.xs,
         },
@@ -351,15 +353,7 @@ export default function RosterScreen() {
       showMorningHintInList,
       isAfternoonReturn,
       viewMode,
-      roster.isMorningRider,
-      roster.handleExitMark,
-      roster.handleMarkAbsent,
-      roster.isMarkingStudentId,
-      roster.isCorrectingStudentId,
-      roster.canUndoItem,
-      roster.canVoidItem,
-      roster.handleUndoRegistration,
-      roster.handleVoidRegistration,
+      roster,
     ],
   );
 
@@ -380,8 +374,8 @@ export default function RosterScreen() {
 
   return (
     <SafeAreaView
-      edges={["bottom", "left", "right"]}
-      style={[styles.container, { paddingBottom: insets.bottom }]}
+      edges={["left", "right"]}
+      style={[styles.container, { paddingBottom: tabBarInset }]}
     >
       <View style={styles.toolbar}>
         <View style={styles.titleRow}>
@@ -563,7 +557,8 @@ export default function RosterScreen() {
               windowSize={7}
               removeClippedSubviews
               updateCellsBatchingPeriod={50}
-              contentContainerStyle={[styles.list, { paddingBottom: scrollBottom }]}
+              style={styles.listFill}
+              contentContainerStyle={[styles.list, { paddingBottom: tokens.spacing.md }]}
               refreshing={roster.isRefreshing}
               onRefresh={() => void roster.loadRoster()}
               showsVerticalScrollIndicator={false}

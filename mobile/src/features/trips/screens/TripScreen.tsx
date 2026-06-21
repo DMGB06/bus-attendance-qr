@@ -36,6 +36,7 @@ import { getErrorMessage } from '@/src/shared/utils/errors';
 import type { TurnType } from '@/src/features/trips/types';
 import { useAppTheme } from '@/src/core/theme/ThemeProvider';
 import { AppScrollView } from '@/src/shared/ui/AppScrollView';
+import { useCompactScreen } from '@/src/shared/hooks/useCompactScreen';
 import { useScreenPerfMark } from '@/src/shared/hooks/useScreenPerfMark';
 
 type TripPeriod = 'mañana' | 'tarde';
@@ -43,7 +44,7 @@ type TripPeriod = 'mañana' | 'tarde';
 export default function TripScreen() {
   const router = useRouter();
   useScreenPerfMark('trip');
-  const { activeTrip, setActiveTrip, hydrateActiveTrip } = useTripStore();
+  const { activeTrip, setActiveTrip } = useTripStore();
   const { capabilities } = useAppCapabilities();
   const dashboard = useTripDashboard(activeTrip);
   const rosterItems = useRosterItems(activeTrip?.id);
@@ -93,9 +94,12 @@ export default function TripScreen() {
   const [operationalContext, setOperationalContext] = useState<
     OperationalBusContext | null | undefined
   >(undefined);
-  const [isWaitingRefresh, setIsWaitingRefresh] = useState(false);
 
-  const styles = useMemo(() => createTripScreenStyles(colors, tokens), [colors, tokens]);
+  const { isCompact } = useCompactScreen();
+  const styles = useMemo(
+    () => createTripScreenStyles(colors, tokens, isCompact),
+    [colors, isCompact, tokens],
+  );
 
   const historyFooter = capabilities.canViewRoster ? (
     <Button
@@ -115,23 +119,6 @@ export default function TripScreen() {
       setOperationalContext(context);
     });
   }, []);
-
-  useEffect(() => {
-    if (!capabilities.isAssistant || activeTrip) {
-      return;
-    }
-
-    const intervalId = setInterval(() => {
-      setIsWaitingRefresh(true);
-      void hydrateActiveTrip().finally(() => {
-        setIsWaitingRefresh(false);
-      });
-    }, 10_000);
-
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, [capabilities.isAssistant, activeTrip, hydrateActiveTrip]);
 
   function getSelectedTurnType(): TurnType {
     return period === 'mañana' ? 'mañana' : afternoonTurn;
@@ -183,7 +170,6 @@ export default function TripScreen() {
     return (
       <WaitingForDriverView
         busLabel={operationalContext.busLabel}
-        isRefreshing={isWaitingRefresh}
         footer={historyFooter}
       />
     );
@@ -192,7 +178,8 @@ export default function TripScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
       <AppScrollView
-        extraBottomInset={tokens.spacing.md}
+        extraBottomInset={tokens.spacing.lg}
+        contentGrow={false}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
@@ -208,6 +195,18 @@ export default function TripScreen() {
             </Text>
             {activeTrip && activeTripMeta ? (
               <Text style={styles.tripMeta}>Iniciado {activeTripMeta}</Text>
+            ) : null}
+            {activeTrip && capabilities.canViewRoster ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Ver historial de los últimos 7 días"
+                onPress={() => router.push(OPS_ROUTES.activity)}
+                style={styles.historyLink}
+              >
+                <MaterialCommunityIcons name="history" size={18} color={colors.primary} />
+                <Text style={styles.historyLinkText}>Historial (7 días)</Text>
+                <MaterialCommunityIcons name="chevron-right" size={18} color={colors.textMuted} />
+              </Pressable>
             ) : null}
           </View>
 
@@ -451,7 +450,7 @@ export default function TripScreen() {
             </View>
           ) : null}
 
-          {historyFooter}
+          {!activeTrip ? historyFooter : null}
         </View>
       </AppScrollView>
     </SafeAreaView>

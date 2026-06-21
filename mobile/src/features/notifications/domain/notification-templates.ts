@@ -50,31 +50,31 @@ export function buildAttendancePushNotification(
     case "recojo_subio":
       return {
         event_key: eventKey,
-        title: "Bus Escolar",
+        title: "CerroBus",
         body: `${studentName} subió al bus en el recojo.`,
       };
     case "recojo_bajo":
       return {
         event_key: eventKey,
-        title: "Bus Escolar",
+        title: "CerroBus",
         body: `${studentName} llegó al colegio.`,
       };
     case "retorno_subio":
       return {
         event_key: eventKey,
-        title: "Bus Escolar",
+        title: "CerroBus",
         body: `${studentName} subió al bus en el retorno.`,
       };
     case "retorno_bajo":
       return {
         event_key: eventKey,
-        title: "Bus Escolar",
+        title: "CerroBus",
         body: `${studentName} llegó a casa.`,
       };
     default:
       return {
         event_key: eventKey,
-        title: "Bus Escolar",
+        title: "CerroBus",
         body: `Actualización de ${studentName} en el bus.`,
       };
   }

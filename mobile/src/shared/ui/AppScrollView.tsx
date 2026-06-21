@@ -30,7 +30,9 @@ export function AppScrollView({
   const { tokens, isDark } = useAppTheme();
 
   const contentStyle = useMemo(() => {
-    const tabClearance = omitTabBarInset ? 0 : tokens.layout.scrollBottomInset;
+    const tabClearance = omitTabBarInset
+      ? 0
+      : tokens.layout.tabBarBaseHeight + tokens.spacing.lg;
     const paddingBottom = insets.bottom + tabClearance + extraBottomInset;
     const base: StyleProp<ViewStyle> = [
       contentGrow ? styles.grow : null,
@@ -38,7 +40,7 @@ export function AppScrollView({
       contentContainerStyle,
     ];
     return base;
-  }, [contentContainerStyle, contentGrow, extraBottomInset, insets.bottom, omitTabBarInset, tokens.layout.scrollBottomInset]);
+  }, [contentContainerStyle, contentGrow, extraBottomInset, insets.bottom, omitTabBarInset, tokens.layout.tabBarBaseHeight, tokens.spacing.lg]);
 
   return (
     <ScrollView

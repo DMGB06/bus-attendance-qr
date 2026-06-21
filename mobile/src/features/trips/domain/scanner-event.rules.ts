@@ -3,11 +3,7 @@ import {
   canRegisterDropoff,
   findRosterItem,
 } from "@/src/features/trips/domain/attendance.rules";
-import {
-  getDropoffActionLabel,
-  getDropoffLabel,
-  getDropoffRegisteredMessage,
-} from "@/src/features/trips/domain/trip-labels";
+import { getDropoffLabel } from "@/src/features/trips/domain/trip-labels";
 import type { TripRosterItem } from "@/src/features/trips/services/trip-roster.service";
 import type { AttendanceEventType, TripDirection } from "@/src/features/trips/types";
 
@@ -40,19 +36,6 @@ function boardingLabels() {
   };
 }
 
-function dropoffLabels(direction: TripDirection) {
-  const place = getDropoffLabel(direction);
-  const action = getDropoffActionLabel(direction);
-  return {
-    confirmTitle: action,
-    confirmSubtitle: `Verifica los datos antes de registrar que el alumno fue dejado ${place.toLowerCase()}.`,
-    confirmLabel: action,
-    successMessage: (studentName: string) => `${place} registrado para ${studentName}.`,
-    queuedMessage: (studentName: string) =>
-      `${getDropoffRegisteredMessage(direction).replace(".", "")} para ${studentName}. Se sincronizará al recuperar señal.`,
-  };
-}
-
 export function resolveScannerEvent(
   direction: TripDirection,
   rosterItem: TripRosterItem | undefined,
@@ -68,10 +51,9 @@ export function resolveScannerEvent(
 
   if (canRegisterDropoff(rosterItem)) {
     return {
-      ok: true,
-      intent: "dropoff",
-      eventType: "bajo",
-      ...dropoffLabels(direction),
+      ok: false,
+      error:
+        "Este alumno ya está a bordo. Registra la bajada desde la lista cuando llegue al destino.",
     };
   }
 
@@ -91,7 +73,6 @@ export function resolveScannerEventForStudent(
   return resolveScannerEvent(direction, findRosterItem(items, studentId));
 }
 
-export function getScannerAutoModeHint(direction: TripDirection): string {
-  const dropoffPlace = direction === "recojo" ? "colegio" : "casa";
-  return `Subida o bajada en ${dropoffPlace} según el estado del alumno`;
+export function getScannerAutoModeHint(_direction: TripDirection): string {
+  return "Escanear al subir al bus";
 }

@@ -11,12 +11,15 @@ type ActivityDaySelectorProps = {
   options: ActivityDayOption[];
   selectedDate: string;
   onSelectDate: (date: string) => void;
+  /** Sin padding horizontal extra cuando va dentro de un contenedor ya acolchado. */
+  embedded?: boolean;
 };
 
 export function ActivityDaySelector({
   options,
   selectedDate,
   onSelectDate,
+  embedded = false,
 }: ActivityDaySelectorProps) {
   const { colors, tokens } = useAppTheme();
   const [menuVisible, setMenuVisible] = useState(false);
@@ -31,7 +34,7 @@ export function ActivityDaySelector({
     () =>
       StyleSheet.create({
         wrap: {
-          paddingHorizontal: tokens.spacing.xl,
+          paddingHorizontal: embedded ? 0 : tokens.spacing.xl,
         },
         label: {
           ...tokens.typography.label,
@@ -70,7 +73,7 @@ export function ActivityDaySelector({
           color: colors.textMuted,
         },
       }),
-    [colors, tokens],
+    [colors, embedded, tokens],
   );
 
   if (!selectedOption) {

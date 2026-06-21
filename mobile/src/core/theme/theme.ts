@@ -9,4 +9,4 @@ export {
 export { buildPaperTheme } from '@/src/core/theme/buildPaperTheme';
 export { AppThemeProvider, useAppTheme } from '@/src/core/theme/ThemeProvider';
 export { loadStoredColorScheme, persistColorScheme } from '@/src/core/theme/themeStorage';
-export { useScrollBottomPadding } from '@/src/core/theme/useScrollBottomPadding';
+export { useScrollBottomPadding, useTabSceneBottomInset } from '@/src/core/theme/useScrollBottomPadding';

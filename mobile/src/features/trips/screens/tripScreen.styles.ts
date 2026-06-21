@@ -5,7 +5,13 @@ import type { AppThemeContextValue } from '@/src/core/theme/ThemeProvider';
 export function createTripScreenStyles(
   colors: AppThemeContextValue['colors'],
   tokens: AppThemeContextValue['tokens'],
+  compact = false,
 ) {
+  const screenPadding = compact ? tokens.spacing.md : tokens.spacing.lg;
+  const sectionGap = compact ? tokens.spacing.md : tokens.spacing.lg;
+  const cardPadding = compact ? tokens.spacing.lg : tokens.spacing.xl;
+  const actionHeight = compact ? tokens.layout.buttonHeight - 8 : tokens.layout.buttonHeight - 4;
+
   return StyleSheet.create({
     safeArea: {
       flex: 1,
@@ -13,25 +19,45 @@ export function createTripScreenStyles(
     },
     container: {
       flexGrow: 1,
-      justifyContent: 'center',
-      paddingHorizontal: tokens.spacing.lg,
-      paddingVertical: tokens.spacing.xl,
-      gap: tokens.spacing.xl,
-      maxWidth: 480,
+      paddingHorizontal: screenPadding,
+      paddingTop: compact ? tokens.spacing.sm : tokens.spacing.md,
+      paddingBottom: tokens.spacing.lg,
+      gap: sectionGap,
+      maxWidth: 520,
       width: '100%',
       alignSelf: 'center',
     },
     pageHeader: {
       alignItems: 'center',
-      gap: tokens.spacing.sm,
+      gap: compact ? tokens.spacing.xs : tokens.spacing.sm,
     },
     tripMeta: {
       ...tokens.typography.caption,
       color: colors.textMuted,
       textAlign: 'center',
     },
+    historyLink: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: tokens.spacing.xs,
+      marginTop: tokens.spacing.xs,
+      paddingVertical: compact ? tokens.spacing.xs : tokens.spacing.sm,
+      paddingHorizontal: tokens.spacing.md,
+      borderRadius: tokens.radius.full,
+      backgroundColor: colors.primarySoftBg,
+      borderWidth: 1,
+      borderColor: colors.surfaceCardBorder,
+      alignSelf: 'stretch',
+    },
+    historyLinkText: {
+      ...tokens.typography.label,
+      color: colors.primary,
+      flex: 1,
+      textAlign: 'center',
+    },
     title: {
-      ...tokens.typography.title1,
+      ...(compact ? tokens.typography.title2 : tokens.typography.title1),
       color: colors.textHero,
       textAlign: 'center',
     },
@@ -43,8 +69,8 @@ export function createTripScreenStyles(
     mainCard: {
       backgroundColor: colors.surfaceCard,
       borderRadius: tokens.radius.lg,
-      padding: tokens.spacing.xl,
-      gap: tokens.spacing.lg,
+      padding: cardPadding,
+      gap: sectionGap,
       borderWidth: 1,
       borderColor: colors.surfaceCardBorder,
       borderTopWidth: 4,
@@ -63,7 +89,7 @@ export function createTripScreenStyles(
     },
     selectorButton: {
       flex: 1,
-      height: tokens.layout.buttonHeight,
+      height: actionHeight,
       borderRadius: tokens.radius.sm,
       alignItems: 'center',
       justifyContent: 'center',
@@ -90,7 +116,7 @@ export function createTripScreenStyles(
       alignItems: 'center',
       gap: tokens.spacing.md,
       paddingHorizontal: tokens.spacing.md,
-      paddingVertical: tokens.spacing.md,
+      paddingVertical: compact ? tokens.spacing.sm : tokens.spacing.md,
       borderRadius: tokens.radius.md,
       borderWidth: 1,
       borderColor: colors.borderMuted,
@@ -141,7 +167,7 @@ export function createTripScreenStyles(
       borderRadius: tokens.radius.md,
     },
     startButtonContent: {
-      height: tokens.layout.buttonHeight,
+      height: actionHeight,
     },
     startButtonLabel: {
       ...tokens.typography.bodyStrong,
@@ -151,7 +177,7 @@ export function createTripScreenStyles(
       marginTop: -tokens.spacing.sm,
     },
     activeActions: {
-      gap: tokens.spacing.md,
+      gap: compact ? tokens.spacing.sm : tokens.spacing.md,
       paddingTop: tokens.spacing.xs,
     },
     statsRow: {
@@ -164,11 +190,11 @@ export function createTripScreenStyles(
     statChip: {
       flex: 1,
       alignItems: 'center',
-      paddingVertical: tokens.spacing.md,
+      paddingVertical: compact ? tokens.spacing.sm : tokens.spacing.md,
       gap: 2,
     },
     statValue: {
-      ...tokens.typography.title2,
+      ...(compact ? tokens.typography.title3 : tokens.typography.title2),
       color: colors.textOnPrimary,
     },
     statLabel: {
@@ -184,7 +210,7 @@ export function createTripScreenStyles(
       borderRadius: tokens.radius.md,
     },
     actionButtonContent: {
-      height: tokens.layout.buttonHeight - 4,
+      height: actionHeight,
     },
     historyButton: {
       borderRadius: tokens.radius.md,
@@ -221,7 +247,6 @@ export function createTripScreenStyles(
     },
     scrollContent: {
       flexGrow: 1,
-      justifyContent: 'center',
     },
   });
 }
