@@ -75,6 +75,8 @@ export type ParentChildSummary = {
   student: Student;
   todayStatus: StudentTripStatus | null;
   activeTrip: Trip | null;
+  /** Todos los eventos de asistencia de hoy (mañana + tarde), en orden cronológico. */
+  todayTimeline: ChildTimelineEvent[];
 };
 
 export type ChildTimelineEvent = {

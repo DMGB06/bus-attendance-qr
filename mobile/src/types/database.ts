@@ -259,6 +259,18 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      get_own_profile: {
+        Args: Record<PropertyKey, never>;
+        Returns: AppProfile;
+      };
+      current_app_role: {
+        Args: Record<PropertyKey, never>;
+        Returns: AppRole;
+      };
+      update_own_profile: {
+        Args: { p_full_name?: string | null; p_phone?: string | null };
+        Returns: AppProfile;
+      };
       void_attendance_record: {
         Args: { p_record_id: string; p_reason: string };
         Returns: AttendanceRecord;

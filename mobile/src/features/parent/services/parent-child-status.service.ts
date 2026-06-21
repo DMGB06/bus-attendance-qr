@@ -1,8 +1,7 @@
 import { supabase } from "@/src/core/config/supabase";
 import { buildStudentTripStatusFromAttendance } from "@/src/features/parent/domain/parent-status-from-attendance";
 import {
-  pickPreferredStudentTripStatus,
-  rankStudentTripStatus,
+  pickPreferredStudentTripStatusForParent,
 } from "@/src/features/parent/domain/parent-linked-students";
 import { getTodayDateIso } from "@/src/features/parent/utils/date";
 import { filterValidUuids } from "@/src/shared/utils/uuid";
@@ -114,9 +113,12 @@ function deriveStatusFromAttendance(
       tripRecords,
     );
 
-    if (!best || rankStudentTripStatus(derived.status) > rankStudentTripStatus(best.status)) {
+    if (!best) {
       best = derived;
+      continue;
     }
+
+    best = pickPreferredStudentTripStatusForParent(best, derived, tripMap);
   }
 
   return best;
@@ -133,16 +135,21 @@ export async function resolveTodayStatusesForStudents(
   }
 
   const fromTable = await fetchStatusesFromTable(validIds, today);
-  const tableByStudent = new Map(fromTable.map((status) => [status.student_id, status]));
 
   const records = await fetchAttendanceSlices(validIds);
-  if (!records.length) {
-    return fromTable;
-  }
 
-  const tripIds = [...new Set(records.map((record) => record.trip_id))];
+  const tripIds = [
+    ...new Set([
+      ...fromTable.map((status) => status.trip_id),
+      ...records.map((record) => record.trip_id),
+    ]),
+  ];
   const trips = await fetchTripsByIds(tripIds);
   const tripMap = new Map(trips.map((trip) => [trip.id, trip]));
+
+  if (!records.length) {
+    return pickBestStatusPerStudent(validIds, fromTable, tripMap);
+  }
 
   const recordsByStudent = new Map<string, AttendanceSlice[]>();
   for (const record of records) {
@@ -154,7 +161,10 @@ export async function resolveTodayStatusesForStudents(
   const merged: StudentTripStatus[] = [];
 
   for (const studentId of validIds) {
-    const tableStatus = tableByStudent.get(studentId);
+    const candidates: StudentTripStatus[] = fromTable.filter(
+      (status) => status.student_id === studentId,
+    );
+
     const derived = deriveStatusFromAttendance(
       studentId,
       recordsByStudent.get(studentId) ?? [],
@@ -162,13 +172,42 @@ export async function resolveTodayStatusesForStudents(
       today,
     );
 
-    if (tableStatus && derived) {
-      merged.push(pickPreferredStudentTripStatus(tableStatus, derived));
-    } else if (derived) {
-      merged.push(derived);
-    } else if (tableStatus) {
-      merged.push(tableStatus);
+    if (derived) {
+      candidates.push(derived);
     }
+
+    if (!candidates.length) {
+      continue;
+    }
+
+    let best = candidates[0];
+    for (let index = 1; index < candidates.length; index += 1) {
+      best = pickPreferredStudentTripStatusForParent(best, candidates[index], tripMap);
+    }
+    merged.push(best);
+  }
+
+  return merged;
+}
+
+function pickBestStatusPerStudent(
+  studentIds: string[],
+  statuses: StudentTripStatus[],
+  tripMap: Map<string, TripSlice>,
+): StudentTripStatus[] {
+  const merged: StudentTripStatus[] = [];
+
+  for (const studentId of studentIds) {
+    const candidates = statuses.filter((status) => status.student_id === studentId);
+    if (!candidates.length) {
+      continue;
+    }
+
+    let best = candidates[0];
+    for (let index = 1; index < candidates.length; index += 1) {
+      best = pickPreferredStudentTripStatusForParent(best, candidates[index], tripMap);
+    }
+    merged.push(best);
   }
 
   return merged;

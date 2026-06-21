@@ -1,5 +1,6 @@
 import {
   pickPreferredStudentTripStatus,
+  pickPreferredStudentTripStatusForParent,
   resolveLinkedStudentPairs,
 } from "@/src/features/parent/domain/parent-linked-students";
 import type { ParentStudentLink } from "@/src/features/parent/types";
@@ -76,5 +77,42 @@ describe("pickPreferredStudentTripStatus", () => {
     };
 
     expect(pickPreferredStudentTripStatus(pending, atSchool).status).toBe("at_school");
+  });
+});
+
+describe("pickPreferredStudentTripStatusForParent", () => {
+  it("prefiere retorno tarde activo sobre recojo mañana completado", () => {
+    const morningAtSchool = {
+      student_id: "s1",
+      trip_id: "trip-morning",
+      trip_date: "2026-06-21",
+      direction: "recojo" as const,
+      status: "at_school" as const,
+      last_event_type: "bajo",
+      last_event_at: "2026-06-21T12:49:00Z",
+      updated_at: "2026-06-21T12:49:00Z",
+    };
+    const afternoonReturning = {
+      student_id: "s1",
+      trip_id: "trip-afternoon",
+      trip_date: "2026-06-21",
+      direction: "retorno" as const,
+      status: "returning" as const,
+      last_event_type: "subio",
+      last_event_at: "2026-06-21T14:37:00Z",
+      updated_at: "2026-06-21T14:37:00Z",
+    };
+    const tripMap = new Map([
+      ["trip-morning", { status: "completed" }],
+      ["trip-afternoon", { status: "active" }],
+    ]);
+
+    expect(
+      pickPreferredStudentTripStatusForParent(
+        morningAtSchool,
+        afternoonReturning,
+        tripMap,
+      ).status,
+    ).toBe("returning");
   });
 });

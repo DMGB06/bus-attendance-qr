@@ -179,6 +179,10 @@ export default function ChildDetailScreen() {
           ...tokens.typography.headline,
           color: colors.textTitle,
         },
+        sectionHint: {
+          ...tokens.typography.caption,
+          color: colors.textMuted,
+        },
         section: {
           gap: tokens.spacing.sm,
         },
@@ -296,6 +300,9 @@ export default function ChildDetailScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Historial de hoy</Text>
+          <Text style={styles.sectionHint}>
+            Todos los registros del día: recojo mañana, tarde y retorno.
+          </Text>
           <ChildTimelineList events={timeline} />
         </View>
 

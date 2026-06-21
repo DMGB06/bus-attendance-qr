@@ -95,9 +95,7 @@ export default function ParentHomeScreen() {
         <View style={styles.intro}>
           <Text style={styles.title}>Mis hijos</Text>
           <Text style={styles.subtitle}>
-            {children.length === 1
-              ? "Estado de tu hijo en el bus escolar hoy."
-              : `Estado de tus ${children.length} hijos en el bus escolar hoy.`}
+            Estado actual e historial del día en el bus escolar.
           </Text>
         </View>
 

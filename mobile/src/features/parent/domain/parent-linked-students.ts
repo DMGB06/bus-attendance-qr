@@ -66,3 +66,28 @@ export function pickPreferredStudentTripStatus(
 ): StudentTripStatus {
   return rankStudentTripStatus(left.status) >= rankStudentTripStatus(right.status) ? left : right;
 }
+
+type TripStatusSlice = { status: string };
+
+/** Padre: viaje activo y evento más reciente ganan (tarde no queda tapada por recojo mañana). */
+export function pickPreferredStudentTripStatusForParent(
+  left: StudentTripStatus,
+  right: StudentTripStatus,
+  tripMap: Map<string, TripStatusSlice>,
+): StudentTripStatus {
+  const leftActive = tripMap.get(left.trip_id)?.status === "active";
+  const rightActive = tripMap.get(right.trip_id)?.status === "active";
+
+  if (leftActive !== rightActive) {
+    return leftActive ? left : right;
+  }
+
+  const leftTime = left.last_event_at ?? left.updated_at;
+  const rightTime = right.last_event_at ?? right.updated_at;
+
+  if (leftTime && rightTime && leftTime !== rightTime) {
+    return leftTime > rightTime ? left : right;
+  }
+
+  return pickPreferredStudentTripStatus(left, right);
+}

@@ -9,6 +9,7 @@ import {
   mapStudentTripStatusToPresentation,
 } from "@/src/features/parent/domain/student-status.mapper";
 import { ChildStatusIcon } from "@/src/features/parent/components/ChildStatusBadge";
+import { ChildTimelinePreview } from "@/src/features/parent/components/ChildTimelinePreview";
 import type { ParentChildSummary, ParentStatusTone } from "@/src/features/parent/types";
 import type { NivelEducativo } from "@/src/features/trips/types";
 import { formatTurnTypeLabel } from "@/src/features/trips/domain/trip-labels";
@@ -226,6 +227,14 @@ export function ChildStatusCard({ item, onPress }: ChildStatusCardProps) {
           ...tokens.typography.caption,
           color: colors.textMuted,
         },
+        timelineSection: {
+          paddingHorizontal: tokens.spacing.lg,
+          paddingBottom: tokens.spacing.md,
+          gap: tokens.spacing.sm,
+          borderTopWidth: 1,
+          borderTopColor: colors.surfaceDivider,
+          paddingTop: tokens.spacing.md,
+        },
       }),
     [colors, tokens],
   );
@@ -307,6 +316,12 @@ export function ChildStatusCard({ item, onPress }: ChildStatusCardProps) {
           ) : null}
         </View>
       </View>
+
+      {item.todayTimeline.length > 0 ? (
+        <View style={styles.timelineSection}>
+          <ChildTimelinePreview events={item.todayTimeline} />
+        </View>
+      ) : null}
     </Pressable>
   );
 }

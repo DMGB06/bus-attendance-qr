@@ -1,4 +1,5 @@
 import { getGuardianPadronStudents } from "@/src/features/parent/services/guardian-students.service";
+import { getChildrenTimelinesToday } from "@/src/features/parent/services/child-timeline.service";
 import { getGuardianLinksForUser } from "@/src/features/parent/services/guardians.service";
 import {
   fetchTripsForStatuses,
@@ -7,7 +8,7 @@ import {
 import { resolveLinkedStudentPairs } from "@/src/features/parent/domain/parent-linked-students";
 import { getTodayDateIso } from "@/src/features/parent/utils/date";
 import { isUuid } from "@/src/shared/utils/uuid";
-import type { ParentChildSummary, StudentTripStatus } from "@/src/features/parent/types";
+import type { ParentChildSummary, StudentTripStatus, ChildTimelineEvent } from "@/src/features/parent/types";
 import type { Trip } from "@/src/features/trips/types";
 
 function buildChildSummary(
@@ -15,6 +16,7 @@ function buildChildSummary(
   student: ParentChildSummary["student"],
   statusByStudent: Map<string, StudentTripStatus>,
   tripMap: Map<string, Trip>,
+  todayTimeline: ChildTimelineEvent[],
 ): ParentChildSummary {
   const todayStatus =
     statusByStudent.get(student.id) ?? statusByStudent.get(link.student_id) ?? null;
@@ -25,6 +27,7 @@ function buildChildSummary(
     student,
     todayStatus,
     activeTrip,
+    todayTimeline,
   };
 }
 
@@ -58,8 +61,15 @@ export async function getParentChildrenWithStatus(userId: string): Promise<Paren
   const statusByStudent = new Map(statuses.map((status) => [status.student_id, status]));
   const trips = await fetchTripsForStatuses(statuses);
   const tripMap = new Map(trips.map((trip) => [trip.id, trip]));
+  const timelines = await getChildrenTimelinesToday(displayStudentIds);
 
   return pairs.map((pair) =>
-    buildChildSummary(pair.link, pair.student, statusByStudent, tripMap),
+    buildChildSummary(
+      pair.link,
+      pair.student,
+      statusByStudent,
+      tripMap,
+      timelines.get(pair.student.id) ?? [],
+    ),
   );
 }
