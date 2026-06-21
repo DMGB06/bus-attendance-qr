@@ -7,31 +7,26 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "environment": "development",
       "android": {
         "buildType": "apk"
       }
     },
     "preview": {
       "distribution": "internal",
+      "environment": "preview",
       "android": {
         "buildType": "apk"
       },
       "ios": {
         "simulator": false
-      },
-      "env": {
-        "EXPO_PUBLIC_SUPABASE_URL": "CONFIGURE_IN_EAS_SECRETS",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "CONFIGURE_IN_EAS_SECRETS"
       }
     },
     "production": {
       "autoIncrement": true,
+      "environment": "production",
       "android": {
         "buildType": "apk"
-      },
-      "env": {
-        "EXPO_PUBLIC_SUPABASE_URL": "CONFIGURE_IN_EAS_SECRETS",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "CONFIGURE_IN_EAS_SECRETS"
       }
     }
   },

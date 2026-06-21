@@ -1,7 +1,7 @@
-# Solo publicar mobile — lo demás queda local
+# Solo publicar mobile — lo demás queda local (/shared = solo carpeta en raíz del repo)
 docs/
 scripts/
-shared/
+/shared/
 index.html
 supabase/
 

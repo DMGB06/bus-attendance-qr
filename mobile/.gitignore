@@ -3,10 +3,10 @@
 # dependencies
 node_modules/
 
-# Solo publicar mobile — lo demás queda local
+# Solo publicar mobile — lo demás queda local (solo /shared en raíz del repo, no src/shared)
 docs/
 scripts/
-shared/
+/shared/
 index.html
 .env
 .env.local
@@ -15,6 +15,7 @@ index.html
 # Expo
 .expo/
 dist/
+dist-*/
 web-build/
 expo-env.d.ts
 
