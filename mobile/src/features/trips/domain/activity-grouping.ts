@@ -1,4 +1,5 @@
 import { formatTripTitle } from "@/src/features/trips/domain/trip-labels";
+import { getLocalTodayDateIso } from "@/src/shared/utils/local-date";
 import type {
   ActivityDayGroup,
   ActivityDayOption,
@@ -18,7 +19,7 @@ function toDateIso(date: Date): string {
 }
 
 export function getTodayDateIso(): string {
-  return toDateIso(new Date());
+  return getLocalTodayDateIso();
 }
 
 export function getWeekDateRange(todayIso = getTodayDateIso()): {

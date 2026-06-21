@@ -13,6 +13,7 @@ import { useAppTheme } from "@/src/core/theme/ThemeProvider";
 
 type TripDailyChecklistProps = {
   context: DailyChecklistContext;
+  compact?: boolean;
 };
 
 function stepIcon(status: ChecklistStepStatus): keyof typeof MaterialCommunityIcons.glyphMap {
@@ -28,6 +29,7 @@ function stepIcon(status: ChecklistStepStatus): keyof typeof MaterialCommunityIc
 
 export const TripDailyChecklist = memo(function TripDailyChecklist({
   context,
+  compact = false,
 }: TripDailyChecklistProps) {
   const { colors, tokens } = useAppTheme();
   const steps = useMemo(() => buildDailyChecklist(context), [context]);
@@ -37,8 +39,8 @@ export const TripDailyChecklist = memo(function TripDailyChecklist({
     () =>
       StyleSheet.create({
         card: {
-          gap: tokens.spacing.sm,
-          padding: tokens.spacing.md,
+          gap: compact ? tokens.spacing.xs : tokens.spacing.sm,
+          padding: compact ? tokens.spacing.sm : tokens.spacing.md,
           borderRadius: tokens.radius.md,
           backgroundColor: colors.surfaceTrack,
           borderWidth: 1,
@@ -54,7 +56,7 @@ export const TripDailyChecklist = memo(function TripDailyChecklist({
           flexDirection: "row",
           alignItems: "flex-start",
           gap: tokens.spacing.sm,
-          paddingVertical: tokens.spacing.xs,
+          paddingVertical: compact ? 2 : tokens.spacing.xs,
         },
         stepBody: {
           flex: 1,
@@ -73,7 +75,7 @@ export const TripDailyChecklist = memo(function TripDailyChecklist({
           color: colors.textMuted,
         },
       }),
-    [colors, tokens],
+    [colors, compact, tokens],
   );
 
   return (
@@ -95,7 +97,9 @@ export const TripDailyChecklist = memo(function TripDailyChecklist({
               <Text style={step.status === "current" ? styles.stepLabelCurrent : styles.stepLabel}>
                 {step.label}
               </Text>
-              {step.hint ? <Text style={styles.stepHint}>{step.hint}</Text> : null}
+              {step.hint && step.status !== "done" ? (
+                <Text style={styles.stepHint}>{step.hint}</Text>
+              ) : null}
             </View>
           </View>
         );

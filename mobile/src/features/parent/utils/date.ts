@@ -1,3 +1,5 @@
+import { getLocalTodayDateIso } from "@/src/shared/utils/local-date";
+
 export function getTodayDateIso(): string {
-  return new Date().toISOString().split("T")[0];
+  return getLocalTodayDateIso();
 }

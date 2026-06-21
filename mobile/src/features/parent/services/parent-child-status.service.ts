@@ -1,0 +1,190 @@
+import { supabase } from "@/src/core/config/supabase";
+import { buildStudentTripStatusFromAttendance } from "@/src/features/parent/domain/parent-status-from-attendance";
+import {
+  pickPreferredStudentTripStatus,
+  rankStudentTripStatus,
+} from "@/src/features/parent/domain/parent-linked-students";
+import { getTodayDateIso } from "@/src/features/parent/utils/date";
+import { filterValidUuids } from "@/src/shared/utils/uuid";
+import type { StudentTripStatus } from "@/src/features/parent/types";
+import type { Trip } from "@/src/features/trips/types";
+
+type AttendanceSlice = {
+  student_id: string;
+  trip_id: string;
+  event_type: string;
+  scanned_at: string;
+  voided_at: string | null;
+};
+
+type TripSlice = Pick<Trip, "id" | "trip_date" | "direction" | "status">;
+
+async function fetchStatusesFromTable(studentIds: string[], today: string): Promise<StudentTripStatus[]> {
+  const validIds = filterValidUuids(studentIds);
+  if (!validIds.length) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("student_trip_status")
+    .select("*")
+    .in("student_id", validIds)
+    .eq("trip_date", today);
+
+  if (error) {
+    throw new Error("No se pudo consultar el estado de hoy.");
+  }
+
+  return (data ?? []) as StudentTripStatus[];
+}
+
+function isTripRelevantForToday(trip: TripSlice, today: string): boolean {
+  return trip.trip_date === today || trip.status === "active";
+}
+
+async function fetchAttendanceSlices(studentIds: string[]): Promise<AttendanceSlice[]> {
+  const validIds = filterValidUuids(studentIds);
+  if (!validIds.length) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("bus_attendance_records")
+    .select("student_id, trip_id, event_type, scanned_at, voided_at")
+    .in("student_id", validIds)
+    .is("voided_at", null);
+
+  if (error) {
+    throw new Error("No se pudo consultar la asistencia del día.");
+  }
+
+  return data ?? [];
+}
+
+async function fetchTripsByIds(tripIds: string[]): Promise<TripSlice[]> {
+  const validIds = filterValidUuids(tripIds);
+  if (!validIds.length) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("bus_trips")
+    .select("id, trip_date, direction, status")
+    .in("id", validIds);
+
+  if (error) {
+    throw new Error("No se pudieron cargar los viajes del día.");
+  }
+
+  return (data ?? []) as TripSlice[];
+}
+
+function deriveStatusFromAttendance(
+  studentId: string,
+  records: AttendanceSlice[],
+  tripMap: Map<string, TripSlice>,
+  today: string,
+): StudentTripStatus | null {
+  const byTrip = new Map<string, AttendanceSlice[]>();
+
+  for (const record of records) {
+    const trip = tripMap.get(record.trip_id);
+    if (!trip || !isTripRelevantForToday(trip, today)) {
+      continue;
+    }
+
+    const bucket = byTrip.get(record.trip_id) ?? [];
+    bucket.push(record);
+    byTrip.set(record.trip_id, bucket);
+  }
+
+  let best: StudentTripStatus | null = null;
+
+  for (const [tripId, tripRecords] of byTrip) {
+    const trip = tripMap.get(tripId);
+    if (!trip) {
+      continue;
+    }
+
+    const derived = buildStudentTripStatusFromAttendance(
+      studentId,
+      tripId,
+      trip.trip_date,
+      trip.direction,
+      tripRecords,
+    );
+
+    if (!best || rankStudentTripStatus(derived.status) > rankStudentTripStatus(best.status)) {
+      best = derived;
+    }
+  }
+
+  return best;
+}
+
+/** Combina `student_trip_status` con asistencia real; la asistencia gana si la tabla sigue en pending. */
+export async function resolveTodayStatusesForStudents(
+  studentIds: string[],
+  today = getTodayDateIso(),
+): Promise<StudentTripStatus[]> {
+  const validIds = filterValidUuids(studentIds);
+  if (!validIds.length) {
+    return [];
+  }
+
+  const fromTable = await fetchStatusesFromTable(validIds, today);
+  const tableByStudent = new Map(fromTable.map((status) => [status.student_id, status]));
+
+  const records = await fetchAttendanceSlices(validIds);
+  if (!records.length) {
+    return fromTable;
+  }
+
+  const tripIds = [...new Set(records.map((record) => record.trip_id))];
+  const trips = await fetchTripsByIds(tripIds);
+  const tripMap = new Map(trips.map((trip) => [trip.id, trip]));
+
+  const recordsByStudent = new Map<string, AttendanceSlice[]>();
+  for (const record of records) {
+    const bucket = recordsByStudent.get(record.student_id) ?? [];
+    bucket.push(record);
+    recordsByStudent.set(record.student_id, bucket);
+  }
+
+  const merged: StudentTripStatus[] = [];
+
+  for (const studentId of validIds) {
+    const tableStatus = tableByStudent.get(studentId);
+    const derived = deriveStatusFromAttendance(
+      studentId,
+      recordsByStudent.get(studentId) ?? [],
+      tripMap,
+      today,
+    );
+
+    if (tableStatus && derived) {
+      merged.push(pickPreferredStudentTripStatus(tableStatus, derived));
+    } else if (derived) {
+      merged.push(derived);
+    } else if (tableStatus) {
+      merged.push(tableStatus);
+    }
+  }
+
+  return merged;
+}
+
+export async function fetchTripsForStatuses(statuses: StudentTripStatus[]): Promise<Trip[]> {
+  const tripIds = [...new Set(statuses.map((status) => status.trip_id))];
+  if (!tripIds.length) {
+    return [];
+  }
+
+  const { data, error } = await supabase.from("bus_trips").select("*").in("id", tripIds);
+
+  if (error) {
+    throw new Error("No se pudieron cargar los viajes del día.");
+  }
+
+  return data ?? [];
+}

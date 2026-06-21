@@ -2,6 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { supabase } from "@/src/core/config/supabase";
 import { getUser } from "@/src/features/auth/services/auth.service";
+import {
+  PARENT_CHILDREN_POLL_INTERVAL_MS,
+  shouldPollWhenRealtimeDisconnected,
+} from "@/src/features/parent/domain/parent-realtime-sync.rules";
 import { getParentChildrenWithStatus } from "@/src/features/parent/services/parent-children.service";
 import type { ParentChildSummary } from "@/src/features/parent/types";
 
@@ -18,6 +22,7 @@ export function useParentChildren(): ParentChildrenState {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [realtimeStatus, setRealtimeStatus] = useState<string | null>(null);
   const mountedRef = useRef(true);
 
   const loadChildren = useCallback(async (options?: { silent?: boolean }) => {
@@ -61,6 +66,9 @@ export function useParentChildren(): ParentChildrenState {
     () => children.map((child) => child.student.id),
     [children],
   );
+  const studentIdsKey = studentIds.join(",");
+
+  const shouldPoll = shouldPollWhenRealtimeDisconnected(realtimeStatus);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -72,11 +80,26 @@ export function useParentChildren(): ParentChildrenState {
   }, [loadChildren]);
 
   useEffect(() => {
-    if (!studentIds.length) {
+    if (!shouldPoll || !studentIds.length) {
       return;
     }
 
-    const channel = supabase.channel(`parent-children-${studentIds.join("-")}`);
+    const intervalId = setInterval(() => {
+      void loadChildren({ silent: true });
+    }, PARENT_CHILDREN_POLL_INTERVAL_MS);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [loadChildren, shouldPoll, studentIds.length]);
+
+  useEffect(() => {
+    if (!studentIds.length) {
+      setRealtimeStatus(null);
+      return;
+    }
+
+    const channel = supabase.channel(`parent-children-${studentIdsKey}`);
 
     for (const studentId of studentIds) {
       channel.on(
@@ -91,14 +114,45 @@ export function useParentChildren(): ParentChildrenState {
           void loadChildren({ silent: true });
         },
       );
+
+      channel.on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "buscontrol",
+          table: "bus_attendance_records",
+          filter: `student_id=eq.${studentId}`,
+        },
+        () => {
+          void loadChildren({ silent: true });
+        },
+      );
+
+      channel.on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "buscontrol",
+          table: "bus_attendance_records",
+          filter: `student_id=eq.${studentId}`,
+        },
+        () => {
+          void loadChildren({ silent: true });
+        },
+      );
     }
 
-    channel.subscribe();
+    channel.subscribe((status) => {
+      if (mountedRef.current) {
+        setRealtimeStatus(status);
+      }
+    });
 
     return () => {
+      setRealtimeStatus(null);
       void supabase.removeChannel(channel);
     };
-  }, [studentIds, loadChildren]);
+  }, [studentIdsKey, loadChildren, studentIds]);
 
   return {
     children,

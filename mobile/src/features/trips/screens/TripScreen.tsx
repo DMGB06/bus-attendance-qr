@@ -100,6 +100,9 @@ export default function TripScreen() {
     () => createTripScreenStyles(colors, tokens, isCompact),
     [colors, isCompact, tokens],
   );
+  const showBulkDropoff = Boolean(
+    activeTrip && capabilities.canBulkDropoff && dashboard.totalOnboardCount > 0,
+  );
 
   const historyFooter = capabilities.canViewRoster ? (
     <Button
@@ -176,283 +179,296 @@ export default function TripScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
-      <AppScrollView
-        extraBottomInset={tokens.spacing.lg}
-        contentGrow={false}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.container}>
-          <View style={styles.pageHeader}>
-            <Text style={styles.title}>
-              {activeTrip ? formatTripTitle(activeTrip) : 'Iniciar viaje'}
-            </Text>
-            <Text style={styles.subtitle}>
-              {activeTrip
-                ? getTripSegmentSubtitle(activeTrip)
-                : 'Elige el tramo del día para comenzar.'}
-            </Text>
-            {activeTrip && activeTripMeta ? (
-              <Text style={styles.tripMeta}>Iniciado {activeTripMeta}</Text>
-            ) : null}
-            {activeTrip && capabilities.canViewRoster ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Ver historial de los últimos 7 días"
-                onPress={() => router.push(OPS_ROUTES.activity)}
-                style={styles.historyLink}
-              >
-                <MaterialCommunityIcons name="history" size={18} color={colors.primary} />
-                <Text style={styles.historyLinkText}>Historial (7 días)</Text>
-                <MaterialCommunityIcons name="chevron-right" size={18} color={colors.textMuted} />
-              </Pressable>
-            ) : null}
-          </View>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
+      {activeTrip ? (
+        <View style={styles.activeTripShell}>
+          <View style={styles.activeTripFixed}>
+            <View style={styles.pageHeaderCompact}>
+              <Text style={styles.titleCompact}>{formatTripTitle(activeTrip)}</Text>
+              <Text style={styles.subtitleCompact}>
+                {getTripSegmentSubtitle(activeTrip)}
+                {activeTripMeta ? ` · Iniciado ${activeTripMeta}` : ''}
+              </Text>
+              {capabilities.canViewRoster ? (
+                <Pressable
+                  style={styles.historyLink}
+                  onPress={() => router.push(OPS_ROUTES.activity)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Ver historial de 7 días"
+                >
+                  <MaterialCommunityIcons name="history" size={16} color={colors.primary} />
+                  <Text style={styles.historyLinkText}>Historial (7 días)</Text>
+                </Pressable>
+              ) : null}
+            </View>
 
-          <View style={styles.mainCard}>
-            {!activeTrip ? (
-              <>
-                <Text style={styles.sectionLabel}>Turno</Text>
-                <View style={styles.selectorContainer}>
-                  <Pressable
-                    style={[styles.selectorButton, period === 'mañana' && styles.selectorButtonActive]}
-                    onPress={() => setPeriod('mañana')}
-                  >
-                    <MaterialCommunityIcons
-                      name="weather-sunny"
-                      size={16}
-                      color={period === 'mañana' ? colors.textInverse : colors.tripSelectorIdleText}
-                    />
-                    <Text
-                      style={[
-                        styles.selectorText,
-                        period === 'mañana' ? styles.selectorLabelActive : styles.selectorLabelIdle,
-                      ]}
-                    >
-                      Mañana
-                    </Text>
-                  </Pressable>
-
-                  <Pressable
-                    style={[styles.selectorButton, period === 'tarde' && styles.selectorButtonActive]}
-                    onPress={() => setPeriod('tarde')}
-                  >
-                    <MaterialCommunityIcons
-                      name="weather-sunset"
-                      size={16}
-                      color={period === 'tarde' ? colors.textInverse : colors.tripSelectorIdleText}
-                    />
-                    <Text
-                      style={[
-                        styles.selectorText,
-                        period === 'tarde' ? styles.selectorLabelActive : styles.selectorLabelIdle,
-                      ]}
-                    >
-                      Tarde
-                    </Text>
-                  </Pressable>
+            <View style={styles.activeMainCard}>
+              <View style={styles.statsRow}>
+                <View style={styles.statChip}>
+                  <Text style={styles.statValue}>{dashboard.stats.onboardCount}</Text>
+                  <Text style={styles.statLabel}>{dashboardStatLabels.onboard}</Text>
                 </View>
-
-                {period === 'mañana' ? (
-                  <Text style={styles.morningHint}>
-                    Recojo matutino: casas y paradas hacia el colegio.
-                  </Text>
-                ) : (
-                  <>
-                    <Text style={styles.sectionLabel}>Tramo tarde</Text>
-                    <View style={styles.afternoonList}>
-                      {AFTERNOON_TURN_OPTIONS.map((option) => {
-                        const isActive = afternoonTurn === option.id;
-                        return (
-                          <Pressable
-                            key={option.id}
-                            style={[styles.afternoonOption, isActive && styles.afternoonOptionActive]}
-                            onPress={() => setAfternoonTurn(option.id)}
-                          >
-                            <MaterialCommunityIcons
-                              name={isActive ? 'radiobox-marked' : 'radiobox-blank'}
-                              size={22}
-                              color={isActive ? colors.primary : colors.textMuted}
-                            />
-                            <View style={styles.afternoonOptionBody}>
-                              <Text
-                                style={[
-                                  styles.afternoonOptionTitle,
-                                  isActive && styles.afternoonOptionTitleActive,
-                                ]}
-                              >
-                                {option.label}
-                              </Text>
-                              <Text style={styles.afternoonOptionHint}>{option.hint}</Text>
-                              {getSuggestedLevelFilterHint(option.id) ? (
-                                <Text style={styles.afternoonOptionHint}>
-                                  {getSuggestedLevelFilterHint(option.id)}
-                                </Text>
-                              ) : null}
-                            </View>
-                          </Pressable>
-                        );
-                      })}
-                    </View>
-                  </>
-                )}
-
-                <View style={styles.infoContainer}>
-                  <View style={styles.infoRow}>
-                    <MaterialCommunityIcons name="bus" size={18} color={colors.sky} />
-                    <Text style={styles.infoText}>
-                      Unidad asignada: {operationalContext?.busLabel ?? 'BUS-01'}
-                    </Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <MaterialCommunityIcons name="account-check" size={18} color={colors.sky} />
-                    <Text style={styles.infoText}>Conductor listo</Text>
-                  </View>
+                <View style={styles.statChip}>
+                  <Text style={styles.statValue}>{dashboard.stats.pendingCount}</Text>
+                  <Text style={styles.statLabel}>{dashboardStatLabels.pending}</Text>
                 </View>
+                <View style={styles.statChip}>
+                  <Text style={styles.statValue}>{dashboard.stats.completedCount}</Text>
+                  <Text style={styles.statLabel}>{dashboardStatLabels.third}</Text>
+                </View>
+              </View>
 
-                {errorMessage ? (
-                  <HelperText type="error" visible style={styles.errorText}>
-                    {errorMessage}
-                  </HelperText>
-                ) : null}
-
-                <TripDailyChecklist context={checklistContext} />
-
-                {capabilities.canStartTrip ? (
+              <View style={styles.primaryActionRow}>
+                {capabilities.canScan ? (
                   <Button
                     mode="contained"
-                    icon="play"
-                    onPress={handleStartTrip}
-                    loading={isStartingTrip}
-                    disabled={isStartingTrip}
-                    style={styles.startButton}
-                    contentStyle={styles.startButtonContent}
-                    labelStyle={styles.startButtonLabel}
+                    icon="qrcode-scan"
                     buttonColor={colors.primary}
+                    onPress={() => router.push(OPS_ROUTES.scanner)}
+                    style={styles.primaryActionButton}
+                    contentStyle={styles.compactActionContent}
+                    labelStyle={styles.startButtonLabel}
                   >
-                    Iniciar viaje
+                    Escáner
                   </Button>
                 ) : null}
-              </>
-            ) : (
-              <>
-                <View style={styles.statsRow}>
-                  <View style={styles.statChip}>
-                    <Text style={styles.statValue}>{dashboard.stats.onboardCount}</Text>
-                    <Text style={styles.statLabel}>{dashboardStatLabels.onboard}</Text>
-                  </View>
-                  <View style={styles.statChip}>
-                    <Text style={styles.statValue}>{dashboard.stats.pendingCount}</Text>
-                    <Text style={styles.statLabel}>{dashboardStatLabels.pending}</Text>
-                  </View>
-                  <View style={styles.statChip}>
-                    <Text style={styles.statValue}>{dashboard.stats.completedCount}</Text>
-                    <Text style={styles.statLabel}>{dashboardStatLabels.third}</Text>
-                  </View>
-                </View>
 
-                {morningRiders.isVisible ? (
-                  <MorningRiderReminderBanner
-                    count={morningRiders.count}
-                    preview={morningRiders.preview}
-                    onPress={() => {
-                      requestRosterView('prioritarios');
-                      router.push(OPS_ROUTES.roster);
-                    }}
-                  />
+                {capabilities.canViewRoster ? (
+                  <Button
+                    mode="outlined"
+                    icon="format-list-bulleted"
+                    textColor={colors.primary}
+                    onPress={() => router.push(OPS_ROUTES.roster)}
+                    style={styles.primaryActionButton}
+                    contentStyle={styles.compactActionContent}
+                  >
+                    Lista
+                  </Button>
                 ) : null}
+              </View>
 
-                <TripDailyChecklist context={checklistContext} />
+              {showBulkDropoff ? (
+                <Button
+                  mode="contained"
+                  buttonColor={colors.primaryPressed}
+                  icon={activeTrip.direction === 'recojo' ? 'school' : 'home'}
+                  loading={dashboard.isBulkDropping}
+                  disabled={dashboard.isBulkDropping}
+                  onPress={() => void dashboard.handleBulkDropoff()}
+                  style={styles.actionButton}
+                  contentStyle={styles.compactActionContent}
+                  labelStyle={styles.startButtonLabel}
+                >
+                  {activeTrip.direction === 'recojo'
+                    ? `Dejar todos en colegio (${dashboard.totalOnboardCount})`
+                    : `Dejar todos en casa (${dashboard.totalOnboardCount})`}
+                </Button>
+              ) : null}
 
-                <View style={styles.sectionDivider} />
-
-                <View style={styles.activeActions}>
-                  {capabilities.canScan ? (
-                    <Button
-                      mode="contained"
-                      icon="qrcode-scan"
-                      buttonColor={colors.primary}
-                      onPress={() => router.push(OPS_ROUTES.scanner)}
-                      style={styles.actionButton}
-                      contentStyle={styles.actionButtonContent}
-                      labelStyle={styles.startButtonLabel}
-                    >
-                      Ir a escáner
-                    </Button>
-                  ) : null}
-
-                  {capabilities.canViewRoster ? (
-                    <Button
-                      mode="outlined"
-                      icon="format-list-bulleted"
-                      textColor={colors.primary}
-                      onPress={() => router.push(OPS_ROUTES.roster)}
-                      style={styles.actionButton}
-                      contentStyle={styles.actionButtonContent}
-                    >
-                      Ver lista
-                    </Button>
-                  ) : null}
-
-                  {capabilities.canBulkDropoff && dashboard.totalOnboardCount > 0 ? (
-                    <Button
-                      mode="contained"
-                      buttonColor={colors.primaryPressed}
-                      icon={activeTrip.direction === 'recojo' ? 'school' : 'home'}
-                      loading={dashboard.isBulkDropping}
-                      disabled={dashboard.isBulkDropping}
-                      onPress={() => void dashboard.handleBulkDropoff()}
-                      style={styles.actionButton}
-                      contentStyle={styles.actionButtonContent}
-                      labelStyle={styles.startButtonLabel}
-                    >
-                      {activeTrip.direction === 'recojo'
-                        ? `Dejar todos en colegio (${dashboard.totalOnboardCount})`
-                        : `Dejar todos en casa (${dashboard.totalOnboardCount})`}
-                    </Button>
-                  ) : null}
-
-                  {dashboard.bulkError ? (
-                    <HelperText type="error" visible>
-                      {dashboard.bulkError}
-                    </HelperText>
-                  ) : null}
-
-                  {capabilities.canCloseTrip ? (
-                    <Button
-                      mode="outlined"
-                      icon="check-circle-outline"
-                      textColor={colors.tripActionOutlineText}
-                      onPress={() => router.push(OPS_ROUTES.closeTrip)}
-                      style={styles.actionButton}
-                      contentStyle={styles.actionButtonContent}
-                    >
-                      Cerrar viaje
-                    </Button>
-                  ) : null}
-                </View>
-              </>
-            )}
+              {dashboard.bulkError ? (
+                <HelperText type="error" visible>
+                  {dashboard.bulkError}
+                </HelperText>
+              ) : null}
+            </View>
           </View>
 
-          {!activeTrip && capabilities.canStartTrip ? (
-            <View style={styles.warning}>
-              <View style={styles.warningIcon}>
-                <MaterialCommunityIcons name="shield-alert-outline" size={20} color={colors.feedbackWarningGlyph} />
-              </View>
-              <View style={styles.warningText}>
-                <Text style={styles.warningTitle}>Seguridad</Text>
-                <Text style={styles.warningBody}>
-                  Verifica que todos los estudiantes tengan el cinturón colocado antes de iniciar.
-                </Text>
-              </View>
-            </View>
-          ) : null}
+          <AppScrollView
+            style={styles.scroll}
+            extraBottomInset={tokens.spacing.sm}
+            contentGrow={false}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.activeScrollBody}>
+              <TripDailyChecklist context={checklistContext} compact />
 
-          {!activeTrip ? historyFooter : null}
+              {morningRiders.isVisible ? (
+                <MorningRiderReminderBanner
+                  count={morningRiders.count}
+                  preview={morningRiders.preview}
+                  onPress={() => {
+                    requestRosterView('prioritarios');
+                    router.push(OPS_ROUTES.roster);
+                  }}
+                />
+              ) : null}
+
+              {capabilities.canCloseTrip ? (
+                <Button
+                  mode="outlined"
+                  icon="check-circle-outline"
+                  textColor={colors.tripActionOutlineText}
+                  onPress={() => router.push(OPS_ROUTES.closeTrip)}
+                  style={styles.closeTripButton}
+                  contentStyle={styles.compactActionContent}
+                >
+                  Cerrar viaje
+                </Button>
+              ) : null}
+            </View>
+          </AppScrollView>
         </View>
-      </AppScrollView>
+      ) : (
+        <AppScrollView
+          style={styles.scroll}
+          extraBottomInset={tokens.spacing.md}
+          contentGrow={false}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.container}>
+            <View style={styles.pageHeader}>
+              <Text style={styles.title}>Iniciar viaje</Text>
+              <Text style={styles.subtitle}>Elige el tramo del día para comenzar.</Text>
+            </View>
+
+            <View style={styles.mainCard}>
+              <Text style={styles.sectionLabel}>Turno</Text>
+              <View style={styles.selectorContainer}>
+                <Pressable
+                  style={[styles.selectorButton, period === 'mañana' && styles.selectorButtonActive]}
+                  onPress={() => setPeriod('mañana')}
+                >
+                  <MaterialCommunityIcons
+                    name="weather-sunny"
+                    size={16}
+                    color={period === 'mañana' ? colors.textInverse : colors.tripSelectorIdleText}
+                  />
+                  <Text
+                    style={[
+                      styles.selectorText,
+                      period === 'mañana' ? styles.selectorLabelActive : styles.selectorLabelIdle,
+                    ]}
+                  >
+                    Mañana
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  style={[styles.selectorButton, period === 'tarde' && styles.selectorButtonActive]}
+                  onPress={() => setPeriod('tarde')}
+                >
+                  <MaterialCommunityIcons
+                    name="weather-sunset"
+                    size={16}
+                    color={period === 'tarde' ? colors.textInverse : colors.tripSelectorIdleText}
+                  />
+                  <Text
+                    style={[
+                      styles.selectorText,
+                      period === 'tarde' ? styles.selectorLabelActive : styles.selectorLabelIdle,
+                    ]}
+                  >
+                    Tarde
+                  </Text>
+                </Pressable>
+              </View>
+
+              {period === 'mañana' ? (
+                <Text style={styles.morningHint}>
+                  Recojo matutino: casas y paradas hacia el colegio.
+                </Text>
+              ) : (
+                <>
+                  <Text style={styles.sectionLabel}>Tramo tarde</Text>
+                  <View style={styles.afternoonList}>
+                    {AFTERNOON_TURN_OPTIONS.map((option) => {
+                      const isActive = afternoonTurn === option.id;
+                      return (
+                        <Pressable
+                          key={option.id}
+                          style={[styles.afternoonOption, isActive && styles.afternoonOptionActive]}
+                          onPress={() => setAfternoonTurn(option.id)}
+                        >
+                          <MaterialCommunityIcons
+                            name={isActive ? 'radiobox-marked' : 'radiobox-blank'}
+                            size={22}
+                            color={isActive ? colors.primary : colors.textMuted}
+                          />
+                          <View style={styles.afternoonOptionBody}>
+                            <Text
+                              style={[
+                                styles.afternoonOptionTitle,
+                                isActive && styles.afternoonOptionTitleActive,
+                              ]}
+                            >
+                              {option.label}
+                            </Text>
+                            <Text style={styles.afternoonOptionHint}>{option.hint}</Text>
+                            {getSuggestedLevelFilterHint(option.id) ? (
+                              <Text style={styles.afternoonOptionHint}>
+                                {getSuggestedLevelFilterHint(option.id)}
+                              </Text>
+                            ) : null}
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </>
+              )}
+
+              <View style={styles.infoContainer}>
+                <View style={styles.infoRow}>
+                  <MaterialCommunityIcons name="bus" size={18} color={colors.sky} />
+                  <Text style={styles.infoText}>
+                    Unidad asignada: {operationalContext?.busLabel ?? 'BUS-01'}
+                  </Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <MaterialCommunityIcons name="account-check" size={18} color={colors.sky} />
+                  <Text style={styles.infoText}>Conductor listo</Text>
+                </View>
+              </View>
+
+              {errorMessage ? (
+                <HelperText type="error" visible style={styles.errorText}>
+                  {errorMessage}
+                </HelperText>
+              ) : null}
+
+              <TripDailyChecklist context={checklistContext} />
+
+              {capabilities.canStartTrip ? (
+                <Button
+                  mode="contained"
+                  icon="play"
+                  onPress={handleStartTrip}
+                  loading={isStartingTrip}
+                  disabled={isStartingTrip}
+                  style={styles.startButton}
+                  contentStyle={styles.startButtonContent}
+                  labelStyle={styles.startButtonLabel}
+                  buttonColor={colors.primary}
+                >
+                  Iniciar viaje
+                </Button>
+              ) : null}
+            </View>
+
+            {capabilities.canStartTrip ? (
+              <View style={styles.warning}>
+                <View style={styles.warningIcon}>
+                  <MaterialCommunityIcons
+                    name="shield-alert-outline"
+                    size={20}
+                    color={colors.feedbackWarningGlyph}
+                  />
+                </View>
+                <View style={styles.warningText}>
+                  <Text style={styles.warningTitle}>Seguridad</Text>
+                  <Text style={styles.warningBody}>
+                    Verifica que todos los estudiantes tengan el cinturón colocado antes de iniciar.
+                  </Text>
+                </View>
+              </View>
+            ) : null}
+
+            {historyFooter}
+          </View>
+        </AppScrollView>
+      )}
     </SafeAreaView>
   );
 }

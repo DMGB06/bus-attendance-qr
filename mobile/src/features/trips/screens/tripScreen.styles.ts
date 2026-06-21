@@ -11,6 +11,7 @@ export function createTripScreenStyles(
   const sectionGap = compact ? tokens.spacing.md : tokens.spacing.lg;
   const cardPadding = compact ? tokens.spacing.lg : tokens.spacing.xl;
   const actionHeight = compact ? tokens.layout.buttonHeight - 8 : tokens.layout.buttonHeight - 4;
+  const stickyActionHeight = compact ? 40 : 42;
 
   return StyleSheet.create({
     safeArea: {
@@ -44,7 +45,7 @@ export function createTripScreenStyles(
       marginTop: tokens.spacing.xs,
       paddingVertical: compact ? tokens.spacing.xs : tokens.spacing.sm,
       paddingHorizontal: tokens.spacing.md,
-      borderRadius: tokens.radius.full,
+      borderRadius: tokens.radius.sm,
       backgroundColor: colors.primarySoftBg,
       borderWidth: 1,
       borderColor: colors.surfaceCardBorder,
@@ -247,6 +248,63 @@ export function createTripScreenStyles(
     },
     scrollContent: {
       flexGrow: 1,
+    },
+    scroll: {
+      flex: 1,
+    },
+    activeTripShell: {
+      flex: 1,
+    },
+    activeTripFixed: {
+      paddingHorizontal: screenPadding,
+      paddingTop: compact ? tokens.spacing.sm : tokens.spacing.md,
+      gap: compact ? tokens.spacing.sm : tokens.spacing.md,
+      maxWidth: 520,
+      width: '100%',
+      alignSelf: 'center',
+    },
+    pageHeaderCompact: {
+      gap: 2,
+    },
+    titleCompact: {
+      ...tokens.typography.title2,
+      color: colors.textHero,
+    },
+    subtitleCompact: {
+      ...tokens.typography.caption,
+      color: colors.textMuted,
+    },
+    activeMainCard: {
+      backgroundColor: colors.surfaceCard,
+      borderRadius: tokens.radius.lg,
+      padding: compact ? tokens.spacing.md : tokens.spacing.lg,
+      gap: compact ? tokens.spacing.sm : tokens.spacing.md,
+      borderWidth: 1,
+      borderColor: colors.surfaceCardBorder,
+      borderTopWidth: 4,
+      borderTopColor: colors.accent,
+    },
+    activeScrollBody: {
+      paddingHorizontal: screenPadding,
+      paddingTop: compact ? tokens.spacing.sm : tokens.spacing.md,
+      gap: compact ? tokens.spacing.sm : tokens.spacing.md,
+      maxWidth: 520,
+      width: '100%',
+      alignSelf: 'center',
+    },
+    primaryActionRow: {
+      flexDirection: 'row',
+      gap: tokens.spacing.sm,
+    },
+    primaryActionButton: {
+      flex: 1,
+      borderRadius: tokens.radius.md,
+    },
+    compactActionContent: {
+      height: stickyActionHeight,
+    },
+    closeTripButton: {
+      borderRadius: tokens.radius.md,
     },
   });
 }
