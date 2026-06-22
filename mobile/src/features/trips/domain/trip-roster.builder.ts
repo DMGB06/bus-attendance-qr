@@ -26,21 +26,35 @@ export function groupAttendanceByStudent(
 }
 
 export function deriveRosterStatus(history: AttendanceRecord[]): TripRosterStatus {
-  const hasBoarding = history.some(
-    (record) => record.event_type === "subio" || record.event_type === "manual",
-  );
-  const hasDropoff = history.some((record) => record.event_type === "bajo");
+  const sorted = [...history]
+    .filter(isActiveAttendanceRecord)
+    .sort((left, right) => {
+      const leftTime = left.scanned_at ? new Date(left.scanned_at).getTime() : 0;
+      const rightTime = right.scanned_at ? new Date(right.scanned_at).getTime() : 0;
+      return leftTime - rightTime;
+    });
 
-  if (hasDropoff) {
-    return "completed";
+  if (sorted.length === 0) {
+    return "pending";
   }
-  if (hasBoarding) {
-    return "onboard";
+
+  let onboard = false;
+
+  for (const record of sorted) {
+    if (record.event_type === "ausente") {
+      return "completed";
+    }
+
+    if (record.event_type === "subio" || record.event_type === "manual") {
+      onboard = true;
+    }
+
+    if (record.event_type === "bajo") {
+      onboard = false;
+    }
   }
-  if (history.some((record) => record.event_type === "ausente")) {
-    return "completed";
-  }
-  return "pending";
+
+  return onboard ? "onboard" : "completed";
 }
 
 export function buildTripRosterItems(

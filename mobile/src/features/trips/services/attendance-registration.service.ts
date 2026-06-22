@@ -1,6 +1,11 @@
-import { isLocalPendingRecord } from "@/src/features/trips/domain/attendance-sync.rules";
+import {
+  isLocalPendingRecord,
+  isQueueEntrySyncedOnServer,
+} from "@/src/features/trips/domain/attendance-sync.rules";
 import { shouldFlushAttendanceQueueBeforeRefresh } from "@/src/features/trips/domain/attendance-queue-flush.rules";
-import { registerAttendance, registerDropoffAttendance } from "@/src/features/trips/services/attendance.service";
+import { registerAttendance, registerDropoffAttendance, voidAttendanceRecord } from "@/src/features/trips/services/attendance.service";
+import { getUser } from "@/src/features/auth/services/auth.service";
+import type { ScanContext } from "@/src/features/trips/services/crew.service";
 import { getScanContextForCurrentUser } from "@/src/features/trips/services/crew.service";
 import { perfAsync, perfStart } from "@/src/shared/utils/perfMark";
 import {
@@ -19,7 +24,7 @@ import {
 } from "@/src/features/trips/services/trip-roster-merge.service";
 import { getTripAttendanceOnly, getTripRosterRaw } from "@/src/features/trips/services/trip-roster.service";
 import type { TripRosterItem } from "@/src/features/trips/types/trip-roster";
-import type { AttendanceEventType } from "@/src/features/trips/types";
+import type { AttendanceEventType, AttendanceRecord } from "@/src/features/trips/types";
 import {
   countPendingForTrip,
   enqueueAttendanceWrite,
@@ -152,6 +157,47 @@ async function persistRosterSnapshot(tripId: string, items: TripRosterItem[]): P
   await saveCachedRosterSnapshot(tripId, items);
 }
 
+function replaceActiveEventInRecords(
+  records: AttendanceRecord[],
+  localRecord: AttendanceRecord,
+): AttendanceRecord[] {
+  const withoutSameActiveEvent = records.filter(
+    (record) =>
+      !(
+        record.student_id === localRecord.student_id &&
+        record.event_type === localRecord.event_type &&
+        record.voided_at == null
+      ),
+  );
+
+  return [...withoutSameActiveEvent, localRecord];
+}
+
+export async function voidSyncedAttendanceRecord(
+  tripId: string,
+  recordId: string,
+  studentId: string,
+  eventType: AttendanceEventType,
+  reason: string,
+): Promise<TripRosterItem[]> {
+  await voidAttendanceRecord(recordId, reason);
+  await removeQueuedWrite(tripId, studentId, eventType);
+
+  const cachedAttendance = await loadCachedTripAttendance(tripId);
+  if (cachedAttendance) {
+    const voidedAt = new Date().toISOString();
+    await saveCachedTripAttendance(
+      tripId,
+      cachedAttendance.records.map((record) =>
+        record.id === recordId ? { ...record, voided_at: voidedAt } : record,
+      ),
+    );
+  }
+
+  const result = await refreshRosterFromNetwork(tripId, { forceFullSync: true });
+  return result.items;
+}
+
 export async function syncAttendanceToServer(
   tripId: string,
   studentId: string,
@@ -215,6 +261,24 @@ export async function syncAttendanceToServer(
   }
 }
 
+async function resolveScanForQueueFlush(
+  entry: QueuedAttendanceWrite,
+): Promise<ScanContext> {
+  try {
+    return await getScanContextForCurrentUser();
+  } catch {
+    const user = await getUser();
+    if (!user) {
+      throw new Error("Debes iniciar sesión para sincronizar.");
+    }
+
+    return {
+      scannedBy: entry.scannedBy ?? user.id,
+      scanRole: "chofer",
+    };
+  }
+}
+
 export async function flushAttendanceQueue(tripId?: string): Promise<number> {
   const queue = await loadAttendanceQueue();
   const pending = sortQueueForFlush(
@@ -222,10 +286,11 @@ export async function flushAttendanceQueue(tripId?: string): Promise<number> {
   );
 
   let flushed = 0;
-  const scan = await getScanContextForCurrentUser();
 
   for (const entry of pending) {
     try {
+      const scan = await resolveScanForQueueFlush(entry);
+
       if (entry.eventType === "bajo") {
         await registerDropoffAttendance(entry.tripId, entry.studentId, scan);
       } else {
@@ -243,11 +308,39 @@ export async function flushAttendanceQueue(tripId?: string): Promise<number> {
       if (isNetworkError(error)) {
         break;
       }
-      await removeAttendanceWrite(entry.id);
+      // Error de servidor/permisos: conservar en cola y reintentar luego.
+      break;
     }
   }
 
   return flushed;
+}
+
+/** Quita de la cola local entradas que ya existen en el servidor (evita "Pendiente sync" falso). */
+export async function pruneStaleQueueEntriesForTrip(tripId: string): Promise<number> {
+  const queue = await loadAttendanceQueue();
+  const tripEntries = queue.filter((entry) => entry.tripId === tripId);
+  if (tripEntries.length === 0) {
+    return 0;
+  }
+
+  let serverRecords: AttendanceRecord[];
+  try {
+    serverRecords = await getTripAttendanceOnly(tripId);
+  } catch {
+    const cached = await loadCachedTripAttendance(tripId);
+    serverRecords = cached?.records ?? [];
+  }
+
+  let pruned = 0;
+  for (const entry of tripEntries) {
+    if (isQueueEntrySyncedOnServer(entry, serverRecords)) {
+      await removeAttendanceWrite(entry.id);
+      pruned += 1;
+    }
+  }
+
+  return pruned;
 }
 
 async function canUseAttendanceOnlyRefresh(): Promise<boolean> {
@@ -320,6 +413,7 @@ export async function refreshRosterFromNetwork(
       ) {
         const endFlush = perfStart("refreshRosterFromNetwork.flushQueue", { tripId });
         await flushAttendanceQueue(tripId);
+        await pruneStaleQueueEntriesForTrip(tripId);
         endFlush();
       }
 
@@ -398,7 +492,7 @@ export async function applyOptimisticRegistration(
     eventType,
     `optimistic-${Date.now()}`,
   );
-  const nextRecords = [...merged, localRecord];
+  const nextRecords = replaceActiveEventInRecords(merged, localRecord);
   const nextItems = buildTripRosterItems(students, nextRecords);
 
   await saveCachedTripAttendance(tripId, nextRecords);
@@ -448,10 +542,13 @@ export async function applyOptimisticBulkDropoff(
 
   const timestamp = Date.now();
   for (const studentId of studentIds) {
-    merged = [
-      ...merged,
-      createOptimisticAttendanceRecord(tripId, studentId, "bajo", `optimistic-${timestamp}-${studentId}`),
-    ];
+    const localRecord = createOptimisticAttendanceRecord(
+      tripId,
+      studentId,
+      "bajo",
+      `optimistic-${timestamp}-${studentId}`,
+    );
+    merged = replaceActiveEventInRecords(merged, localRecord);
   }
 
   const nextItems = buildTripRosterItems(students, merged);

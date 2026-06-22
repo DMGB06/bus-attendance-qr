@@ -3,7 +3,7 @@ import type { QueuedAttendanceWrite } from "@/src/features/trips/storage/attenda
 import { queueEntryKey } from "@/src/features/trips/storage/attendance-queue.storage";
 
 export function isLocalPendingRecord(record: AttendanceRecord): boolean {
-  return record.id.startsWith("local-") || record.is_offline_sync === true;
+  return record.id.startsWith("local-") || record.id.startsWith("patch-");
 }
 
 export function isVoidedRecord(record: AttendanceRecord): boolean {
@@ -37,6 +37,18 @@ export function isRecordPendingSync(
   }
 
   return Boolean(findQueueEntryForRecord(record, queue));
+}
+
+export function isQueueEntrySyncedOnServer(
+  entry: QueuedAttendanceWrite,
+  serverRecords: AttendanceRecord[],
+): boolean {
+  const key = queueEntryKey(entry.tripId, entry.studentId, entry.eventType);
+  return serverRecords.some(
+    (record) =>
+      !isVoidedRecord(record) &&
+      queueEntryKey(record.trip_id, record.student_id, record.event_type) === key,
+  );
 }
 
 export function canUndoPendingRecord(options: {

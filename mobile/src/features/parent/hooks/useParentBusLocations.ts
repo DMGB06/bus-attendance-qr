@@ -8,6 +8,7 @@ import { shouldPollParentBusLocations } from "@/src/features/parent/domain/paren
 
 import { getUser } from "@/src/features/auth/services/auth.service";
 
+import { useAppForeground } from "@/src/shared/hooks/useAppForeground";
 import { PARENT_LOCATION_POLL_INTERVAL_MS } from "@/src/features/trips/domain/location.constants";
 
 import { getParentBusLocationSnapshot } from "@/src/features/parent/services/parent-bus-location.service";
@@ -56,10 +57,9 @@ export function useParentBusLocations(): ParentBusLocationsState {
 
   const mountedRef = useRef(true);
 
-
+  const isForeground = useAppForeground();
 
   const loadLocations = useCallback(async (options?: { silent?: boolean }) => {
-
     const silent = options?.silent ?? false;
 
 
@@ -156,7 +156,7 @@ export function useParentBusLocations(): ParentBusLocationsState {
 
 
 
-  const shouldPoll = shouldPollParentBusLocations(realtimeStatus);
+  const shouldPoll = shouldPollParentBusLocations(realtimeStatus, isForeground);
 
 
 
@@ -184,7 +184,7 @@ export function useParentBusLocations(): ParentBusLocationsState {
 
     };
 
-  }, [loadLocations, shouldPoll]);
+  }, [loadLocations, shouldPoll, isForeground]);
 
 
 

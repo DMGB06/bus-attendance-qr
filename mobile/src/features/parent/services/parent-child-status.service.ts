@@ -16,7 +16,7 @@ type AttendanceSlice = {
   voided_at: string | null;
 };
 
-type TripSlice = Pick<Trip, "id" | "trip_date" | "direction" | "status">;
+type TripSlice = Pick<Trip, "id" | "trip_date" | "direction" | "status" | "turn_type">;
 
 async function fetchStatusesFromTable(studentIds: string[], today: string): Promise<StudentTripStatus[]> {
   const validIds = filterValidUuids(studentIds);
@@ -68,7 +68,7 @@ async function fetchTripsByIds(tripIds: string[]): Promise<TripSlice[]> {
 
   const { data, error } = await supabase
     .from("bus_trips")
-    .select("id, trip_date, direction, status")
+    .select("id, trip_date, direction, status, turn_type")
     .in("id", validIds);
 
   if (error) {

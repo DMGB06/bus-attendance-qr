@@ -13,6 +13,8 @@
     "lint": "expo lint",
     "test": "jest",
     "test:watch": "jest --watch",
+    "test:suite": "jest --testPathPattern=testS",
+    "test:all": "node ./testS/run-all.mjs",
     "generate:brand-assets": "node ./scripts/generate-brand-assets.mjs",
     "apply:cerrobus-branding": "node ./scripts/apply-cerrobus-branding.mjs"
   },

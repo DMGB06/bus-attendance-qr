@@ -1,5 +1,5 @@
 import type { ParentStudentLink, StudentTripStatus, StudentTripStatusValue } from "@/src/features/parent/types";
-import type { Student } from "@/src/features/trips/types";
+import type { Student, TripDirection, TurnType } from "@/src/features/trips/types";
 
 export type LinkedStudentPair = {
   link: ParentStudentLink;
@@ -67,9 +67,41 @@ export function pickPreferredStudentTripStatus(
   return rankStudentTripStatus(left.status) >= rankStudentTripStatus(right.status) ? left : right;
 }
 
-type TripStatusSlice = { status: string };
+type TripStatusSlice = {
+  status: string;
+  direction?: TripDirection;
+  trip_date?: string;
+  turn_type?: TurnType | null;
+};
 
-/** Padre: viaje activo y evento más reciente ganan (tarde no queda tapada por recojo mañana). */
+/** Viaje activo duplicado (mismo turno ya completado) — no debe tapar tarde ni estado real. */
+function isGhostActiveTrip(
+  active: StudentTripStatus,
+  tripMap: Map<string, TripStatusSlice>,
+): boolean {
+  const activeTrip = tripMap.get(active.trip_id);
+  if (!activeTrip || activeTrip.status !== "active") {
+    return false;
+  }
+
+  for (const [tripId, otherTrip] of tripMap) {
+    if (tripId === active.trip_id || otherTrip.status !== "completed") {
+      continue;
+    }
+
+    if (
+      active.direction === otherTrip.direction &&
+      active.trip_date === otherTrip.trip_date &&
+      (activeTrip.turn_type ?? null) === (otherTrip.turn_type ?? null)
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/** Padre: viaje activo gana salvo duplicado fantasma; luego gana el evento más reciente. */
 export function pickPreferredStudentTripStatusForParent(
   left: StudentTripStatus,
   right: StudentTripStatus,
@@ -79,7 +111,14 @@ export function pickPreferredStudentTripStatusForParent(
   const rightActive = tripMap.get(right.trip_id)?.status === "active";
 
   if (leftActive !== rightActive) {
-    return leftActive ? left : right;
+    const active = leftActive ? left : right;
+    const inactive = leftActive ? right : left;
+
+    if (isGhostActiveTrip(active, tripMap)) {
+      return inactive;
+    }
+
+    return active;
   }
 
   const leftTime = left.last_event_at ?? left.updated_at;

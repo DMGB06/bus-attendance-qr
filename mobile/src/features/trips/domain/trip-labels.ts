@@ -226,6 +226,12 @@ export function getCloseTripReadyMessage(direction: TripDirection): string {
     : "No hay alumnos pendientes de registro en casa.";
 }
 
+export function getTripClosedSuccessMessage(direction: TripDirection): string {
+  return direction === "recojo"
+    ? "Viaje de recojo cerrado correctamente."
+    : "Viaje de retorno cerrado correctamente.";
+}
+
 export function getDropoffRegisteredMessage(direction: TripDirection): string {
   return `${getDropoffLabel(direction)} registrado correctamente.`;
 }

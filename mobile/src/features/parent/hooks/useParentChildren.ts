@@ -4,10 +4,11 @@ import { supabase } from "@/src/core/config/supabase";
 import { getUser } from "@/src/features/auth/services/auth.service";
 import {
   PARENT_CHILDREN_POLL_INTERVAL_MS,
-  shouldPollWhenRealtimeDisconnected,
+  shouldRunForegroundPoll,
 } from "@/src/features/parent/domain/parent-realtime-sync.rules";
 import { getParentChildrenWithStatus } from "@/src/features/parent/services/parent-children.service";
 import type { ParentChildSummary } from "@/src/features/parent/types";
+import { useAppForeground } from "@/src/shared/hooks/useAppForeground";
 
 type ParentChildrenState = {
   children: ParentChildSummary[];
@@ -24,6 +25,7 @@ export function useParentChildren(): ParentChildrenState {
   const [error, setError] = useState<string | null>(null);
   const [realtimeStatus, setRealtimeStatus] = useState<string | null>(null);
   const mountedRef = useRef(true);
+  const isForeground = useAppForeground();
 
   const loadChildren = useCallback(async (options?: { silent?: boolean }) => {
     const silent = options?.silent ?? false;
@@ -68,7 +70,7 @@ export function useParentChildren(): ParentChildrenState {
   );
   const studentIdsKey = studentIds.join(",");
 
-  const shouldPoll = shouldPollWhenRealtimeDisconnected(realtimeStatus);
+  const shouldPoll = shouldRunForegroundPoll(realtimeStatus, isForeground);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -91,7 +93,15 @@ export function useParentChildren(): ParentChildrenState {
     return () => {
       clearInterval(intervalId);
     };
-  }, [loadChildren, shouldPoll, studentIds.length]);
+  }, [loadChildren, shouldPoll, studentIds.length, isForeground]);
+
+  useEffect(() => {
+    if (!isForeground || realtimeStatus !== "SUBSCRIBED") {
+      return;
+    }
+
+    void loadChildren({ silent: true });
+  }, [isForeground, loadChildren, realtimeStatus]);
 
   useEffect(() => {
     if (!studentIds.length) {
@@ -145,6 +155,9 @@ export function useParentChildren(): ParentChildrenState {
     channel.subscribe((status) => {
       if (mountedRef.current) {
         setRealtimeStatus(status);
+        if (status === "SUBSCRIBED") {
+          void loadChildren({ silent: true });
+        }
       }
     });
 

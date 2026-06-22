@@ -8,6 +8,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
 import {
   formatLastUpdatedAt,
+  mapLatestTimelineEventToPresentation,
   mapStudentTripStatusToPresentation,
 } from "@/src/features/parent/domain/student-status.mapper";
 import { ChildStatusBadge, ChildStatusIcon } from "@/src/features/parent/components/ChildStatusBadge";
@@ -217,16 +218,23 @@ export default function ChildDetailScreen() {
     );
   }
 
-  const presentation = mapStudentTripStatusToPresentation(
-    child.todayStatus?.status ?? null,
-    child.todayStatus?.direction ?? child.activeTrip?.direction ?? null,
+  const latestTimelineEvent = timeline.at(-1) ?? null;
+  const presentation = latestTimelineEvent
+    ? mapLatestTimelineEventToPresentation(latestTimelineEvent)
+    : mapStudentTripStatusToPresentation(
+        child.todayStatus?.status ?? null,
+        child.todayStatus?.direction ?? child.activeTrip?.direction ?? null,
+      );
+  const lastUpdated = formatLastUpdatedAt(
+    latestTimelineEvent?.scanned_at ?? child.todayStatus?.last_event_at,
   );
-  const lastUpdated = formatLastUpdatedAt(child.todayStatus?.last_event_at);
   const nivelLabel = formatNivelLabel(child.student.nivel_educativo);
   const panelColors = statusPanelColors(presentation.tone, colors);
-  const segmentLabel = child.activeTrip?.turn_type
-    ? formatTurnTypeLabel(child.activeTrip.turn_type)
-    : null;
+  const segmentLabel = latestTimelineEvent?.turn_type
+    ? formatTurnTypeLabel(latestTimelineEvent.turn_type)
+    : child.activeTrip?.turn_type
+      ? formatTurnTypeLabel(child.activeTrip.turn_type)
+      : null;
 
   return (
     <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>

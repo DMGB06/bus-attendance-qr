@@ -6,6 +6,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
 import {
   formatLastUpdatedAt,
+  mapLatestTimelineEventToPresentation,
   mapStudentTripStatusToPresentation,
 } from "@/src/features/parent/domain/student-status.mapper";
 import { ChildStatusIcon } from "@/src/features/parent/components/ChildStatusBadge";
@@ -80,22 +81,29 @@ function statusStripTheme(
 
 export function ChildStatusCard({ item, onPress }: ChildStatusCardProps) {
   const { colors, tokens } = useAppTheme();
-  const presentation = mapStudentTripStatusToPresentation(
-    item.todayStatus?.status ?? null,
-    item.todayStatus?.direction ?? item.activeTrip?.direction ?? null,
+  const latestTimelineEvent = item.todayTimeline.at(-1) ?? null;
+  const presentation = latestTimelineEvent
+    ? mapLatestTimelineEventToPresentation(latestTimelineEvent)
+    : mapStudentTripStatusToPresentation(
+        item.todayStatus?.status ?? null,
+        item.todayStatus?.direction ?? item.activeTrip?.direction ?? null,
+      );
+  const lastUpdated = formatLastUpdatedAt(
+    latestTimelineEvent?.scanned_at ?? item.todayStatus?.last_event_at,
   );
-  const lastUpdated = formatLastUpdatedAt(item.todayStatus?.last_event_at);
   const nivelLabel = formatNivelLabel(item.student.nivel_educativo);
   const stripTheme = statusStripTheme(presentation.tone, colors);
   const initials = studentInitials(item.student.nombre_alumno);
 
-  const segmentLabel = item.activeTrip?.turn_type
-    ? formatTurnTypeLabel(item.activeTrip.turn_type)
-    : item.todayStatus?.direction === "retorno"
-      ? "Retorno"
-      : item.todayStatus?.direction === "recojo"
-        ? "Recojo"
-        : null;
+  const segmentLabel = latestTimelineEvent?.turn_type
+    ? formatTurnTypeLabel(latestTimelineEvent.turn_type)
+    : item.activeTrip?.turn_type
+      ? formatTurnTypeLabel(item.activeTrip.turn_type)
+      : item.todayStatus?.direction === "retorno"
+        ? "Retorno"
+        : item.todayStatus?.direction === "recojo"
+          ? "Recojo"
+          : null;
 
   const styles = useMemo(
     () =>

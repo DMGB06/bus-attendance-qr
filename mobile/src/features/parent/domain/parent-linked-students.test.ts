@@ -3,7 +3,7 @@ import {
   pickPreferredStudentTripStatusForParent,
   resolveLinkedStudentPairs,
 } from "@/src/features/parent/domain/parent-linked-students";
-import type { ParentStudentLink } from "@/src/features/parent/types";
+import type { ParentStudentLink, StudentTripStatus } from "@/src/features/parent/types";
 import type { Student } from "@/src/features/trips/types";
 
 function makeLink(studentId: string): ParentStudentLink {
@@ -103,8 +103,8 @@ describe("pickPreferredStudentTripStatusForParent", () => {
       updated_at: "2026-06-21T14:37:00Z",
     };
     const tripMap = new Map([
-      ["trip-morning", { status: "completed" }],
-      ["trip-afternoon", { status: "active" }],
+      ["trip-morning", { status: "completed", direction: "recojo" as const, trip_date: "2026-06-21", turn_type: "mañana" as const }],
+      ["trip-afternoon", { status: "active", direction: "retorno" as const, trip_date: "2026-06-21", turn_type: "tarde_secundaria" as const }],
     ]);
 
     expect(
@@ -114,5 +114,49 @@ describe("pickPreferredStudentTripStatusForParent", () => {
         tripMap,
       ).status,
     ).toBe("returning");
+  });
+
+  it("ignora recojo mañana activo duplicado si ya hay recojo mañana completado", () => {
+    const morningCompleted = {
+      student_id: "s1",
+      trip_id: "trip-morning-done",
+      trip_date: "2026-06-21",
+      direction: "recojo" as const,
+      status: "at_school" as const,
+      last_event_type: "bajo",
+      last_event_at: "2026-06-21T17:49:00Z",
+      updated_at: "2026-06-21T17:49:00Z",
+    };
+    const morningGhost = {
+      student_id: "s1",
+      trip_id: "trip-morning-ghost",
+      trip_date: "2026-06-21",
+      direction: "recojo" as const,
+      status: "onboard" as const,
+      last_event_type: "subio",
+      last_event_at: "2026-06-21T21:32:00Z",
+      updated_at: "2026-06-21T21:32:00Z",
+    };
+    const afternoonHome = {
+      student_id: "s1",
+      trip_id: "trip-afternoon",
+      trip_date: "2026-06-21",
+      direction: "retorno" as const,
+      status: "dropped_off" as const,
+      last_event_type: "bajo",
+      last_event_at: "2026-06-21T20:49:00Z",
+      updated_at: "2026-06-21T20:49:00Z",
+    };
+    const tripMap = new Map([
+      ["trip-morning-done", { status: "completed", direction: "recojo" as const, trip_date: "2026-06-21", turn_type: "mañana" as const }],
+      ["trip-morning-ghost", { status: "active", direction: "recojo" as const, trip_date: "2026-06-21", turn_type: "mañana" as const }],
+      ["trip-afternoon", { status: "completed", direction: "retorno" as const, trip_date: "2026-06-21", turn_type: "tarde_secundaria" as const }],
+    ]);
+
+    let best: StudentTripStatus = morningCompleted;
+    best = pickPreferredStudentTripStatusForParent(best, afternoonHome, tripMap);
+    best = pickPreferredStudentTripStatusForParent(best, morningGhost, tripMap);
+
+    expect(best.status).toBe("dropped_off");
   });
 });

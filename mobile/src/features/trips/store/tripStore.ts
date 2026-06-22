@@ -5,18 +5,21 @@ import type { Trip } from "@/src/features/trips/types";
 
 interface TripState {
   activeTrip: Trip | null;
+  closeSuccessMessage: string | null;
 }
 
 interface TripStoreActions {
   setActiveTrip: (trip: Trip) => void;
   clearActiveTrip: () => void;
   hydrateActiveTrip: () => Promise<Trip | null>;
+  acknowledgeCloseSuccess: () => void;
 }
 
 type Listener = () => void;
 
 let state: TripState = {
   activeTrip: null,
+  closeSuccessMessage: null,
 };
 
 const listeners = new Set<Listener>();
@@ -60,6 +63,14 @@ function clearActiveTrip() {
   setState({ activeTrip: null });
 }
 
+function setCloseSuccessMessage(message: string | null) {
+  setState({ closeSuccessMessage: message });
+}
+
+function acknowledgeCloseSuccess() {
+  setState({ closeSuccessMessage: null });
+}
+
 export function useTripStore(): TripState & TripStoreActions {
   const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
@@ -68,10 +79,13 @@ export function useTripStore(): TripState & TripStoreActions {
     setActiveTrip,
     clearActiveTrip,
     hydrateActiveTrip,
+    acknowledgeCloseSuccess,
   };
 }
 
 export const tripStoreActions = {
   getActiveTripId: () => getSnapshot().activeTrip?.id ?? null,
   clearActiveTrip,
+  setCloseSuccessMessage,
+  acknowledgeCloseSuccess,
 };

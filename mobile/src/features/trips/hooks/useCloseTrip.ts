@@ -12,6 +12,7 @@ import {
   cleanupTripAfterClose,
   flushPendingAttendanceForClose,
 } from "@/src/features/trips/services/close-trip.service";
+import { getTripClosedSuccessMessage } from "@/src/features/trips/domain/trip-labels";
 import { loadCloseTripValidation } from "@/src/features/trips/services/close-trip-validation.service";
 import { closeTrip, getActiveTripForCurrentUser, isTripAlreadyClosedError } from "@/src/features/trips/services/trips.service";
 import {
@@ -19,11 +20,12 @@ import {
   rosterStoreActions,
   useRosterItems,
 } from "@/src/features/trips/store/rosterStore";
-import { useTripStore } from "@/src/features/trips/store/tripStore";
+import { tripStoreActions, useTripStore } from "@/src/features/trips/store/tripStore";
 import {
   confirmCloseWithPendingStudents,
   confirmCloseWithPendingSync,
 } from "@/src/features/trips/utils/rosterConfirmations";
+import type { TripDirection } from "@/src/features/trips/types";
 import { countPendingForTrip } from "@/src/features/trips/storage/attendance-queue.storage";
 
 const EMPTY_VALIDATION: CloseTripValidationResult = {
@@ -93,9 +95,10 @@ export function useCloseTrip() {
   }, [activeTrip, rosterItems.length, reloadValidation]);
 
   const finishCloseLocally = useCallback(
-    async (tripId: string) => {
+    async (tripId: string, direction: TripDirection) => {
       rosterStoreActions.clearRosterStore();
       await cleanupTripAfterClose(tripId);
+      tripStoreActions.setCloseSuccessMessage(getTripClosedSuccessMessage(direction));
       clearActiveTrip();
       router.replace(OPS_ROUTES.trip);
     },
@@ -151,7 +154,7 @@ export function useCloseTrip() {
 
       const freshTrip = await getActiveTripForCurrentUser();
       if (!freshTrip) {
-        await finishCloseLocally(tripId);
+        await finishCloseLocally(tripId, activeTrip.direction);
         return;
       }
 
@@ -163,13 +166,13 @@ export function useCloseTrip() {
         await closeTrip(freshTrip.id);
       } catch (error: unknown) {
         if (isTripAlreadyClosedError(error)) {
-          await finishCloseLocally(freshTrip.id);
+          await finishCloseLocally(freshTrip.id, freshTrip.direction);
           return;
         }
         throw error;
       }
 
-      await finishCloseLocally(freshTrip.id);
+      await finishCloseLocally(freshTrip.id, freshTrip.direction);
     } catch (error: unknown) {
       setErrorMessage(getErrorMessage(error, "No se pudo cerrar el viaje."));
     } finally {

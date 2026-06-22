@@ -72,14 +72,14 @@ export function useProfile() {
       }
     }
 
-    const loadedById = await getProfileById(user.id);
+    const loadedById = await getProfileById(user.id, user);
     if (loadedById) {
       applyProfileToState(loadedById, userEmail, setters);
       return;
     }
 
     const loadedProfile = userEmail
-      ? await getProfile(userEmail, { forceRefresh })
+      ? await getProfile(userEmail, { forceRefresh, user })
       : null;
     applyProfileToState(loadedProfile, userEmail, setters);
   }, []);

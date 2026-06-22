@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { ActivityIndicator, RefreshControl, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PARENT_ROUTES } from "@/src/core/routes";
@@ -19,6 +19,12 @@ export default function ParentHomeScreen() {
   const handleRefresh = useCallback(() => {
     void refresh();
   }, [refresh]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void refresh();
+    }, [refresh]),
+  );
 
   const handleOpenChild = useCallback(
     (studentId: string) => {

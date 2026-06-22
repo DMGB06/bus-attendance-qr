@@ -44,6 +44,9 @@ const NO_OPS_CAPABILITIES: AppCapabilities = {
   isDriver: false,
 };
 
+/** Permisos neutros mientras se resuelve el rol — evita flash de UI de chofer. */
+export const LOADING_CAPABILITIES: AppCapabilities = NO_OPS_CAPABILITIES;
+
 export function getCapabilitiesForRole(appRole: AppRole | null | undefined): AppCapabilities {
   switch (appRole) {
     case AppRole.CHOFER:

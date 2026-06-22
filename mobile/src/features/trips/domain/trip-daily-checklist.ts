@@ -16,8 +16,10 @@ export type DailyChecklistContext = {
   pendingCount: number;
   completedCount: number;
   morningRiderPendingCount: number;
-  /** Sin viaje activo: turno que el chofer está configurando. */
+  /** Sin rol asignado (V1): operador con permisos de chofer. */
   setupPeriod?: "mañana" | "tarde";
+  /** Si false, oculta pasos de cierre (asistenta). */
+  canCloseTrip?: boolean;
 };
 
 function withStatus(
@@ -157,15 +159,21 @@ function buildIdleChecklist(setupPeriod: "mañana" | "tarde"): DailyChecklistSte
 }
 
 export function buildDailyChecklist(context: DailyChecklistContext): DailyChecklistStep[] {
+  let steps: DailyChecklistStep[];
+
   if (!context.hasActiveTrip) {
-    return buildIdleChecklist(context.setupPeriod ?? "mañana");
+    steps = buildIdleChecklist(context.setupPeriod ?? "mañana");
+  } else if (context.direction === "retorno") {
+    steps = buildActiveRetornoSteps(context);
+  } else {
+    steps = buildActiveRecojoSteps(context);
   }
 
-  if (context.direction === "retorno") {
-    return buildActiveRetornoSteps(context);
+  if (context.canCloseTrip === false) {
+    steps = steps.filter((step) => step.id !== "close");
   }
 
-  return buildActiveRecojoSteps(context);
+  return steps;
 }
 
 export function getDailyChecklistTitle(context: DailyChecklistContext): string {

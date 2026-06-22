@@ -120,6 +120,18 @@ export function useChildDetail(studentId: string | undefined): ChildDetailState 
           void loadDetail({ silent: true });
         },
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "buscontrol",
+          table: "bus_attendance_records",
+          filter: `student_id=eq.${studentId}`,
+        },
+        () => {
+          void loadDetail({ silent: true });
+        },
+      )
       .subscribe();
 
     return () => {

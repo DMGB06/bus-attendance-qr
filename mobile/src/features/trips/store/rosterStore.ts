@@ -9,13 +9,14 @@ import {
   applyOptimisticRegistration,
   collectBulkDropoffTargets,
   flushAttendanceQueue,
+  pruneStaleQueueEntriesForTrip,
   refreshRosterFromNetwork,
   syncBulkDropoffToServer,
   syncAttendanceToServer,
   undoPendingRegistration as undoPendingRegistrationService,
   validateRegistration,
+  voidSyncedAttendanceRecord,
 } from "@/src/features/trips/services/attendance-registration.service";
-import { voidAttendanceRecord } from "@/src/features/trips/services/attendance.service";
 import {
   isStudentsCacheFresh,
   loadCachedRosterSnapshot,
@@ -58,6 +59,8 @@ type RosterStoreState = {
 type Listener = () => void;
 
 const REFRESH_COOLDOWN_MS = 45_000;
+/** Agrupa eventos Realtime de bajada masiva en un solo refresh. */
+const REALTIME_REFRESH_DEBOUNCE_MS = 600;
 const EMPTY_ITEMS: TripRosterItem[] = [];
 const EMPTY_ITEM_STATS: RosterItemStats = {
   onboardCount: 0,
@@ -81,6 +84,34 @@ const listeners = new Set<Listener>();
 const lastRefreshAtByTrip = new Map<string, number>();
 const hydrateInFlightByTrip = new Map<string, Promise<void>>();
 const refreshInFlightByTrip = new Map<string, Promise<void>>();
+const debouncedRealtimeRefreshByTrip = new Map<string, ReturnType<typeof setTimeout>>();
+/** Viaje con bajada masiva en curso en este dispositivo (chofer). */
+let bulkDropoffInFlightTripId: string | null = null;
+
+function cancelDebouncedRealtimeRefresh(tripId: string): void {
+  const timer = debouncedRealtimeRefreshByTrip.get(tripId);
+  if (timer) {
+    clearTimeout(timer);
+    debouncedRealtimeRefreshByTrip.delete(tripId);
+  }
+}
+
+function scheduleDebouncedRealtimeRefresh(
+  tripId: string,
+  options?: { skipQueueFlush?: boolean },
+): void {
+  cancelDebouncedRealtimeRefresh(tripId);
+  const timer = setTimeout(() => {
+    debouncedRealtimeRefreshByTrip.delete(tripId);
+    void refreshTripRoster(tripId, {
+      silent: true,
+      skipQueueFlush: options?.skipQueueFlush,
+      force: true,
+      immediate: true,
+    });
+  }, REALTIME_REFRESH_DEBOUNCE_MS);
+  debouncedRealtimeRefreshByTrip.set(tripId, timer);
+}
 
 let state: RosterStoreState = {
   tripId: null,
@@ -236,10 +267,25 @@ async function hydrateTripRosterInternal(tripId: string, force: boolean): Promis
 
 async function refreshTripRoster(
   tripId: string,
-  options?: { silent?: boolean; skipQueueFlush?: boolean; force?: boolean },
+  options?: {
+    silent?: boolean;
+    skipQueueFlush?: boolean;
+    force?: boolean;
+    immediate?: boolean;
+  },
 ): Promise<void> {
   const silent = options?.silent ?? false;
   const force = options?.force ?? false;
+  const immediate = options?.immediate ?? false;
+
+  if (bulkDropoffInFlightTripId === tripId && force && !immediate) {
+    return;
+  }
+
+  if (silent && force && !immediate) {
+    scheduleDebouncedRealtimeRefresh(tripId, { skipQueueFlush: options?.skipQueueFlush });
+    return;
+  }
 
   if (silent && !force && state.tripId === tripId && state.items.length > 0) {
     const lastRefreshAt = lastRefreshAtByTrip.get(tripId) ?? 0;
@@ -309,6 +355,10 @@ function clearRosterStore() {
   lastRefreshAtByTrip.clear();
   hydrateInFlightByTrip.clear();
   refreshInFlightByTrip.clear();
+  for (const tripId of debouncedRealtimeRefreshByTrip.keys()) {
+    cancelDebouncedRealtimeRefresh(tripId);
+  }
+  bulkDropoffInFlightTripId = null;
   setState({
     tripId: null,
     items: [],
@@ -355,17 +405,40 @@ async function registerStudentAttendance(
 
     if (result.status === "queued") {
       await updatePendingSyncCount(tripId);
+      void syncPendingWrites(tripId);
       return { synced: false, queued: true, duplicate: false };
     }
 
+    await updatePendingSyncCount(tripId);
+    setState({
+      items: getSnapshot().items.map((item) =>
+        item.student.id === studentId ? { ...item, isPendingSync: false } : item,
+      ),
+    });
+    void refreshTripRoster(tripId, { silent: true });
+
     if (result.status === "duplicate") {
-      await refreshTripRoster(tripId, { silent: true });
+      await updatePendingSyncCount(tripId);
+      setState({
+        items: getSnapshot().items.map((item) =>
+          item.student.id === studentId ? { ...item, isPendingSync: false } : item,
+        ),
+      });
+      void refreshTripRoster(tripId, { silent: true });
+
+      const afterItem = getSnapshot().items.find((item) => item.student.id === studentId);
+      if (eventType === "bajo" && afterItem?.status === "onboard") {
+        throw new Error(
+          "No se pudo registrar en colegio otra vez. El servidor aún bloquea la bajada — ejecuta la migración 022 en Supabase.",
+        );
+      }
+
       return { synced: true, queued: false, duplicate: true };
     }
 
     return { synced: true, queued: false, duplicate: false };
   } catch (error: unknown) {
-    await refreshTripRoster(tripId, { silent: true });
+    void refreshTripRoster(tripId, { silent: true });
     throw error;
   }
 }
@@ -388,6 +461,8 @@ async function bulkRegisterDropoff(
   setState({ items: optimisticItems, errorMessage: null });
   void saveCachedRosterSnapshot(tripId, optimisticItems);
 
+  bulkDropoffInFlightTripId = tripId;
+
   try {
     await applyOptimisticBulkDropoff(tripId, eligible, previousItems);
   } catch {
@@ -397,7 +472,11 @@ async function bulkRegisterDropoff(
   try {
     const { queuedCount, failedCount } = await syncBulkDropoffToServer(tripId, eligible);
     await updatePendingSyncCount(tripId);
-    await refreshTripRoster(tripId, { silent: true });
+    if (queuedCount > 0) {
+      void syncPendingWrites(tripId);
+    }
+    cancelDebouncedRealtimeRefresh(tripId);
+    await refreshTripRoster(tripId, { silent: true, force: true, immediate: true });
 
     const stillOnboardCount = eligible.filter((studentId) => {
       const item = state.items.find((entry) => entry.student.id === studentId);
@@ -413,13 +492,17 @@ async function bulkRegisterDropoff(
 
     return { count: eligible.length, queued: queuedCount > 0, failedCount: 0 };
   } catch (error: unknown) {
-    await refreshTripRoster(tripId, { silent: true });
+    cancelDebouncedRealtimeRefresh(tripId);
+    await refreshTripRoster(tripId, { silent: true, force: true, immediate: true });
     throw error;
+  } finally {
+    bulkDropoffInFlightTripId = null;
   }
 }
 
 async function syncPendingWrites(tripId: string): Promise<void> {
   await flushAttendanceQueue(tripId);
+  await pruneStaleQueueEntriesForTrip(tripId);
   await refreshTripRoster(tripId, { silent: true });
 
   const pendingSyncCount = await countPendingForTrip(tripId);
@@ -439,8 +522,20 @@ async function undoPendingRegistration(
 }
 
 async function voidStudentAttendance(tripId: string, recordId: string, reason: string): Promise<void> {
-  await voidAttendanceRecord(recordId, reason);
-  await refreshTripRoster(tripId, { force: true, silent: true });
+  const item = getSnapshot().items.find((entry) => entry.attendance?.id === recordId);
+  if (!item?.attendance) {
+    throw new Error("No se encontró el registro a anular.");
+  }
+
+  const items = await voidSyncedAttendanceRecord(
+    tripId,
+    recordId,
+    item.student.id,
+    item.attendance.event_type,
+    reason,
+  );
+  setState({ tripId, items, errorMessage: null });
+  await updatePendingSyncCount(tripId);
 }
 
 /** Metadatos del roster (loading, refresh, sync) sin suscribirse a `items`. */

@@ -4,6 +4,7 @@ import {
   loadCachedProfile,
   saveCachedProfile,
 } from "@/src/features/profile/storage/profile-cache.storage";
+import type { User } from "@supabase/supabase-js";
 import type { AppProfile, UpdateAppProfile } from "../types";
 
 async function persistProfileCache(profile: AppProfile): Promise<void> {
@@ -29,7 +30,7 @@ export async function getOwnProfile(): Promise<AppProfile | null> {
 
 export async function getProfile(
   email: string,
-  options?: { forceRefresh?: boolean },
+  options?: { forceRefresh?: boolean; user?: User | null },
 ): Promise<AppProfile | null> {
   const normalizedEmail = email.trim();
   if (!normalizedEmail) {
@@ -43,7 +44,7 @@ export async function getProfile(
     }
   }
 
-  const user = await getUser();
+  const user = options?.user ?? (await getUser());
   if (!user) {
     return null;
   }
@@ -60,9 +61,12 @@ export async function getProfile(
   return profile;
 }
 
-export async function getProfileById(id: string): Promise<AppProfile | null> {
-  const user = await getUser();
-  if (!user || user.id !== id) {
+export async function getProfileById(
+  id: string,
+  user?: User | null,
+): Promise<AppProfile | null> {
+  const resolvedUser = user ?? (await getUser());
+  if (!resolvedUser || resolvedUser.id !== id) {
     return null;
   }
 

@@ -1,5 +1,7 @@
 export const TRIP_LOCATION_PUBLISH_INTERVAL_MS = 25_000;
 export const PARENT_LOCATION_POLL_INTERVAL_MS = 15_000;
+/** Reintento de cola offline mientras hay pendientes y hay red. */
+export const ATTENDANCE_QUEUE_FLUSH_INTERVAL_MS = 15_000;
 
 /** Aproximado Cerro Azul (fallback del mapa). */
 export const DEFAULT_MAP_REGION = {

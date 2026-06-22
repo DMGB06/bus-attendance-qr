@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Button, HelperText, Text } from 'react-native-paper';
@@ -18,7 +18,14 @@ import {
   getTripDashboardStatLabels,
   getTripSegmentSubtitle,
 } from '@/src/features/trips/domain/trip-labels';
+import {
+  getDefaultAfternoonTurn,
+  getDefaultTripPeriod,
+  getTurnStartBlockedMessage,
+  isTurnCompletedToday,
+} from '@/src/features/trips/domain/trip-start.rules';
 import { useMorningRiderSummary } from '@/src/features/trips/hooks/useMorningRiderSummary';
+import { useTodayCompletedTurns } from '@/src/features/trips/hooks/useTodayCompletedTurns';
 import { WaitingForDriverView } from '@/src/features/trips/components/WaitingForDriverView';
 import { TripDailyChecklist } from '@/src/features/trips/components/TripDailyChecklist';
 import type { DailyChecklistContext } from '@/src/features/trips/domain/trip-daily-checklist';
@@ -33,7 +40,7 @@ import { useRosterItems } from '@/src/features/trips/store/rosterStore';
 import { useTripStore } from '@/src/features/trips/store/tripStore';
 import { requestRosterView } from '@/src/features/trips/utils/roster-navigation';
 import { getErrorMessage } from '@/src/shared/utils/errors';
-import type { TurnType } from '@/src/features/trips/types';
+import type { Trip, TurnType } from '@/src/features/trips/types';
 import { useAppTheme } from '@/src/core/theme/ThemeProvider';
 import { AppScrollView } from '@/src/shared/ui/AppScrollView';
 import { useCompactScreen } from '@/src/shared/hooks/useCompactScreen';
@@ -44,23 +51,40 @@ type TripPeriod = 'mañana' | 'tarde';
 export default function TripScreen() {
   const router = useRouter();
   useScreenPerfMark('trip');
-  const { activeTrip, setActiveTrip } = useTripStore();
-  const { capabilities } = useAppCapabilities();
-  const dashboard = useTripDashboard(activeTrip);
-  const rosterItems = useRosterItems(activeTrip?.id);
+  const { activeTrip, setActiveTrip, closeSuccessMessage, acknowledgeCloseSuccess } = useTripStore();
+  const { capabilities, loading: capabilitiesLoading } = useAppCapabilities();
   const [period, setPeriod] = useState<TripPeriod>('mañana');
   const [afternoonTurn, setAfternoonTurn] = useState<AfternoonTurnType>('tarde_primaria');
+  const [isStartingTrip, setIsStartingTrip] = useState(false);
+  const [optimisticTrip, setOptimisticTrip] = useState<Trip | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [operationalContext, setOperationalContext] = useState<
+    OperationalBusContext | null | undefined
+  >(undefined);
+  const appliedIdleDefaultsKeyRef = useRef('');
+  const visibleTrip = activeTrip ?? optimisticTrip;
+  const dashboard = useTripDashboard(visibleTrip);
+  const rosterItems = useRosterItems(visibleTrip?.id);
   const morningRiders = useMorningRiderSummary(
-    activeTrip?.trip_date,
-    activeTrip?.direction,
+    visibleTrip?.trip_date,
+    visibleTrip?.direction,
     rosterItems,
   );
+  const { completedTurns, refresh: refreshCompletedTurns } = useTodayCompletedTurns(
+    !visibleTrip ? operationalContext?.busId : null,
+  );
+  const morningCompletedToday = isTurnCompletedToday(completedTurns, 'mañana');
+  const selectedTurnType = period === 'mañana' ? 'mañana' : afternoonTurn;
+  const selectedTurnBlocked = isTurnCompletedToday(completedTurns, selectedTurnType);
+  const selectedTurnBlockedMessage = selectedTurnBlocked
+    ? getTurnStartBlockedMessage(selectedTurnType)
+    : null;
   const dashboardStatLabels = useMemo(
-    () => getTripDashboardStatLabels(activeTrip?.direction ?? 'recojo'),
-    [activeTrip?.direction],
+    () => getTripDashboardStatLabels(visibleTrip?.direction ?? 'recojo'),
+    [visibleTrip?.direction],
   );
   const checklistContext = useMemo((): DailyChecklistContext => {
-    if (!activeTrip) {
+    if (!visibleTrip) {
       return {
         hasActiveTrip: false,
         direction: null,
@@ -69,31 +93,29 @@ export default function TripScreen() {
         completedCount: 0,
         morningRiderPendingCount: 0,
         setupPeriod: period,
+        canCloseTrip: capabilities.canCloseTrip,
       };
     }
 
     return {
       hasActiveTrip: true,
-      direction: activeTrip.direction,
+      direction: visibleTrip.direction,
       onboardCount: dashboard.stats.onboardCount,
       pendingCount: dashboard.stats.pendingCount,
       completedCount: dashboard.stats.completedCount,
       morningRiderPendingCount: morningRiders.count,
+      canCloseTrip: capabilities.canCloseTrip,
     };
   }, [
-    activeTrip,
+    visibleTrip,
     dashboard.stats.completedCount,
     dashboard.stats.onboardCount,
     dashboard.stats.pendingCount,
     morningRiders.count,
     period,
+    capabilities.canCloseTrip,
   ]);
   const { colors, tokens } = useAppTheme();
-  const [isStartingTrip, setIsStartingTrip] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [operationalContext, setOperationalContext] = useState<
-    OperationalBusContext | null | undefined
-  >(undefined);
 
   const { isCompact } = useCompactScreen();
   const styles = useMemo(
@@ -101,7 +123,7 @@ export default function TripScreen() {
     [colors, isCompact, tokens],
   );
   const showBulkDropoff = Boolean(
-    activeTrip && capabilities.canBulkDropoff && dashboard.totalOnboardCount > 0,
+    visibleTrip && capabilities.canBulkDropoff && dashboard.totalOnboardCount > 0,
   );
 
   const historyFooter = capabilities.canViewRoster ? (
@@ -123,28 +145,74 @@ export default function TripScreen() {
     });
   }, []);
 
-  function getSelectedTurnType(): TurnType {
-    return period === 'mañana' ? 'mañana' : afternoonTurn;
-  }
+  useEffect(() => {
+    if (!closeSuccessMessage) {
+      return;
+    }
+
+    void refreshCompletedTurns();
+    const timer = setTimeout(() => acknowledgeCloseSuccess(), 6000);
+    return () => clearTimeout(timer);
+  }, [acknowledgeCloseSuccess, closeSuccessMessage, refreshCompletedTurns]);
+
+  useEffect(() => {
+    if (activeTrip) {
+      setOptimisticTrip(null);
+    }
+  }, [activeTrip?.id]);
+
+  useEffect(() => {
+    if (visibleTrip) {
+      appliedIdleDefaultsKeyRef.current = '';
+      return;
+    }
+
+    if (isStartingTrip || optimisticTrip || completedTurns.length === 0) {
+      return;
+    }
+
+    const defaultsKey = completedTurns.join('|');
+    if (appliedIdleDefaultsKeyRef.current === defaultsKey) {
+      return;
+    }
+
+    appliedIdleDefaultsKeyRef.current = defaultsKey;
+    setPeriod(getDefaultTripPeriod(completedTurns));
+    setAfternoonTurn(getDefaultAfternoonTurn(completedTurns));
+  }, [visibleTrip, completedTurns, isStartingTrip, optimisticTrip]);
 
   async function handleStartTrip() {
-    if (activeTrip || !capabilities.canStartTrip) return;
+    if (visibleTrip || !capabilities.canStartTrip) return;
+
+    if (selectedTurnBlocked) {
+      setErrorMessage(
+        selectedTurnBlockedMessage ?? getTurnStartBlockedMessage(getSelectedTurnType()),
+      );
+      return;
+    }
 
     setIsStartingTrip(true);
     setErrorMessage(null);
+    setOptimisticTrip(null);
 
     try {
       const trip = await startTrip(getSelectedTurnType());
+      setOptimisticTrip(trip);
       setActiveTrip(trip);
     } catch (error: unknown) {
+      setOptimisticTrip(null);
       setErrorMessage(getErrorMessage(error, 'No se pudo iniciar el viaje.'));
     } finally {
       setIsStartingTrip(false);
     }
   }
 
-  const activeTripMeta = activeTrip?.started_at
-    ? new Date(activeTrip.started_at).toLocaleString('es-PE', {
+  function getSelectedTurnType(): TurnType {
+    return period === 'mañana' ? 'mañana' : afternoonTurn;
+  }
+
+  const activeTripMeta = visibleTrip?.started_at
+    ? new Date(visibleTrip.started_at).toLocaleString('es-PE', {
         day: 'numeric',
         month: 'numeric',
         year: 'numeric',
@@ -152,6 +220,16 @@ export default function TripScreen() {
         minute: '2-digit',
       })
     : null;
+
+  if (capabilitiesLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
+        <View style={styles.startingShell}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (capabilities.isAssistant && !activeTrip) {
     if (operationalContext === undefined) {
@@ -180,13 +258,13 @@ export default function TripScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
-      {activeTrip ? (
+      {visibleTrip ? (
         <View style={styles.activeTripShell}>
           <View style={styles.activeTripFixed}>
             <View style={styles.pageHeaderCompact}>
-              <Text style={styles.titleCompact}>{formatTripTitle(activeTrip)}</Text>
+              <Text style={styles.titleCompact}>{formatTripTitle(visibleTrip)}</Text>
               <Text style={styles.subtitleCompact}>
-                {getTripSegmentSubtitle(activeTrip)}
+                {getTripSegmentSubtitle(visibleTrip)}
                 {activeTripMeta ? ` · Iniciado ${activeTripMeta}` : ''}
               </Text>
               {capabilities.canViewRoster ? (
@@ -251,7 +329,7 @@ export default function TripScreen() {
                 <Button
                   mode="contained"
                   buttonColor={colors.primaryPressed}
-                  icon={activeTrip.direction === 'recojo' ? 'school' : 'home'}
+                  icon={visibleTrip.direction === 'recojo' ? 'school' : 'home'}
                   loading={dashboard.isBulkDropping}
                   disabled={dashboard.isBulkDropping}
                   onPress={() => void dashboard.handleBulkDropoff()}
@@ -259,7 +337,7 @@ export default function TripScreen() {
                   contentStyle={styles.compactActionContent}
                   labelStyle={styles.startButtonLabel}
                 >
-                  {activeTrip.direction === 'recojo'
+                  {visibleTrip.direction === 'recojo'
                     ? `Dejar todos en colegio (${dashboard.totalOnboardCount})`
                     : `Dejar todos en casa (${dashboard.totalOnboardCount})`}
                 </Button>
@@ -309,6 +387,11 @@ export default function TripScreen() {
             </View>
           </AppScrollView>
         </View>
+      ) : isStartingTrip ? (
+        <View style={styles.startingShell}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.startingText}>Iniciando viaje…</Text>
+        </View>
       ) : (
         <AppScrollView
           style={styles.scroll}
@@ -318,6 +401,17 @@ export default function TripScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.container}>
+            {closeSuccessMessage ? (
+              <View style={styles.closeSuccessBanner}>
+                <MaterialCommunityIcons
+                  name="check-circle-outline"
+                  size={20}
+                  color={colors.attendanceCompleted}
+                />
+                <Text style={styles.closeSuccessText}>{closeSuccessMessage}</Text>
+              </View>
+            ) : null}
+
             <View style={styles.pageHeader}>
               <Text style={styles.title}>Iniciar viaje</Text>
               <Text style={styles.subtitle}>Elige el tramo del día para comenzar.</Text>
@@ -327,8 +421,17 @@ export default function TripScreen() {
               <Text style={styles.sectionLabel}>Turno</Text>
               <View style={styles.selectorContainer}>
                 <Pressable
-                  style={[styles.selectorButton, period === 'mañana' && styles.selectorButtonActive]}
-                  onPress={() => setPeriod('mañana')}
+                  disabled={morningCompletedToday}
+                  style={[
+                    styles.selectorButton,
+                    period === 'mañana' && styles.selectorButtonActive,
+                    morningCompletedToday && styles.selectorButtonDisabled,
+                  ]}
+                  onPress={() => {
+                    if (!morningCompletedToday) {
+                      setPeriod('mañana');
+                    }
+                  }}
                 >
                   <MaterialCommunityIcons
                     name="weather-sunny"
@@ -375,11 +478,21 @@ export default function TripScreen() {
                   <View style={styles.afternoonList}>
                     {AFTERNOON_TURN_OPTIONS.map((option) => {
                       const isActive = afternoonTurn === option.id;
+                      const isCompleted = isTurnCompletedToday(completedTurns, option.id);
                       return (
                         <Pressable
                           key={option.id}
-                          style={[styles.afternoonOption, isActive && styles.afternoonOptionActive]}
-                          onPress={() => setAfternoonTurn(option.id)}
+                          disabled={isCompleted}
+                          style={[
+                            styles.afternoonOption,
+                            isActive && styles.afternoonOptionActive,
+                            isCompleted && styles.afternoonOptionDisabled,
+                          ]}
+                          onPress={() => {
+                            if (!isCompleted) {
+                              setAfternoonTurn(option.id);
+                            }
+                          }}
                         >
                           <MaterialCommunityIcons
                             name={isActive ? 'radiobox-marked' : 'radiobox-blank'}
@@ -409,18 +522,11 @@ export default function TripScreen() {
                 </>
               )}
 
-              <View style={styles.infoContainer}>
-                <View style={styles.infoRow}>
-                  <MaterialCommunityIcons name="bus" size={18} color={colors.sky} />
-                  <Text style={styles.infoText}>
-                    Unidad asignada: {operationalContext?.busLabel ?? 'BUS-01'}
-                  </Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <MaterialCommunityIcons name="account-check" size={18} color={colors.sky} />
-                  <Text style={styles.infoText}>Conductor listo</Text>
-                </View>
-              </View>
+              {selectedTurnBlockedMessage ? (
+                <HelperText type="info" visible style={styles.errorText}>
+                  {selectedTurnBlockedMessage}
+                </HelperText>
+              ) : null}
 
               {errorMessage ? (
                 <HelperText type="error" visible style={styles.errorText}>
@@ -436,7 +542,7 @@ export default function TripScreen() {
                   icon="play"
                   onPress={handleStartTrip}
                   loading={isStartingTrip}
-                  disabled={isStartingTrip}
+                  disabled={isStartingTrip || selectedTurnBlocked}
                   style={styles.startButton}
                   contentStyle={styles.startButtonContent}
                   labelStyle={styles.startButtonLabel}
@@ -449,19 +555,12 @@ export default function TripScreen() {
 
             {capabilities.canStartTrip ? (
               <View style={styles.warning}>
-                <View style={styles.warningIcon}>
-                  <MaterialCommunityIcons
-                    name="shield-alert-outline"
-                    size={20}
-                    color={colors.feedbackWarningGlyph}
-                  />
-                </View>
-                <View style={styles.warningText}>
-                  <Text style={styles.warningTitle}>Seguridad</Text>
-                  <Text style={styles.warningBody}>
-                    Verifica que todos los estudiantes tengan el cinturón colocado antes de iniciar.
-                  </Text>
-                </View>
+                <MaterialCommunityIcons
+                  name="shield-alert-outline"
+                  size={18}
+                  color={colors.feedbackWarningGlyph}
+                />
+                <Text style={styles.warningBody}>Cinturones puestos antes de salir.</Text>
               </View>
             ) : null}
 

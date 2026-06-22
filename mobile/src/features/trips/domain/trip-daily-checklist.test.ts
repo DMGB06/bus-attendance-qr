@@ -59,4 +59,17 @@ describe("buildDailyChecklist", () => {
 
     expect(steps.find((step) => step.id === "scan_dropoff")?.status).toBe("current");
   });
+
+  it("oculta cerrar viaje para asistenta", () => {
+    const steps = buildDailyChecklist(
+      baseContext({
+        hasActiveTrip: true,
+        direction: "recojo",
+        completedCount: 3,
+        canCloseTrip: false,
+      }),
+    );
+
+    expect(steps.find((step) => step.id === "close")).toBeUndefined();
+  });
 });

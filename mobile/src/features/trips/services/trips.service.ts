@@ -8,6 +8,7 @@ import {
   type OperationalBusContext,
 } from "@/src/features/trips/services/crew.service";
 import { isUuid } from "@/src/shared/utils/uuid";
+import { getLocalTodayDateIso } from "@/src/shared/utils/local-date";
 import type { Trip, TurnType } from "@/src/features/trips/types";
 
 function formatSupabaseError(
@@ -87,6 +88,33 @@ export async function getActiveTripForCurrentUser(): Promise<Trip | null> {
 /** @deprecated Usar getActiveTripForCurrentUser — conservado por compatibilidad interna. */
 export async function getActiveTripByOperator(): Promise<Trip | null> {
   return getActiveTripForCurrentUser();
+}
+
+export async function getCompletedTurnTypesForBusToday(busId: string): Promise<TurnType[]> {
+  if (!isUuid(busId)) {
+    return [];
+  }
+
+  const tripDate = getLocalTodayDateIso();
+  const { data, error } = await supabase
+    .from("bus_trips")
+    .select("turn_type")
+    .eq("bus_id", busId)
+    .eq("trip_date", tripDate)
+    .eq("status", "completed");
+
+  if (error) {
+    throw new Error(formatSupabaseError("No se pudo consultar los viajes del día", error));
+  }
+
+  const turns: TurnType[] = [];
+  for (const row of data ?? []) {
+    if (row.turn_type) {
+      turns.push(row.turn_type as TurnType);
+    }
+  }
+
+  return turns;
 }
 
 export async function startTrip(turnType: TurnType): Promise<Trip> {

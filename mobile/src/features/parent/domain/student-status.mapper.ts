@@ -2,6 +2,7 @@ import { formatTurnTypeLabel } from "@/src/features/trips/domain/trip-labels";
 import type { AttendanceEventType, TripDirection, TurnType } from "@/src/features/trips/types";
 
 import type {
+  ChildTimelineEvent,
   ParentStatusPresentation,
   ParentStatusTone,
   StudentTripStatusValue,
@@ -90,6 +91,63 @@ export function mapStudentTripStatusToPresentation(
     label: "En recorrido",
     subtitle: "Estado actualizado",
     tone: toneForStatus(status),
+    icon: "bus-marker",
+  };
+}
+
+/** Estado resumen alineado con el último evento del historial (tarjeta Inicio). */
+export function mapLatestTimelineEventToPresentation(
+  event: ChildTimelineEvent,
+): ParentStatusPresentation {
+  if (event.event_type === "ausente") {
+    return {
+      label: "Ausente hoy",
+      subtitle: "El bus registró que no asistió",
+      tone: "absent",
+      icon: "account-off-outline",
+    };
+  }
+
+  if (event.event_type === "subio" || event.event_type === "manual") {
+    if (event.trip_direction === "recojo") {
+      return {
+        label: "Subió al bus",
+        subtitle: "Camino al colegio",
+        tone: "onboard",
+        icon: "bus-side",
+      };
+    }
+
+    return {
+      label: "Subió al bus",
+      subtitle: "Retorno a casa en curso",
+      tone: "onboard",
+      icon: "bus-side",
+    };
+  }
+
+  if (event.event_type === "bajo" && event.trip_direction === "recojo") {
+    return {
+      label: "Llegó al colegio",
+      subtitle: "Recojo completado",
+      tone: "completed",
+      icon: "school-outline",
+    };
+  }
+
+  if (event.event_type === "bajo") {
+    return {
+      label: "Llegó a casa",
+      subtitle: "Retorno completado",
+      tone: "completed",
+      icon: "home-outline",
+    };
+  }
+
+  return {
+    label: "En recorrido",
+    subtitle: "Estado actualizado",
+    tone: "neutral",
     icon: "bus-marker",
   };
 }

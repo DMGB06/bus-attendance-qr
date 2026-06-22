@@ -290,7 +290,18 @@ export function useTripRoster(tripId: string | undefined) {
       const selectedStudent = findStudentName(studentId);
       const item = items.find((entry) => entry.student.id === studentId);
       const recordId = item?.attendance?.id;
-      if (!selectedStudent || !recordId || recordId.startsWith("local-")) {
+
+      if (!selectedStudent) {
+        return;
+      }
+
+      if (!recordId) {
+        setInfoMessage("No hay registro para anular.");
+        return;
+      }
+
+      if (recordId.startsWith("local-") || recordId.startsWith("patch-")) {
+        setInfoMessage("Este registro aún no está en el servidor. Usa «Deshacer».");
         return;
       }
 

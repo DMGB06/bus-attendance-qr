@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import {
   getCapabilitiesForRole,
+  LOADING_CAPABILITIES,
   type AppCapabilities,
 } from "@/src/features/auth/domain/permissions";
 import { getUser } from "@/src/features/auth/services/auth.service";
@@ -16,9 +17,7 @@ type AppCapabilitiesState = {
 };
 
 export function useAppCapabilities(): AppCapabilitiesState {
-  const [capabilities, setCapabilities] = useState<AppCapabilities>(() =>
-    getCapabilitiesForRole(null),
-  );
+  const [capabilities, setCapabilities] = useState<AppCapabilities>(() => LOADING_CAPABILITIES);
   const [appRole, setAppRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
 

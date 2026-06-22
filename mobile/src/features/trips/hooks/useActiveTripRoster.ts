@@ -2,8 +2,10 @@ import { useEffect, useRef } from "react";
 
 import { supabase } from "@/src/core/config/supabase";
 import { useAppCapabilities } from "@/src/features/auth/hooks/useAppCapabilities";
+import { getOperationalContext } from "@/src/features/trips/services/trips.service";
 import { rosterStoreActions } from "@/src/features/trips/store/rosterStore";
 import { useTripStore } from "@/src/features/trips/store/tripStore";
+import { useAppForeground } from "@/src/shared/hooks/useAppForeground";
 
 const ASSISTANT_POLL_MS = 10_000;
 
@@ -14,6 +16,7 @@ const ASSISTANT_POLL_MS = 10_000;
 export function useActiveTripRoster(): void {
   const { activeTrip, hydrateActiveTrip } = useTripStore();
   const { capabilities } = useAppCapabilities();
+  const isForeground = useAppForeground();
   const tripId = activeTrip?.id;
   const previousTripIdRef = useRef<string | undefined>(undefined);
 
@@ -31,7 +34,7 @@ export function useActiveTripRoster(): void {
   }, [tripId]);
 
   useEffect(() => {
-    if (!capabilities.isAssistant || activeTrip) {
+    if (!capabilities.isAssistant || activeTrip || !isForeground) {
       return;
     }
 
@@ -42,7 +45,53 @@ export function useActiveTripRoster(): void {
     return () => {
       clearInterval(intervalId);
     };
+  }, [capabilities.isAssistant, activeTrip, hydrateActiveTrip, isForeground]);
+
+  useEffect(() => {
+    if (!capabilities.isAssistant || activeTrip) {
+      return;
+    }
+
+    let cancelled = false;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    void getOperationalContext().then((context) => {
+      if (cancelled || !context?.busId) {
+        return;
+      }
+
+      channel = supabase
+        .channel(`assistant-bus-trips-${context.busId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "buscontrol",
+            table: "bus_trips",
+            filter: `bus_id=eq.${context.busId}`,
+          },
+          () => {
+            void hydrateActiveTrip();
+          },
+        )
+        .subscribe();
+    });
+
+    return () => {
+      cancelled = true;
+      if (channel) {
+        void supabase.removeChannel(channel);
+      }
+    };
   }, [capabilities.isAssistant, activeTrip, hydrateActiveTrip]);
+
+  useEffect(() => {
+    if (!capabilities.isAssistant || !activeTrip || !isForeground) {
+      return;
+    }
+
+    void hydrateActiveTrip();
+  }, [capabilities.isAssistant, activeTrip, hydrateActiveTrip, isForeground]);
 
   useEffect(() => {
     if (!tripId) {
@@ -63,6 +112,23 @@ export function useActiveTripRoster(): void {
           void rosterStoreActions.refreshTripRoster(tripId, {
             silent: true,
             skipQueueFlush: true,
+            force: true,
+          });
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "buscontrol",
+          table: "bus_attendance_records",
+          filter: `trip_id=eq.${tripId}`,
+        },
+        () => {
+          void rosterStoreActions.refreshTripRoster(tripId, {
+            silent: true,
+            skipQueueFlush: true,
+            force: true,
           });
         },
       )

@@ -100,6 +100,9 @@ export function createTripScreenStyles(
     selectorButtonActive: {
       backgroundColor: colors.primary,
     },
+    selectorButtonDisabled: {
+      opacity: 0.45,
+    },
     selectorText: {
       ...tokens.typography.bodyStrong,
     },
@@ -127,6 +130,9 @@ export function createTripScreenStyles(
       borderColor: colors.primary,
       backgroundColor: colors.primarySoftBg,
     },
+    afternoonOptionDisabled: {
+      opacity: 0.45,
+    },
     afternoonOptionBody: {
       flex: 1,
       gap: 2,
@@ -148,21 +154,6 @@ export function createTripScreenStyles(
       backgroundColor: colors.skySoftBg,
       borderRadius: tokens.radius.md,
       padding: tokens.spacing.md,
-    },
-    infoContainer: {
-      gap: tokens.spacing.md,
-      paddingTop: tokens.spacing.xs,
-      borderTopWidth: 1,
-      borderTopColor: colors.borderMuted,
-    },
-    infoRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: tokens.spacing.sm,
-    },
-    infoText: {
-      ...tokens.typography.body,
-      color: colors.textBody,
     },
     startButton: {
       borderRadius: tokens.radius.md,
@@ -218,33 +209,19 @@ export function createTripScreenStyles(
     },
     warning: {
       flexDirection: 'row',
-      alignItems: 'flex-start',
-      gap: tokens.spacing.md,
+      alignItems: 'center',
+      gap: tokens.spacing.sm,
       backgroundColor: colors.skySoftBg,
       borderRadius: tokens.radius.md,
       borderWidth: 1,
       borderColor: colors.feedbackWarningBorder,
-      padding: tokens.spacing.lg,
-    },
-    warningIcon: {
-      width: 36,
-      height: 36,
-      borderRadius: tokens.radius.full,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.feedbackWarningIconCircle,
-    },
-    warningText: {
-      flex: 1,
-      gap: tokens.spacing.xs,
-    },
-    warningTitle: {
-      ...tokens.typography.label,
-      color: colors.feedbackWarningTitle,
+      paddingHorizontal: tokens.spacing.md,
+      paddingVertical: tokens.spacing.sm,
     },
     warningBody: {
-      ...tokens.typography.body,
+      ...tokens.typography.caption,
       color: colors.feedbackWarningBody,
+      flex: 1,
     },
     scrollContent: {
       flexGrow: 1,
@@ -305,6 +282,32 @@ export function createTripScreenStyles(
     },
     closeTripButton: {
       borderRadius: tokens.radius.md,
+    },
+    closeSuccessBanner: {
+      backgroundColor: 'rgba(47, 133, 90, 0.1)',
+      borderRadius: tokens.radius.xl,
+      padding: tokens.spacing.md,
+      borderWidth: 1,
+      borderColor: colors.attendanceCompleted,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: tokens.spacing.sm,
+    },
+    closeSuccessText: {
+      ...tokens.typography.body,
+      color: colors.attendanceCompleted,
+      flex: 1,
+    },
+    startingShell: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: tokens.spacing.md,
+      paddingHorizontal: screenPadding,
+    },
+    startingText: {
+      ...tokens.typography.body,
+      color: colors.textMuted,
     },
   });
 }
