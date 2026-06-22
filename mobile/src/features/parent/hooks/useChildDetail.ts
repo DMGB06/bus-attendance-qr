@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { supabase } from "@/src/core/config/supabase";
-import { getChildTimelineToday } from "@/src/features/parent/services/child-timeline.service";
-import { getParentChildrenWithStatus } from "@/src/features/parent/services/parent-children.service";
-import type { ChildTimelineEvent, ParentChildSummary } from "@/src/features/parent/types";
 import { getUser } from "@/src/features/auth/services/auth.service";
+import { getChildTimelineToday } from "@/src/features/parent/services/child-timeline.service";
+import {
+  parentChildrenStore,
+  useParentChildrenStore,
+} from "@/src/features/parent/store/parentChildrenStore";
+import type { ChildTimelineEvent, ParentChildSummary } from "@/src/features/parent/types";
+
+const REALTIME_DEBOUNCE_MS = 450;
 
 type ChildDetailState = {
   child: ParentChildSummary | null;
@@ -16,15 +21,75 @@ type ChildDetailState = {
 };
 
 export function useChildDetail(studentId: string | undefined): ChildDetailState {
-  const [child, setChild] = useState<ParentChildSummary | null>(null);
-  const [timeline, setTimeline] = useState<ChildTimelineEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const store = useParentChildrenStore();
+  const cachedChild = studentId ? parentChildrenStore.getChildById(studentId) : null;
+  const [child, setChild] = useState<ParentChildSummary | null>(cachedChild);
+  const [timeline, setTimeline] = useState<ChildTimelineEvent[]>(
+    cachedChild?.todayTimeline ?? [],
+  );
+  const [loading, setLoading] = useState(!cachedChild);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const loadDetail = useCallback(
-    async (options?: { silent?: boolean }) => {
+  const loadTimeline = useCallback(async (options?: { silent?: boolean }) => {
+    if (!studentId) {
+      setChild(null);
+      setTimeline([]);
+      setLoading(false);
+      return;
+    }
+
+    const silent = options?.silent ?? false;
+    if (!silent && !parentChildrenStore.getChildById(studentId)) {
+      setLoading(true);
+    }
+
+    try {
+      const nextTimeline = await getChildTimelineToday(studentId);
+      const matchedChild = parentChildrenStore.getChildById(studentId);
+
+      if (!matchedChild) {
+        throw new Error("No tienes acceso a este alumno.");
+      }
+
+      if (mountedRef.current) {
+        setChild(matchedChild);
+        setTimeline(nextTimeline);
+        setError(null);
+      }
+    } catch (loadError) {
+      if (mountedRef.current) {
+        setError(loadError instanceof Error ? loadError.message : "Error al cargar el detalle.");
+      }
+    } finally {
+      if (mountedRef.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    }
+  }, [studentId]);
+
+  const refresh = useCallback(async () => {
+    if (!studentId) {
+      return;
+    }
+
+    setRefreshing(true);
+
+    const userId = store.userId;
+    if (userId) {
+      await parentChildrenStore.fetchChildren(userId, { silent: true, force: true });
+    }
+
+    await loadTimeline({ silent: true });
+  }, [loadTimeline, studentId, store.userId]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+
+    void (async () => {
       if (!studentId) {
         setChild(null);
         setTimeline([]);
@@ -32,67 +97,64 @@ export function useChildDetail(studentId: string | undefined): ChildDetailState 
         return;
       }
 
-      const silent = options?.silent ?? false;
-
-      if (!silent) {
-        setLoading(true);
-      }
-
-      try {
-        const user = await getUser();
-
-        if (!user) {
-          throw new Error("Debes iniciar sesión.");
-        }
-
-        const [children, nextTimeline] = await Promise.all([
-          getParentChildrenWithStatus(user.id),
-          getChildTimelineToday(studentId),
-        ]);
-
-        const matchedChild = children.find((item) => item.student.id === studentId) ?? null;
-
-        if (!matchedChild) {
-          throw new Error("No tienes acceso a este alumno.");
-        }
-
-        if (mountedRef.current) {
-          setChild(matchedChild);
-          setTimeline(nextTimeline);
-          setError(null);
-        }
-      } catch (loadError) {
-        if (mountedRef.current) {
-          setError(loadError instanceof Error ? loadError.message : "Error al cargar el detalle.");
-        }
-      } finally {
-        if (mountedRef.current) {
-          setLoading(false);
-          setRefreshing(false);
+      let matchedChild = parentChildrenStore.getChildById(studentId);
+      if (!matchedChild) {
+        try {
+          const user = await getUser();
+          if (user) {
+            await parentChildrenStore.fetchChildren(user.id);
+            matchedChild = parentChildrenStore.getChildById(studentId);
+          }
+        } catch {
+          // loadTimeline reportará el error.
         }
       }
-    },
-    [studentId],
-  );
 
-  const refresh = useCallback(async () => {
-    setRefreshing(true);
-    await loadDetail({ silent: true });
-  }, [loadDetail]);
+      if (matchedChild && mountedRef.current) {
+        setChild(matchedChild);
+        setTimeline(matchedChild.todayTimeline);
+        setLoading(false);
+      }
 
-  useEffect(() => {
-    mountedRef.current = true;
-    void loadDetail();
+      await loadTimeline({ silent: Boolean(matchedChild) });
+    })();
 
     return () => {
       mountedRef.current = false;
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
     };
-  }, [loadDetail]);
+  }, [loadTimeline, studentId]);
 
   useEffect(() => {
     if (!studentId) {
       return;
     }
+
+    const cached = parentChildrenStore.getChildById(studentId);
+    if (cached) {
+      setChild(cached);
+      if (!loading) {
+        setTimeline(cached.todayTimeline);
+      }
+    }
+  }, [store.children, studentId, loading]);
+
+  useEffect(() => {
+    if (!studentId) {
+      return;
+    }
+
+    const scheduleRefresh = () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+
+      debounceTimerRef.current = setTimeout(() => {
+        void refresh();
+      }, REALTIME_DEBOUNCE_MS);
+    };
 
     const channel = supabase
       .channel(`parent-child-${studentId}`)
@@ -104,9 +166,7 @@ export function useChildDetail(studentId: string | undefined): ChildDetailState 
           table: "student_trip_status",
           filter: `student_id=eq.${studentId}`,
         },
-        () => {
-          void loadDetail({ silent: true });
-        },
+        scheduleRefresh,
       )
       .on(
         "postgres_changes",
@@ -116,9 +176,7 @@ export function useChildDetail(studentId: string | undefined): ChildDetailState 
           table: "bus_attendance_records",
           filter: `student_id=eq.${studentId}`,
         },
-        () => {
-          void loadDetail({ silent: true });
-        },
+        scheduleRefresh,
       )
       .on(
         "postgres_changes",
@@ -128,21 +186,19 @@ export function useChildDetail(studentId: string | undefined): ChildDetailState 
           table: "bus_attendance_records",
           filter: `student_id=eq.${studentId}`,
         },
-        () => {
-          void loadDetail({ silent: true });
-        },
+        scheduleRefresh,
       )
       .subscribe();
 
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [studentId, loadDetail]);
+  }, [studentId, refresh]);
 
   return {
     child,
     timeline,
-    loading,
+    loading: loading && !child,
     refreshing,
     error,
     refresh,

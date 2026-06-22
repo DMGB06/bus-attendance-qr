@@ -11,6 +11,47 @@ export function isPushAvailable(): boolean {
   return Device.isDevice && !isExpoGo();
 }
 
+export type PushSetupStatus =
+  | { available: true }
+  | { available: false; reason: string; hint: string };
+
+/** Explica por qué push no está disponible en este dispositivo/entorno. */
+export function getPushSetupStatus(): PushSetupStatus {
+  if (Platform.OS === "web") {
+    return {
+      available: false,
+      reason: "Las push no funcionan en el navegador (localhost).",
+      hint: "Instala el APK de desarrollo en un celular Android e inicia sesión como apoderado.",
+    };
+  }
+
+  if (!Device.isDevice) {
+    return {
+      available: false,
+      reason: "El emulador no recibe notificaciones push reales.",
+      hint: "Prueba en un celular físico con el APK generado por EAS (dev client o preview).",
+    };
+  }
+
+  if (isExpoGo()) {
+    return {
+      available: false,
+      reason: "Expo Go ya no soporta push remoto (SDK 53+).",
+      hint: "Compila e instala el dev client: eas build --profile development --platform android",
+    };
+  }
+
+  if (!getExpoProjectId()) {
+    return {
+      available: false,
+      reason: "Falta el projectId de EAS en app.json.",
+      hint: "Ejecuta eas init en mobile/ y vuelve a compilar el APK.",
+    };
+  }
+
+  return { available: true };
+}
+
 function getExpoProjectId(): string | null {
   const projectId =
     Constants.expoConfig?.extra?.eas?.projectId ??

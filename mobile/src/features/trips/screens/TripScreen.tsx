@@ -31,11 +31,7 @@ import { TripDailyChecklist } from '@/src/features/trips/components/TripDailyChe
 import type { DailyChecklistContext } from '@/src/features/trips/domain/trip-daily-checklist';
 import { useTripDashboard } from '@/src/features/trips/hooks/useTripDashboard';
 import { createTripScreenStyles } from '@/src/features/trips/screens/tripScreen.styles';
-import {
-  getOperationalContext,
-  startTrip,
-} from '@/src/features/trips/services/trips.service';
-import type { OperationalBusContext } from '@/src/features/trips/services/crew.service';
+import { startTrip } from '@/src/features/trips/services/trips.service';
 import { useRosterItems } from '@/src/features/trips/store/rosterStore';
 import { useTripStore } from '@/src/features/trips/store/tripStore';
 import { requestRosterView } from '@/src/features/trips/utils/roster-navigation';
@@ -51,16 +47,21 @@ type TripPeriod = 'mañana' | 'tarde';
 export default function TripScreen() {
   const router = useRouter();
   useScreenPerfMark('trip');
-  const { activeTrip, setActiveTrip, closeSuccessMessage, acknowledgeCloseSuccess } = useTripStore();
+  const {
+    activeTrip,
+    operationalContext,
+    isHydrating,
+    hasHydratedOnce,
+    setActiveTrip,
+    closeSuccessMessage,
+    acknowledgeCloseSuccess,
+  } = useTripStore();
   const { capabilities, loading: capabilitiesLoading } = useAppCapabilities();
   const [period, setPeriod] = useState<TripPeriod>('mañana');
   const [afternoonTurn, setAfternoonTurn] = useState<AfternoonTurnType>('tarde_primaria');
   const [isStartingTrip, setIsStartingTrip] = useState(false);
   const [optimisticTrip, setOptimisticTrip] = useState<Trip | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [operationalContext, setOperationalContext] = useState<
-    OperationalBusContext | null | undefined
-  >(undefined);
   const appliedIdleDefaultsKeyRef = useRef('');
   const visibleTrip = activeTrip ?? optimisticTrip;
   const dashboard = useTripDashboard(visibleTrip);
@@ -140,12 +141,6 @@ export default function TripScreen() {
   ) : null;
 
   useEffect(() => {
-    void getOperationalContext().then((context) => {
-      setOperationalContext(context);
-    });
-  }, []);
-
-  useEffect(() => {
     if (!closeSuccessMessage) {
       return;
     }
@@ -221,7 +216,7 @@ export default function TripScreen() {
       })
     : null;
 
-  if (capabilitiesLoading) {
+  if (capabilitiesLoading || (isHydrating && !visibleTrip) || (!hasHydratedOnce && !visibleTrip)) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
         <View style={styles.startingShell}>

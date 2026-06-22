@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { ActivityIndicator, RefreshControl, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PARENT_ROUTES } from "@/src/core/routes";
@@ -19,12 +19,6 @@ export default function ParentHomeScreen() {
   const handleRefresh = useCallback(() => {
     void refresh();
   }, [refresh]);
-
-  useFocusEffect(
-    useCallback(() => {
-      void refresh();
-    }, [refresh]),
-  );
 
   const handleOpenChild = useCallback(
     (studentId: string) => {
@@ -118,7 +112,8 @@ export default function ParentHomeScreen() {
               <ChildStatusCard
                 key={item.student.id}
                 item={item}
-                onPress={() => handleOpenChild(item.student.id)}
+                onOpenChild={handleOpenChild}
+                studentId={item.student.id}
               />
             ))}
           </View>

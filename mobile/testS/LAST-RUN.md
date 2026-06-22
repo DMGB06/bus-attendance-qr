@@ -1,6 +1,6 @@
 # BusControl — reporte de pruebas
 
-Generado: 21/6/2026, 8:47:00 p. m.
+Generado: 21/6/2026, 11:10:38 p. m.
 
 ## ✅ Lint (eslint)
 
@@ -8,7 +8,7 @@ Sin errores de lint.
 
 ## ✅ Tests Jest (src + testS)
 
-**94/94** tests pasaron en **22/22** suites.
+**98/98** tests pasaron en **23/23** suites.
 
 Todos los tests automatizados pasaron.
 

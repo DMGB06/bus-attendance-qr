@@ -76,13 +76,22 @@ export async function getOperationalContext(): Promise<OperationalBusContext | n
   return resolveOperationalBusContext();
 }
 
-export async function getActiveTripForCurrentUser(): Promise<Trip | null> {
+export async function resolveOperatorTripSnapshot(): Promise<{
+  context: OperationalBusContext | null;
+  activeTrip: Trip | null;
+}> {
   const context = await resolveOperationalBusContext();
   if (!context) {
-    return null;
+    return { context: null, activeTrip: null };
   }
 
-  return getActiveTripByBusId(context.busId);
+  const activeTrip = await getActiveTripByBusId(context.busId);
+  return { context, activeTrip };
+}
+
+export async function getActiveTripForCurrentUser(): Promise<Trip | null> {
+  const { activeTrip } = await resolveOperatorTripSnapshot();
+  return activeTrip;
 }
 
 /** @deprecated Usar getActiveTripForCurrentUser — conservado por compatibilidad interna. */

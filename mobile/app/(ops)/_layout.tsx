@@ -1,5 +1,7 @@
-import { Stack } from "expo-router";
+import { Stack } from 'expo-router';
+
+import { fadeScreenOptions } from '@/src/core/navigation/screenTransitions';
 
 export default function OpsLayout() {
-  return <Stack screenOptions={{ headerShown: false, contentStyle: { flex: 1 } }} />;
+  return <Stack screenOptions={fadeScreenOptions} />;
 }

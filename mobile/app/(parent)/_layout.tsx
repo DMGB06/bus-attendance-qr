@@ -1,8 +1,10 @@
-import { Stack } from "expo-router";
+import { Stack } from 'expo-router';
+
+import { fadeScreenOptions } from '@/src/core/navigation/screenTransitions';
 
 export default function ParentLayout() {
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { flex: 1 } }}>
+    <Stack screenOptions={fadeScreenOptions}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="child/[id]" />
       <Stack.Screen name="index" />

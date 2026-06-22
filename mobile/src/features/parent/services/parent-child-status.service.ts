@@ -4,6 +4,7 @@ import {
   pickPreferredStudentTripStatusForParent,
 } from "@/src/features/parent/domain/parent-linked-students";
 import { getTodayDateIso } from "@/src/features/parent/utils/date";
+import { APP_TIME_ZONE } from "@/src/shared/utils/local-date";
 import { filterValidUuids } from "@/src/shared/utils/uuid";
 import type { StudentTripStatus } from "@/src/features/parent/types";
 import type { Trip } from "@/src/features/trips/types";
@@ -41,7 +42,12 @@ function isTripRelevantForToday(trip: TripSlice, today: string): boolean {
   return trip.trip_date === today || trip.status === "active";
 }
 
-async function fetchAttendanceSlices(studentIds: string[]): Promise<AttendanceSlice[]> {
+function getLocalDayStartIso(today: string): string {
+  const offset = APP_TIME_ZONE === "America/Lima" ? "-05:00" : "Z";
+  return `${today}T00:00:00${offset}`;
+}
+
+async function fetchAttendanceSlices(studentIds: string[], today: string): Promise<AttendanceSlice[]> {
   const validIds = filterValidUuids(studentIds);
   if (!validIds.length) {
     return [];
@@ -51,7 +57,8 @@ async function fetchAttendanceSlices(studentIds: string[]): Promise<AttendanceSl
     .from("bus_attendance_records")
     .select("student_id, trip_id, event_type, scanned_at, voided_at")
     .in("student_id", validIds)
-    .is("voided_at", null);
+    .is("voided_at", null)
+    .gte("scanned_at", getLocalDayStartIso(today));
 
   if (error) {
     throw new Error("No se pudo consultar la asistencia del día.");
@@ -136,7 +143,7 @@ export async function resolveTodayStatusesForStudents(
 
   const fromTable = await fetchStatusesFromTable(validIds, today);
 
-  const records = await fetchAttendanceSlices(validIds);
+  const records = await fetchAttendanceSlices(validIds, today);
 
   const tripIds = [
     ...new Set([

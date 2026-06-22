@@ -1,11 +1,15 @@
 import { useSyncExternalStore } from "react";
 
-import { getActiveTripForCurrentUser } from "@/src/features/trips/services/trips.service";
+import type { OperationalBusContext } from "@/src/features/trips/services/crew.service";
+import { resolveOperatorTripSnapshot } from "@/src/features/trips/services/trips.service";
 import type { Trip } from "@/src/features/trips/types";
 
 interface TripState {
   activeTrip: Trip | null;
+  operationalContext: OperationalBusContext | null | undefined;
   closeSuccessMessage: string | null;
+  isHydrating: boolean;
+  hasHydratedOnce: boolean;
 }
 
 interface TripStoreActions {
@@ -19,9 +23,13 @@ type Listener = () => void;
 
 let state: TripState = {
   activeTrip: null,
+  operationalContext: undefined,
   closeSuccessMessage: null,
+  isHydrating: false,
+  hasHydratedOnce: false,
 };
 
+let hydrateInFlight: Promise<Trip | null> | null = null;
 const listeners = new Set<Listener>();
 
 function subscribe(listener: Listener): () => void {
@@ -38,10 +46,7 @@ function emitChange() {
 }
 
 function setState(patch: Partial<TripState>) {
-  state = {
-    ...state,
-    ...patch,
-  };
+  state = { ...state, ...patch };
   emitChange();
 }
 
@@ -50,9 +55,33 @@ function getSnapshot() {
 }
 
 async function hydrateActiveTrip() {
-  const activeTrip = await getActiveTripForCurrentUser();
-  setState({ activeTrip });
-  return activeTrip;
+  if (hydrateInFlight) {
+    return hydrateInFlight;
+  }
+
+  setState({ isHydrating: true });
+
+  hydrateInFlight = (async () => {
+    try {
+      const { context, activeTrip } = await resolveOperatorTripSnapshot().catch(() => ({
+        context: null,
+        activeTrip: null,
+      }));
+
+      setState({
+        activeTrip,
+        operationalContext: context,
+        hasHydratedOnce: true,
+      });
+
+      return activeTrip;
+    } finally {
+      setState({ isHydrating: false });
+      hydrateInFlight = null;
+    }
+  })();
+
+  return hydrateInFlight;
 }
 
 function setActiveTrip(trip: Trip) {
@@ -60,7 +89,12 @@ function setActiveTrip(trip: Trip) {
 }
 
 function clearActiveTrip() {
-  setState({ activeTrip: null });
+  setState({
+    activeTrip: null,
+    operationalContext: undefined,
+    hasHydratedOnce: false,
+  });
+  hydrateInFlight = null;
 }
 
 function setCloseSuccessMessage(message: string | null) {
@@ -85,7 +119,9 @@ export function useTripStore(): TripState & TripStoreActions {
 
 export const tripStoreActions = {
   getActiveTripId: () => getSnapshot().activeTrip?.id ?? null,
+  getOperationalContext: () => getSnapshot().operationalContext,
   clearActiveTrip,
+  hydrateActiveTrip,
   setCloseSuccessMessage,
   acknowledgeCloseSuccess,
 };

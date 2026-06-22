@@ -9,10 +9,11 @@ type PostLoginRouteState = {
   href: PostLoginHref | null;
 };
 
-const PROFILE_ROUTE_TIMEOUT_MS = 12_000;
+const PROFILE_ROUTE_TIMEOUT_MS = 4_000;
 
 export function usePostLoginRoute(session: Session | null): PostLoginRouteState {
   const sessionUserId = session?.user?.id ?? null;
+  const sessionUser = session?.user ?? null;
   const resolvedUserIdRef = useRef<string | null>(null);
   const [ready, setReady] = useState(!sessionUserId);
   const [href, setHref] = useState<PostLoginHref | null>(null);
@@ -48,12 +49,10 @@ export function usePostLoginRoute(session: Session | null): PostLoginRouteState 
         return;
       }
 
-      void resolvePostLoginHref(sessionUserId)
-        .then(finish)
-        .catch(() => finish(OPS_ROUTES.trip));
+      finish(OPS_ROUTES.trip);
     }, PROFILE_ROUTE_TIMEOUT_MS);
 
-    void resolvePostLoginHref(sessionUserId)
+    void resolvePostLoginHref(sessionUserId, sessionUser)
       .then((nextHref) => {
         clearTimeout(timeoutId);
         finish(nextHref);

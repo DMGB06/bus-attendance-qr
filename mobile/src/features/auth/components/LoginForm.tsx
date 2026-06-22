@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
@@ -42,6 +42,7 @@ export function LoginForm({
   onForgotPassword,
 }: LoginFormProps) {
   const passwordInputRef = useRef<NativeTextInput | null>(null);
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const { colors, tokens } = useAppTheme();
 
   const styles = useMemo(
@@ -160,6 +161,9 @@ export function LoginForm({
                 onChangeText={onChangeEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="email"
+                textContentType="username"
                 returnKeyType="next"
                 onSubmitEditing={() => passwordInputRef.current?.focus()}
                 blurOnSubmit={false}
@@ -173,11 +177,26 @@ export function LoginForm({
                 placeholder="Contraseña"
                 value={password}
                 onChangeText={onChangePassword}
-                secureTextEntry
+                secureTextEntry={!isPasswordVisible}
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="password"
+                textContentType="password"
                 returnKeyType="go"
                 onSubmitEditing={onSubmit}
                 disabled={isSubmitting || isResettingPassword}
                 left={<AppInput.Icon icon="lock-outline" color={colors.authIconMuted} />}
+                right={
+                  <AppInput.Icon
+                    icon={isPasswordVisible ? 'eye-off-outline' : 'eye-outline'}
+                    color={colors.authIconMuted}
+                    forceTextInputFocus={false}
+                    onPress={() => setIsPasswordVisible((visible) => !visible)}
+                    accessibilityLabel={
+                      isPasswordVisible ? 'Ocultar contraseña' : 'Mostrar contraseña'
+                    }
+                  />
+                }
               />
             </View>
 

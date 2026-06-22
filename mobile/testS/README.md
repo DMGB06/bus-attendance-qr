@@ -34,7 +34,25 @@ npm test
 | `chofer.sync-and-roster.test.ts` | Pendiente sync, anular, volver a marcar en colegio |
 | `padre.status.test.ts` | Estado padre mañana vs tarde, viajes duplicados |
 | `auth.roles.test.ts` | Permisos chofer / asistenta / padre |
+| `notification-templates.test.ts` | Event keys y textos de push |
 | `CHECKLIST-MANUAL.md` | Pasos en teléfono + Supabase (no automatizable) |
+
+## Verificación push en Supabase (en vivo)
+
+```bash
+cd mobile
+npm run test:push
+```
+
+Agrega en `mobile/.env` (local, no commitear):
+
+```env
+SUPABASE_SERVICE_ROLE_KEY=...secret key del proyecto...
+PUSH_VERIFY_GUARDIAN_ID=6403f4d2-3271-4ecd-a8cb-2e1979f4415f
+PUSH_VERIFY_STUDENT_ID=0179cb41-80c5-410c-abcb-3b80b9c70d76
+```
+
+Genera **`testS/PUSH-VERIFY-LAST-RUN.md`** con ✅/❌ por: tablas, Edge Function, vínculo padre, token y `notification_log`.
 
 ## Lo que Jest **no** prueba
 

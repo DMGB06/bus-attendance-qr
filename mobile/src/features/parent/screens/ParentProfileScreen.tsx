@@ -120,7 +120,7 @@ export default function ParentProfileScreen() {
     [colors, tokens],
   );
 
-  if (profileState.loading) {
+  if (profileState.loading && !profileState.profile) {
     return (
       <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>
         <View style={styles.loadingContainer}>

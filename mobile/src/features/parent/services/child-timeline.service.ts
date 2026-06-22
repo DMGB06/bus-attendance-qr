@@ -1,5 +1,6 @@
 import { supabase } from "@/src/core/config/supabase";
 import { getTodayDateIso } from "@/src/features/parent/utils/date";
+import { APP_TIME_ZONE } from "@/src/shared/utils/local-date";
 import { filterValidUuids, isUuid } from "@/src/shared/utils/uuid";
 import type { ChildTimelineEvent } from "@/src/features/parent/types";
 import type { Trip } from "@/src/features/trips/types";
@@ -14,6 +15,11 @@ type AttendanceRecordSlice = {
 };
 
 type TripSlice = Pick<Trip, "id" | "direction" | "turn_type" | "trip_date" | "status">;
+
+function getLocalDayStartIso(today: string): string {
+  const offset = APP_TIME_ZONE === "America/Lima" ? "-05:00" : "Z";
+  return `${today}T00:00:00${offset}`;
+}
 
 function isTripRelevantToday(trip: TripSlice, today: string): boolean {
   return trip.trip_date === today || trip.status === "active";
@@ -81,6 +87,7 @@ export async function getChildTimelineToday(studentId: string): Promise<ChildTim
     .select("id, student_id, event_type, scanned_at, trip_id, voided_at")
     .eq("student_id", studentId)
     .is("voided_at", null)
+    .gte("scanned_at", getLocalDayStartIso(today))
     .order("scanned_at", { ascending: true });
 
   if (recordsError) {
@@ -116,6 +123,7 @@ export async function getChildrenTimelinesToday(
     .select("id, student_id, event_type, scanned_at, trip_id, voided_at")
     .in("student_id", validIds)
     .is("voided_at", null)
+    .gte("scanned_at", getLocalDayStartIso(today))
     .order("scanned_at", { ascending: true });
 
   if (recordsError) {

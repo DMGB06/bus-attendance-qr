@@ -1,3 +1,4 @@
+import type { User } from "@supabase/supabase-js";
 import { OPS_ROUTES, PARENT_ROUTES, type PostLoginHref } from "@/src/core/routes";
 import { isOpsRole, isParentRole } from "@/src/features/auth/domain/permissions";
 import { getGuardianLinksForUser } from "@/src/features/parent/services/guardians.service";
@@ -8,8 +9,11 @@ import { getProfileById } from "@/src/features/profile/services/profile.service"
  * Operadores (chofer/asistenta/coordinador) siempre van a ops aunque tengan vínculos apoderado.
  * Padres explícitos o sin rol pero con vínculos van a la vista de padre.
  */
-export async function resolvePostLoginHref(userId: string): Promise<PostLoginHref> {
-  const profile = await getProfileById(userId).catch(() => null);
+export async function resolvePostLoginHref(
+  userId: string,
+  user?: User | null,
+): Promise<PostLoginHref> {
+  const profile = await getProfileById(userId, user).catch(() => null);
   const role = profile?.app_role ?? null;
 
   if (isParentRole(role)) {

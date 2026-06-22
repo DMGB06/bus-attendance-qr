@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import type { Session } from '@supabase/supabase-js';
 import { Redirect, Stack, useSegments } from 'expo-router';
@@ -6,12 +7,15 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import { Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
 import { supabase } from '@/src/core/config/supabase';
+import { GUEST_CYCLE_KEY, useBootSplash } from '@/src/core/boot/useBootSplash';
+import { fadeScreenOptions } from '@/src/core/navigation/screenTransitions';
 import { AUTH_ROUTES } from '@/src/core/routes';
 import { getSession } from '@/src/features/auth/services/auth.service';
 import { usePostLoginRoute } from '@/src/features/auth/hooks/usePostLoginRoute';
-import { useTripStore } from '@/src/features/trips/store/tripStore';
+import { tripStoreActions } from '@/src/features/trips/store/tripStore';
 import { AppThemeProvider } from '@/src/core/theme/ThemeProvider';
 import { AppLoadingScreen } from '@/src/shared/ui/AppLoadingScreen';
+import { BootSplashOverlay } from '@/src/shared/ui/BootSplashOverlay';
 import { perfMarkBootReady } from '@/src/shared/utils/perfMark';
 import { PushRegistrationSync } from '@/src/features/notifications/components/PushRegistrationSync';
 
@@ -26,31 +30,53 @@ export default function RootLayout() {
     Inter_700Bold,
   });
   const segments = useSegments();
-  const { hydrateActiveTrip, clearActiveTrip } = useTripStore();
   const [session, setSession] = useState<Session | null>(null);
   const [isBootLoading, setIsBootLoading] = useState(true);
   const skipNextSessionHydrateRef = useRef(false);
+  const guestSplashDoneRef = useRef(false);
+  const splashHiddenRef = useRef(false);
   const { ready: routeReady, href: postLoginHref } = usePostLoginRoute(session);
+
+  const fontsReady = fontsLoaded || Boolean(fontsError);
+  const waitingForRoute = Boolean(session) && !routeReady && !postLoginHref;
+  const bootWorkReady = fontsReady && !isBootLoading && !waitingForRoute;
+  const splashCycleKey = session?.user?.id ?? GUEST_CYCLE_KEY;
+  const splashActive = !guestSplashDoneRef.current || Boolean(session);
+
+  const handleSplashHidden = useCallback(() => {
+    if (!session) {
+      guestSplashDoneRef.current = true;
+    }
+  }, [session]);
+
+  const { visible: splashVisible, opacity: splashOpacity } = useBootSplash({
+    cycleKey: splashCycleKey,
+    workReady: bootWorkReady,
+    active: splashActive,
+    onHidden: handleSplashHidden,
+  });
 
   useEffect(() => {
     let isMounted = true;
 
-    void Promise.all([
-      getSession().catch(() => null),
-      hydrateActiveTrip().catch(() => null),
-    ]).then(([activeSession]) => {
-      if (!isMounted) {
-        return;
-      }
+    void getSession()
+      .catch(() => null)
+      .then(async (activeSession) => {
+        if (!isMounted) {
+          return;
+        }
 
-      setSession(activeSession ?? null);
-      if (!activeSession) {
-        clearActiveTrip();
-      } else {
-        skipNextSessionHydrateRef.current = true;
-      }
-      setIsBootLoading(false);
-    });
+        setSession(activeSession ?? null);
+
+        if (!activeSession) {
+          tripStoreActions.clearActiveTrip();
+        } else {
+          skipNextSessionHydrateRef.current = true;
+          await tripStoreActions.hydrateActiveTrip().catch(() => null);
+        }
+
+        setIsBootLoading(false);
+      });
 
     const {
       data: { subscription },
@@ -65,7 +91,7 @@ export default function RootLayout() {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [hydrateActiveTrip, clearActiveTrip]);
+  }, []);
 
   useEffect(() => {
     if (isBootLoading) {
@@ -73,7 +99,7 @@ export default function RootLayout() {
     }
 
     if (!session) {
-      clearActiveTrip();
+      tripStoreActions.clearActiveTrip();
       return;
     }
 
@@ -82,30 +108,32 @@ export default function RootLayout() {
       return;
     }
 
-    void hydrateActiveTrip().catch(() => {
-      clearActiveTrip();
+    void tripStoreActions.hydrateActiveTrip().catch(() => {
+      tripStoreActions.clearActiveTrip();
     });
-  }, [session, isBootLoading, hydrateActiveTrip, clearActiveTrip]);
+  }, [session, isBootLoading]);
 
   useEffect(() => {
-    if (fontsLoaded && !isBootLoading) {
-      perfMarkBootReady(bootStartedAt);
-      void SplashScreen.hideAsync();
+    if (!fontsReady || splashHiddenRef.current) {
+      return;
     }
-  }, [fontsLoaded, isBootLoading]);
 
-  if (fontsError) {
-    return <AppLoadingScreen />;
-  }
+    splashHiddenRef.current = true;
+    void SplashScreen.hideAsync();
+  }, [fontsReady]);
+
+  useEffect(() => {
+    if (bootWorkReady && !splashVisible) {
+      perfMarkBootReady(bootStartedAt);
+    }
+  }, [bootWorkReady, splashVisible]);
 
   const rootSegment = segments[0];
   const inAuthGroup = rootSegment === '(auth)';
   const inOpsGroup = rootSegment === '(ops)';
   const inParentGroup = rootSegment === '(parent)';
-  const waitingForRoute = Boolean(session) && !routeReady && !postLoginHref;
-  const showBootLoader = !fontsLoaded || isBootLoading || waitingForRoute;
 
-  if (showBootLoader) {
+  if (!fontsReady) {
     return (
       <SafeAreaProvider>
         <AppThemeProvider>
@@ -115,43 +143,46 @@ export default function RootLayout() {
     );
   }
 
-  if (!session && !inAuthGroup) {
-    return <Redirect href={AUTH_ROUTES.login} />;
-  }
+  const roleRedirectHref =
+    session && postLoginHref && !inAuthGroup
+      ? (() => {
+          const wantsParent = postLoginHref.startsWith('/(parent)');
+          const wantsOps = postLoginHref.startsWith('/(ops)');
 
-  if (session && postLoginHref && inAuthGroup) {
-    return (
-      <SafeAreaProvider>
-        <AppThemeProvider>
-          <Redirect href={postLoginHref} />
-        </AppThemeProvider>
-      </SafeAreaProvider>
-    );
-  }
+          if (wantsParent && inOpsGroup) {
+            return postLoginHref;
+          }
 
-  if (session && postLoginHref && !inAuthGroup) {
-    const wantsParent = postLoginHref.startsWith('/(parent)');
-    const wantsOps = postLoginHref.startsWith('/(ops)');
+          if (wantsOps && inParentGroup) {
+            return postLoginHref;
+          }
 
-    if (wantsParent && inOpsGroup) {
-      return <Redirect href={postLoginHref} />;
-    }
-
-    if (wantsOps && inParentGroup) {
-      return <Redirect href={postLoginHref} />;
-    }
-  }
+          return null;
+        })()
+      : null;
 
   return (
     <SafeAreaProvider>
       <AppThemeProvider>
-        <PushRegistrationSync session={session} postLoginHref={postLoginHref} />
-        <Stack screenOptions={{ headerShown: false, contentStyle: { flex: 1 } }}>
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(ops)" />
-          <Stack.Screen name="(parent)" />
-        </Stack>
+        <View style={styles.root}>
+          {!session && !inAuthGroup ? <Redirect href={AUTH_ROUTES.login} /> : null}
+          {session && postLoginHref && inAuthGroup ? <Redirect href={postLoginHref} /> : null}
+          {roleRedirectHref ? <Redirect href={roleRedirectHref} /> : null}
+          <PushRegistrationSync session={session} postLoginHref={postLoginHref} />
+          <Stack screenOptions={fadeScreenOptions}>
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(ops)" />
+            <Stack.Screen name="(parent)" />
+          </Stack>
+          <BootSplashOverlay visible={splashVisible} opacity={splashOpacity} />
+        </View>
       </AppThemeProvider>
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+});

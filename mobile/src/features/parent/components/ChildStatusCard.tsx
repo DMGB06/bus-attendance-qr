@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { memo, useCallback, useMemo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -17,7 +17,8 @@ import { formatTurnTypeLabel } from "@/src/features/trips/domain/trip-labels";
 
 type ChildStatusCardProps = {
   item: ParentChildSummary;
-  onPress: () => void;
+  studentId: string;
+  onOpenChild: (studentId: string) => void;
 };
 
 function formatNivelLabel(nivel: NivelEducativo | null | undefined): string | null {
@@ -79,7 +80,14 @@ function statusStripTheme(
   }
 }
 
-export function ChildStatusCard({ item, onPress }: ChildStatusCardProps) {
+export const ChildStatusCard = memo(function ChildStatusCard({
+  item,
+  studentId,
+  onOpenChild,
+}: ChildStatusCardProps) {
+  const handlePress = useCallback(() => {
+    onOpenChild(studentId);
+  }, [onOpenChild, studentId]);
   const { colors, tokens } = useAppTheme();
   const latestTimelineEvent = item.todayTimeline.at(-1) ?? null;
   const presentation = latestTimelineEvent
@@ -249,7 +257,7 @@ export function ChildStatusCard({ item, onPress }: ChildStatusCardProps) {
 
   return (
     <Pressable
-      onPress={onPress}
+      onPress={handlePress}
       style={({ pressed }) => [styles.card, pressed ? { opacity: 0.94 } : null]}
       accessibilityRole="button"
       accessibilityLabel={`Ver estado de ${item.student.nombre_alumno}`}
@@ -332,4 +340,4 @@ export function ChildStatusCard({ item, onPress }: ChildStatusCardProps) {
       ) : null}
     </Pressable>
   );
-}
+});

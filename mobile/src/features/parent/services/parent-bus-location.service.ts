@@ -1,5 +1,6 @@
 import { hasValidCoordinates } from "@/src/features/trips/domain/location-labels";
 import { getParentChildrenWithStatus } from "@/src/features/parent/services/parent-children.service";
+import type { ParentChildSummary } from "@/src/features/parent/types";
 import type { ParentBusLocation } from "@/src/features/parent/types/bus-location";
 
 export type ParentBusLocationSnapshot = {
@@ -9,10 +10,9 @@ export type ParentBusLocationSnapshot = {
   activeTripIds: string[];
 };
 
-export async function getParentBusLocationSnapshot(
-  userId: string,
-): Promise<ParentBusLocationSnapshot> {
-  const children = await getParentChildrenWithStatus(userId);
+export function buildBusLocationSnapshotFromChildren(
+  children: ParentChildSummary[],
+): ParentBusLocationSnapshot {
   const activeChildren = children.filter((child) => child.activeTrip?.status === "active");
   const locationMap = new Map<string, ParentBusLocation>();
 
@@ -50,4 +50,11 @@ export async function getParentBusLocationSnapshot(
     waitingForGps: activeChildren.length > 0 && locations.length === 0,
     activeTripIds,
   };
+}
+
+export async function getParentBusLocationSnapshot(
+  userId: string,
+): Promise<ParentBusLocationSnapshot> {
+  const children = await getParentChildrenWithStatus(userId);
+  return buildBusLocationSnapshotFromChildren(children);
 }

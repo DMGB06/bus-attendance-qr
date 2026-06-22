@@ -1,285 +1,165 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-
-
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { supabase } from "@/src/core/config/supabase";
-
 import { shouldPollParentBusLocations } from "@/src/features/parent/domain/parent-location-sync.rules";
-
+import { buildBusLocationSnapshotFromChildren } from "@/src/features/parent/services/parent-bus-location.service";
+import { fetchActiveTripGpsByIds } from "@/src/features/parent/services/parent-trip-gps.service";
+import {
+  parentChildrenStore,
+  useParentChildrenStore,
+} from "@/src/features/parent/store/parentChildrenStore";
 import { getUser } from "@/src/features/auth/services/auth.service";
-
 import { useAppForeground } from "@/src/shared/hooks/useAppForeground";
 import { PARENT_LOCATION_POLL_INTERVAL_MS } from "@/src/features/trips/domain/location.constants";
-
-import { getParentBusLocationSnapshot } from "@/src/features/parent/services/parent-bus-location.service";
-
 import type { ParentBusLocation } from "@/src/features/parent/types/bus-location";
 
-
-
 type ParentBusLocationsState = {
-
   locations: ParentBusLocation[];
-
   loading: boolean;
-
   refreshing: boolean;
-
   error: string | null;
-
   hasActiveTrip: boolean;
-
   waitingForGps: boolean;
-
   refresh: () => Promise<void>;
-
 };
 
-
-
 export function useParentBusLocations(): ParentBusLocationsState {
-
-  const [locations, setLocations] = useState<ParentBusLocation[]>([]);
-
-  const [loading, setLoading] = useState(true);
-
-  const [refreshing, setRefreshing] = useState(false);
-
+  const store = useParentChildrenStore();
   const [error, setError] = useState<string | null>(null);
-
-  const [hasActiveTrip, setHasActiveTrip] = useState(false);
-
-  const [waitingForGps, setWaitingForGps] = useState(false);
-
-  const [activeTripIds, setActiveTripIds] = useState<string[]>([]);
-
   const [realtimeStatus, setRealtimeStatus] = useState<string | null>(null);
-
   const mountedRef = useRef(true);
-
+  const userIdRef = useRef<string | null>(null);
   const isForeground = useAppForeground();
 
-  const loadLocations = useCallback(async (options?: { silent?: boolean }) => {
-    const silent = options?.silent ?? false;
+  const snapshot = useMemo(
+    () => buildBusLocationSnapshotFromChildren(store.children),
+    [store.children],
+  );
 
-
-
-    if (!silent) {
-
-      setLoading(true);
-
+  const ensureChildrenLoaded = useCallback(async (options?: { silent?: boolean; force?: boolean }) => {
+    const user = userIdRef.current ?? (await getUser())?.id ?? null;
+    if (!user) {
+      throw new Error("Debes iniciar sesión.");
     }
 
-
-
-    try {
-
-      const user = await getUser();
-
-
-
-      if (!user) {
-
-        throw new Error("Debes iniciar sesión.");
-
-      }
-
-
-
-      const snapshot = await getParentBusLocationSnapshot(user.id);
-
-
-
-      if (mountedRef.current) {
-
-        setLocations(snapshot.locations);
-
-        setHasActiveTrip(snapshot.hasActiveTrip);
-
-        setWaitingForGps(snapshot.waitingForGps);
-
-        setActiveTripIds(snapshot.activeTripIds);
-
-        setError(null);
-
-      }
-
-    } catch (loadError) {
-
-      if (mountedRef.current) {
-
-        setError(loadError instanceof Error ? loadError.message : "Error al cargar el mapa.");
-
-      }
-
-    } finally {
-
-      if (mountedRef.current) {
-
-        setLoading(false);
-
-        setRefreshing(false);
-
-      }
-
-    }
-
+    userIdRef.current = user;
+    await parentChildrenStore.fetchChildren(user, {
+      silent: options?.silent ?? false,
+      force: options?.force ?? false,
+    });
   }, []);
 
+  const refreshTripGps = useCallback(async () => {
+    if (!snapshot.activeTripIds.length) {
+      return;
+    }
 
+    try {
+      const trips = await fetchActiveTripGpsByIds(snapshot.activeTripIds);
+      parentChildrenStore.patchActiveTrips(trips);
+      if (mountedRef.current) {
+        setError(null);
+      }
+    } catch (loadError) {
+      if (mountedRef.current) {
+        setError(loadError instanceof Error ? loadError.message : "Error al actualizar el mapa.");
+      }
+    }
+  }, [snapshot.activeTripIds]);
 
   const refresh = useCallback(async () => {
-
-    setRefreshing(true);
-
-    await loadLocations({ silent: true });
-
-  }, [loadLocations]);
-
-
+    try {
+      await ensureChildrenLoaded({ silent: true, force: true });
+      await refreshTripGps();
+    } catch (loadError) {
+      if (mountedRef.current) {
+        setError(loadError instanceof Error ? loadError.message : "Error al cargar el mapa.");
+      }
+    }
+  }, [ensureChildrenLoaded, refreshTripGps]);
 
   useEffect(() => {
-
     mountedRef.current = true;
 
-    void loadLocations();
-
-
+    void (async () => {
+      try {
+        await ensureChildrenLoaded();
+      } catch (loadError) {
+        if (mountedRef.current) {
+          setError(loadError instanceof Error ? loadError.message : "Error al cargar el mapa.");
+        }
+      }
+    })();
 
     return () => {
-
       mountedRef.current = false;
-
     };
-
-  }, [loadLocations]);
-
-
+  }, [ensureChildrenLoaded]);
 
   const shouldPoll = shouldPollParentBusLocations(realtimeStatus, isForeground);
-
-
+  const tripIdsKey = snapshot.activeTripIds.join(",");
 
   useEffect(() => {
-
     if (!shouldPoll) {
-
       return;
-
     }
-
-
 
     const intervalId = setInterval(() => {
+      if (snapshot.activeTripIds.length) {
+        void refreshTripGps();
+        return;
+      }
 
-      void loadLocations({ silent: true });
-
+      void ensureChildrenLoaded({ silent: true, force: true });
     }, PARENT_LOCATION_POLL_INTERVAL_MS);
 
-
-
     return () => {
-
       clearInterval(intervalId);
-
     };
-
-  }, [loadLocations, shouldPoll, isForeground]);
-
-
-
-  const tripIdsKey = activeTripIds.join(",");
-
-
+  }, [shouldPoll, isForeground, snapshot.activeTripIds.length, refreshTripGps, ensureChildrenLoaded]);
 
   useEffect(() => {
-
-    if (!activeTripIds.length) {
-
+    if (!snapshot.activeTripIds.length) {
       setRealtimeStatus(null);
-
       return;
-
     }
-
-
 
     const channel = supabase.channel(`parent-bus-locations-${tripIdsKey}`);
 
-
-
-    for (const tripId of activeTripIds) {
-
+    for (const tripId of snapshot.activeTripIds) {
       channel.on(
-
         "postgres_changes",
-
         {
-
           event: "UPDATE",
-
           schema: "buscontrol",
-
           table: "bus_trips",
-
           filter: `id=eq.${tripId}`,
-
         },
-
         () => {
-
-          void loadLocations({ silent: true });
-
+          void refreshTripGps();
         },
-
       );
-
     }
 
-
-
     channel.subscribe((status) => {
-
       if (mountedRef.current) {
-
         setRealtimeStatus(status);
-
       }
-
     });
 
-
-
     return () => {
-
       setRealtimeStatus(null);
-
       void supabase.removeChannel(channel);
-
     };
-
-  }, [tripIdsKey, loadLocations, activeTripIds]);
-
-
+  }, [tripIdsKey, snapshot.activeTripIds, refreshTripGps]);
 
   return {
-
-    locations,
-
-    loading,
-
-    refreshing,
-
-    error,
-
-    hasActiveTrip,
-
-    waitingForGps,
-
+    locations: snapshot.locations,
+    loading: store.loading && store.children.length === 0,
+    refreshing: store.refreshing,
+    error: error ?? store.error,
+    hasActiveTrip: snapshot.hasActiveTrip,
+    waitingForGps: snapshot.waitingForGps,
     refresh,
-
   };
-
 }
-
-

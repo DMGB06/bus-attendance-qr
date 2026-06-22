@@ -1,5 +1,6 @@
 import { Stack } from 'expo-router';
 
+import { fadeScreenOptions } from '@/src/core/navigation/screenTransitions';
 import { useAppTheme } from '@/src/core/theme/ThemeProvider';
 
 export default function AuthLayout() {
@@ -8,7 +9,7 @@ export default function AuthLayout() {
   return (
     <Stack
       screenOptions={{
-        headerShown: false,
+        ...fadeScreenOptions,
         contentStyle: { flex: 1, backgroundColor: colors.screenSolid },
       }}
     >

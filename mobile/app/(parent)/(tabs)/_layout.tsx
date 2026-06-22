@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AUTH_ROUTES } from "@/src/core/routes";
 import { logout } from "@/src/features/auth/services/auth.service";
+import { ParentChildrenSync } from "@/src/features/parent/components/ParentChildrenSync";
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
 import { AppParentHeaderBar } from "@/src/shared/ui/AppParentHeaderBar";
 
@@ -61,7 +62,9 @@ export default function ParentTabsLayout() {
   );
 
   return (
-    <Tabs initialRouteName="home" screenOptions={screenOptions}>
+    <>
+      <ParentChildrenSync />
+      <Tabs initialRouteName="home" screenOptions={screenOptions}>
       <Tabs.Screen
         name="home"
         options={{
@@ -81,6 +84,7 @@ export default function ParentTabsLayout() {
         options={{
           title: "Ubicación",
           tabBarLabel: "Mapa",
+          lazy: true,
           tabBarIcon: ({ color, focused }) => (
             <MaterialCommunityIcons
               name={focused ? "map" : "map-outline"}
@@ -95,6 +99,7 @@ export default function ParentTabsLayout() {
         options={{
           title: "Perfil",
           tabBarLabel: "Perfil",
+          lazy: true,
           tabBarIcon: ({ color, focused }) => (
             <MaterialCommunityIcons
               name={focused ? "account-circle" : "account-circle-outline"}
@@ -105,5 +110,6 @@ export default function ParentTabsLayout() {
         }}
       />
     </Tabs>
+    </>
   );
 }

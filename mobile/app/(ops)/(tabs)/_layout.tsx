@@ -7,6 +7,7 @@ import { AUTH_ROUTES } from "@/src/core/routes";
 import { useAppCapabilities } from "@/src/features/auth/hooks/useAppCapabilities";
 import { logout } from "@/src/features/auth/services/auth.service";
 import { TripLocationPublisherSync } from "@/src/features/trips/components/TripLocationPublisherSync";
+import { OpsTripHydrationSync } from "@/src/features/trips/components/OpsTripHydrationSync";
 import { useActiveTripRoster } from "@/src/features/trips/hooks/useActiveTripRoster";
 import { useAttendanceQueueSync } from "@/src/features/trips/hooks/useAttendanceQueueSync";
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
@@ -76,6 +77,7 @@ export default function TabsLayout() {
 
   return (
     <Fragment>
+      <OpsTripHydrationSync />
       <ActiveTripRosterSync />
       <TripLocationPublisherSync />
       <Tabs initialRouteName="trip" screenOptions={screenOptions}>
@@ -125,13 +127,14 @@ export default function TabsLayout() {
             ),
           }}
         />
-        <Tabs.Screen
-          name="profile"
-          options={{
-            href: null,
-            title: "Perfil",
-          }}
-        />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          lazy: true,
+          href: null,
+          title: "Perfil",
+        }}
+      />
         <Tabs.Screen
           name="close-trip"
           options={{

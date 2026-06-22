@@ -57,11 +57,15 @@ export async function getParentChildrenWithStatus(userId: string): Promise<Paren
 
   const displayStudentIds = [...new Set(pairs.map((pair) => pair.student.id))];
   const today = getTodayDateIso();
-  const statuses = await resolveTodayStatusesForStudents(displayStudentIds, today);
+
+  const [statuses, timelines] = await Promise.all([
+    resolveTodayStatusesForStudents(displayStudentIds, today),
+    getChildrenTimelinesToday(displayStudentIds),
+  ]);
+
   const statusByStudent = new Map(statuses.map((status) => [status.student_id, status]));
   const trips = await fetchTripsForStatuses(statuses);
   const tripMap = new Map(trips.map((trip) => [trip.id, trip]));
-  const timelines = await getChildrenTimelinesToday(displayStudentIds);
 
   return pairs.map((pair) =>
     buildChildSummary(

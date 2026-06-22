@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { forwardRef, useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import { TextInput, type TextInputProps } from 'react-native-paper';
 
@@ -10,7 +10,10 @@ type AppInputProps = TextInputProps & {
   variant?: AppInputVariant;
 };
 
-const BaseAppInput = ({ variant = 'default', style, theme, ...props }: AppInputProps) => {
+const BaseAppInput = forwardRef<typeof TextInput, AppInputProps>(function BaseAppInput(
+  { variant = 'default', style, theme, ...props },
+  ref,
+) {
   const { colors, tokens } = useAppTheme();
   const isAuth = variant === 'auth';
 
@@ -27,6 +30,7 @@ const BaseAppInput = ({ variant = 'default', style, theme, ...props }: AppInputP
 
   return (
     <TextInput
+      ref={ref}
       mode="outlined"
       autoCapitalize="none"
       style={[isAuth ? styles.authInput : undefined, style]}
@@ -38,7 +42,7 @@ const BaseAppInput = ({ variant = 'default', style, theme, ...props }: AppInputP
       {...props}
     />
   );
-};
+});
 
 type AppInputComponent = typeof BaseAppInput & {
   Icon: typeof TextInput.Icon;
