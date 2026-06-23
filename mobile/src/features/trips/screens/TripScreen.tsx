@@ -154,7 +154,7 @@ export default function TripScreen() {
     if (activeTrip) {
       setOptimisticTrip(null);
     }
-  }, [activeTrip?.id]);
+  }, [activeTrip]);
 
   useEffect(() => {
     if (visibleTrip) {

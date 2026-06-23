@@ -2,9 +2,8 @@ import { useEffect, useRef } from "react";
 
 import { supabase } from "@/src/core/config/supabase";
 import { useAppCapabilities } from "@/src/features/auth/hooks/useAppCapabilities";
-import { getOperationalContext } from "@/src/features/trips/services/trips.service";
 import { rosterStoreActions } from "@/src/features/trips/store/rosterStore";
-import { useTripStore } from "@/src/features/trips/store/tripStore";
+import { tripStoreActions, useTripStore } from "@/src/features/trips/store/tripStore";
 import { useAppForeground } from "@/src/shared/hooks/useAppForeground";
 
 const ASSISTANT_POLL_MS = 10_000;
@@ -14,7 +13,7 @@ const ASSISTANT_POLL_MS = 10_000;
  * Realtime de asistencia + polling para asistenta sin viaje activo local.
  */
 export function useActiveTripRoster(): void {
-  const { activeTrip, hydrateActiveTrip } = useTripStore();
+  const { activeTrip, operationalContext, hydrateActiveTrip } = useTripStore();
   const { capabilities } = useAppCapabilities();
   const isForeground = useAppForeground();
   const tripId = activeTrip?.id;
@@ -55,27 +54,39 @@ export function useActiveTripRoster(): void {
     let cancelled = false;
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
-    void getOperationalContext().then((context) => {
-      if (cancelled || !context?.busId) {
+    const subscribeToBusTrips = (busId: string) => {
+      if (cancelled) {
         return;
       }
 
       channel = supabase
-        .channel(`assistant-bus-trips-${context.busId}`)
+        .channel(`assistant-bus-trips-${busId}`)
         .on(
           "postgres_changes",
           {
             event: "*",
             schema: "buscontrol",
             table: "bus_trips",
-            filter: `bus_id=eq.${context.busId}`,
+            filter: `bus_id=eq.${busId}`,
           },
           () => {
             void hydrateActiveTrip();
           },
         )
         .subscribe();
-    });
+    };
+
+    const cachedBusId = operationalContext?.busId ?? tripStoreActions.getOperationalContext()?.busId;
+    if (cachedBusId) {
+      subscribeToBusTrips(cachedBusId);
+    } else {
+      void hydrateActiveTrip().then(() => {
+        const busId = tripStoreActions.getOperationalContext()?.busId;
+        if (busId) {
+          subscribeToBusTrips(busId);
+        }
+      });
+    }
 
     return () => {
       cancelled = true;
@@ -83,7 +94,7 @@ export function useActiveTripRoster(): void {
         void supabase.removeChannel(channel);
       }
     };
-  }, [capabilities.isAssistant, activeTrip, hydrateActiveTrip]);
+  }, [capabilities.isAssistant, activeTrip, hydrateActiveTrip, operationalContext?.busId]);
 
   useEffect(() => {
     if (!capabilities.isAssistant || !activeTrip || !isForeground) {
