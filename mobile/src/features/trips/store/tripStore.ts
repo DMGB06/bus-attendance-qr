@@ -15,6 +15,8 @@ interface TripState {
 interface TripStoreActions {
   setActiveTrip: (trip: Trip) => void;
   clearActiveTrip: () => void;
+  /** Tras cerrar viaje: quita el activo pero conserva bus/contexto para mostrar "Iniciar viaje". */
+  releaseActiveTripAfterClose: () => void;
   hydrateActiveTrip: () => Promise<Trip | null>;
   acknowledgeCloseSuccess: () => void;
 }
@@ -97,6 +99,11 @@ function clearActiveTrip() {
   hydrateInFlight = null;
 }
 
+function releaseActiveTripAfterClose() {
+  setState({ activeTrip: null });
+  hydrateInFlight = null;
+}
+
 function setCloseSuccessMessage(message: string | null) {
   setState({ closeSuccessMessage: message });
 }
@@ -112,6 +119,7 @@ export function useTripStore(): TripState & TripStoreActions {
     ...snapshot,
     setActiveTrip,
     clearActiveTrip,
+    releaseActiveTripAfterClose,
     hydrateActiveTrip,
     acknowledgeCloseSuccess,
   };
@@ -120,7 +128,9 @@ export function useTripStore(): TripState & TripStoreActions {
 export const tripStoreActions = {
   getActiveTripId: () => getSnapshot().activeTrip?.id ?? null,
   getOperationalContext: () => getSnapshot().operationalContext,
+  hasHydratedOnce: () => getSnapshot().hasHydratedOnce,
   clearActiveTrip,
+  releaseActiveTripAfterClose,
   hydrateActiveTrip,
   setCloseSuccessMessage,
   acknowledgeCloseSuccess,

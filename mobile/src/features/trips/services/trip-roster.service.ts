@@ -1,4 +1,5 @@
 import { supabase, supabasePublic } from "@/src/core/config/supabase";
+import { STUDENT_PADRON_SELECT } from "@/src/features/trips/domain/padron-query.constants";
 import { perfAsync } from "@/src/shared/utils/perfMark";
 import {
   markManualAttendance,
@@ -21,9 +22,8 @@ export async function getTripRosterRaw(tripId: string): Promise<{
     const [studentsResult, attendanceResult] = await Promise.all([
       supabasePublic
         .from("social_bus_escolar")
-        .select(
-          "id, nombre_alumno, dni_alumno, edad, sexo, colegio, nivel_educativo, nombre_apoderado, telefono_apoderado, dni_apoderado, direccion, usuario_registro, created_at, codigo, foto_url, activo, notas",
-        )
+        .select(STUDENT_PADRON_SELECT)
+        .eq("activo", true)
         .order("nombre_alumno"),
       supabase
         .from("bus_attendance_records")

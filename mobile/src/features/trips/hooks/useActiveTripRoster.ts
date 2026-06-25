@@ -123,7 +123,6 @@ export function useActiveTripRoster(): void {
           void rosterStoreActions.refreshTripRoster(tripId, {
             silent: true,
             skipQueueFlush: true,
-            force: true,
           });
         },
       )
@@ -139,7 +138,6 @@ export function useActiveTripRoster(): void {
           void rosterStoreActions.refreshTripRoster(tripId, {
             silent: true,
             skipQueueFlush: true,
-            force: true,
           });
         },
       )

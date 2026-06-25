@@ -24,7 +24,13 @@ export async function getGuardianPadronStudents(
     return matched.length > 0 ? matched : rows;
   }
 
-  const scopedResult = await supabasePublic.from("social_bus_escolar").select("*");
+  const scopedResult =
+    validIds.length > 0
+      ? await supabasePublic
+          .from("social_bus_escolar")
+          .select("*")
+          .in("id", validIds)
+      : await supabasePublic.from("social_bus_escolar").select("*").eq("activo", true).limit(0);
   if (!scopedResult.error && scopedResult.data?.length) {
     const rows = scopedResult.data as Student[];
     if (!validIds.length) {

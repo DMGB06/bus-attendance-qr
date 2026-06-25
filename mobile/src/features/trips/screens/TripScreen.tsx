@@ -32,7 +32,7 @@ import type { DailyChecklistContext } from '@/src/features/trips/domain/trip-dai
 import { useTripDashboard } from '@/src/features/trips/hooks/useTripDashboard';
 import { createTripScreenStyles } from '@/src/features/trips/screens/tripScreen.styles';
 import { startTrip } from '@/src/features/trips/services/trips.service';
-import { useRosterItems } from '@/src/features/trips/store/rosterStore';
+import { rosterStoreActions, useRosterItems } from '@/src/features/trips/store/rosterStore';
 import { useTripStore } from '@/src/features/trips/store/tripStore';
 import { requestRosterView } from '@/src/features/trips/utils/roster-navigation';
 import { getErrorMessage } from '@/src/shared/utils/errors';
@@ -53,6 +53,7 @@ export default function TripScreen() {
     isHydrating,
     hasHydratedOnce,
     setActiveTrip,
+    hydrateActiveTrip,
     closeSuccessMessage,
     acknowledgeCloseSuccess,
   } = useTripStore();
@@ -144,11 +145,17 @@ export default function TripScreen() {
     if (!closeSuccessMessage) {
       return;
     }
-
     void refreshCompletedTurns();
     const timer = setTimeout(() => acknowledgeCloseSuccess(), 6000);
     return () => clearTimeout(timer);
   }, [acknowledgeCloseSuccess, closeSuccessMessage, refreshCompletedTurns]);
+
+  useEffect(() => {
+    if (visibleTrip || isHydrating || capabilitiesLoading || hasHydratedOnce) {
+      return;
+    }
+    void hydrateActiveTrip();
+  }, [visibleTrip, isHydrating, capabilitiesLoading, hasHydratedOnce, hydrateActiveTrip]);
 
   useEffect(() => {
     if (activeTrip) {
@@ -194,6 +201,7 @@ export default function TripScreen() {
       const trip = await startTrip(getSelectedTurnType());
       setOptimisticTrip(trip);
       setActiveTrip(trip);
+      void rosterStoreActions.hydrateTripRoster(trip.id);
     } catch (error: unknown) {
       setOptimisticTrip(null);
       setErrorMessage(getErrorMessage(error, 'No se pudo iniciar el viaje.'));

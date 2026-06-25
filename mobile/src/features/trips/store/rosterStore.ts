@@ -106,7 +106,7 @@ function scheduleDebouncedRealtimeRefresh(
     void refreshTripRoster(tripId, {
       silent: true,
       skipQueueFlush: options?.skipQueueFlush,
-      force: true,
+      force: false,
       immediate: true,
     });
   }, REALTIME_REFRESH_DEBOUNCE_MS);

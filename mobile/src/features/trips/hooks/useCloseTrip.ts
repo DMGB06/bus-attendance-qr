@@ -36,7 +36,7 @@ const EMPTY_VALIDATION: CloseTripValidationResult = {
 
 export function useCloseTrip() {
   const router = useRouter();
-  const { activeTrip, clearActiveTrip, setActiveTrip } = useTripStore();
+  const { activeTrip, releaseActiveTripAfterClose, setActiveTrip } = useTripStore();
   const rosterItems = useRosterItems(activeTrip?.id);
   const hadRosterItemsRef = useRef(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -99,10 +99,11 @@ export function useCloseTrip() {
       rosterStoreActions.clearRosterStore();
       await cleanupTripAfterClose(tripId);
       tripStoreActions.setCloseSuccessMessage(getTripClosedSuccessMessage(direction));
-      clearActiveTrip();
+      releaseActiveTripAfterClose();
+      await tripStoreActions.hydrateActiveTrip().catch(() => null);
       router.replace(OPS_ROUTES.trip);
     },
-    [clearActiveTrip, router],
+    [releaseActiveTripAfterClose, router],
   );
 
   const handleCloseTrip = useCallback(async () => {

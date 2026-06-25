@@ -98,7 +98,11 @@ export async function resolvePendingDropoffStudents(
 
 /** Solo envía la cola offline — sin recargar el padrón completo. */
 export async function flushPendingAttendanceForClose(tripId: string): Promise<void> {
-  await flushAttendanceQueue(tripId);
+  try {
+    await withTimeout(flushAttendanceQueue(tripId), QUEUE_FLUSH_TIMEOUT_MS, 0);
+  } catch {
+    /* Si la red falla, se puede cerrar igual tras confirmación. */
+  }
 }
 
 export async function cleanupTripAfterClose(tripId: string): Promise<void> {

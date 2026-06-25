@@ -1,4 +1,5 @@
 import { supabasePublic } from "@/src/core/config/supabase";
+import { STUDENT_PADRON_SELECT } from "@/src/features/trips/domain/padron-query.constants";
 import { escapeIlikePattern, sanitizeIlikeSearchTerm } from "@/src/shared/utils/ilike";
 import { perfAsync } from "@/src/shared/utils/perfMark";
 import { filterValidUuids, isUuid } from "@/src/shared/utils/uuid";
@@ -126,7 +127,8 @@ export async function searchStudentsByName(
   const escapedName = escapeIlikePattern(normalizedName);
   const { data, error } = await supabasePublic
     .from("social_bus_escolar")
-    .select("*")
+    .select(STUDENT_PADRON_SELECT)
+    .eq("activo", true)
     .ilike("nombre_alumno", `%${escapedName}%`)
     .order("nombre_alumno", { ascending: true })
     .limit(limit);
