@@ -1,7 +1,9 @@
-import { Fragment, useCallback, useMemo } from "react";
+import { Fragment, useCallback, useMemo, useEffect } from "react";
 import { Tabs, useRouter } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+// 1. IMPORTAMOS PLATFORM DESDE REACT-NATIVE
+import { Platform } from "react-native";
 
 import { AUTH_ROUTES } from "@/src/core/routes";
 import { useAppCapabilities } from "@/src/features/auth/hooks/useAppCapabilities";
@@ -53,20 +55,27 @@ export default function TabsLayout() {
       tabBarHideOnKeyboard: true,
       tabBarActiveTintColor: colors.tabBarActive,
       tabBarInactiveTintColor: colors.tabBarInactive,
+      
+      // 1. Dejamos el alto de la barra con un espacio extra en web, sin paddingBottom agresivo
       tabBarStyle: {
         position: "absolute" as const,
         backgroundColor: colors.tabBarBg,
         borderTopWidth: 1,
         borderTopColor: colors.tabBarBorder,
-        height: tokens.layout.tabBarBaseHeight + insets.bottom,
+        height: Platform.OS === 'web' 
+          ? tokens.layout.tabBarBaseHeight + 20 // 20px extra de altura en Web
+          : tokens.layout.tabBarBaseHeight + insets.bottom,
         paddingTop: tokens.spacing.xs,
         paddingBottom: insets.bottom,
         elevation: 0,
         shadowOpacity: 0,
       },
       tabBarLabelStyle: tabLabelStyle,
+      
+      // 2. EMPUJAMOS LOS ITEMS (ICONO + TEXTO) HACIA ARRIBA DESDE SU PROPIO ESTILO
       tabBarItemStyle: {
         paddingVertical: tokens.spacing.xs,
+        marginBottom: Platform.OS === 'web' ? 12 : 0, // Esto eleva los iconos y nombres en la Web
       },
     }),
     [colors, insets.bottom, renderHeader, tabLabelStyle, tokens],

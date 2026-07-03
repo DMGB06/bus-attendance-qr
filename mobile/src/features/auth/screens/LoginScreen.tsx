@@ -4,6 +4,11 @@ import { hasSupabaseConfig } from '@/src/core/config/supabase';
 import { LoginForm } from '@/src/features/auth/components/LoginForm';
 import { getErrorMessage } from '@/src/shared/utils/errors';
 
+import PwaInstallBanner from '../../../../components/PwaInstallBanner';
+
+// DEFINIMOS EL DOMINIO POR DEFECTO PARA AUTOCOMPLETAR
+const DEFAULT_DOMAIN = '@mdca.test'; // Cambia esto al dominio que uses en Supabase
+
 function getFriendlyLoginError(error: unknown) {
   const normalizedMessage = getErrorMessage(error, '').toLowerCase();
 
@@ -12,11 +17,11 @@ function getFriendlyLoginError(error: unknown) {
   }
 
   if (normalizedMessage.includes('invalid login credentials')) {
-    return 'Credenciales incorrectas. Verifica tu correo y contraseña.';
+    return 'Credenciales incorrectas. Verifica tu usuario y contraseña.';
   }
 
   if (normalizedMessage.includes('email not confirmed')) {
-    return 'Tu correo aún no está confirmado.';
+    return 'Tu usuario aún no está confirmado.';
   }
 
   return 'No se pudo iniciar sesión. Intenta nuevamente.';
@@ -30,7 +35,7 @@ function getFriendlyResetError(error: unknown) {
   }
 
   if (normalizedMessage.includes('email not confirmed')) {
-    return 'Tu correo aún no está confirmado.';
+    return 'Tu usuario aún no está confirmado.';
   }
 
   return 'No se pudo enviar el enlace de recuperación.';
@@ -44,8 +49,9 @@ export default function LoginScreen() {
   const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   const handleLogin = useCallback(async () => {
-    if (!email.trim() || !password.trim()) {
-      setErrorMessage('Ingresa correo y contraseña.');
+    const rawInput = email.trim();
+    if (!rawInput || !password.trim()) {
+      setErrorMessage('Ingresa usuario y contraseña.');
       return;
     }
 
@@ -54,10 +60,13 @@ export default function LoginScreen() {
       return;
     }
 
+    // Si el usuario no ingresó un '@', le concatenamos el dominio automáticamente
+    const finalEmail = rawInput.includes('@') ? rawInput : `${rawInput}${DEFAULT_DOMAIN}`;
+
     setIsSubmitting(true);
     setErrorMessage(null);
     try {
-      await login(email.trim(), password);
+      await login(finalEmail, password); // Enviamos el correo autocompletado a Supabase
     } catch (error: unknown) {
       setErrorMessage(getFriendlyLoginError(error));
     } finally {
@@ -66,10 +75,10 @@ export default function LoginScreen() {
   }, [email, password]);
 
   const handleForgotPassword = useCallback(async () => {
-    const normalizedEmail = email.trim();
+    const rawInput = email.trim();
 
-    if (!normalizedEmail) {
-      setErrorMessage('Ingresa tu correo para recuperar tu contraseña.');
+    if (!rawInput) {
+      setErrorMessage('Ingresa tu usuario para recuperar tu contraseña.');
       return;
     }
 
@@ -78,10 +87,13 @@ export default function LoginScreen() {
       return;
     }
 
+    // También autocompletamos el dominio para la recuperación de contraseña
+    const finalEmail = rawInput.includes('@') ? rawInput : `${rawInput}${DEFAULT_DOMAIN}`;
+
     setIsResettingPassword(true);
     setErrorMessage(null);
     try {
-      await requestPasswordReset(normalizedEmail);
+      await requestPasswordReset(finalEmail);
       setErrorMessage('Revisa tu correo para restablecer la contraseña.');
     } catch (error: unknown) {
       setErrorMessage(getFriendlyResetError(error));
@@ -109,17 +121,20 @@ export default function LoginScreen() {
   }, [handleForgotPassword]);
 
   return (
-    <LoginForm
-      email={email}
-      password={password}
-      errorMessage={errorMessage}
-      isSubmitting={isSubmitting}
-      isResettingPassword={isResettingPassword}
-      hasSupabaseConfig={hasSupabaseConfig}
-      onChangeEmail={handleChangeEmail}
-      onChangePassword={handleChangePassword}
-      onSubmit={handleSubmit}
-      onForgotPassword={handleForgotPasswordPress}
-    />
+    <>
+      <PwaInstallBanner />
+      <LoginForm
+        email={email}
+        password={password}
+        errorMessage={errorMessage}
+        isSubmitting={isSubmitting}
+        isResettingPassword={isResettingPassword}
+        hasSupabaseConfig={hasSupabaseConfig}
+        onChangeEmail={handleChangeEmail}
+        onChangePassword={handleChangePassword}
+        onSubmit={handleSubmit}
+        onForgotPassword={handleForgotPasswordPress}
+      />
+    </>
   );
 }

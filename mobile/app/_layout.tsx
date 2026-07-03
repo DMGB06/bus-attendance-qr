@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 import { StyleSheet, View } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import type { Session } from '@supabase/supabase-js';
@@ -24,6 +25,15 @@ void SplashScreen.preventAutoHideAsync();
 const bootStartedAt = performance.now();
 
 export default function RootLayout() {
+  useEffect(() => {
+    if (Platform.OS === 'web' && 'serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+          .then(reg => console.log('Service Worker registrado con éxito:', reg))
+          .catch(err => console.log('Error al registrar el Service Worker:', err));
+      });
+    }
+  }, []);
   const [fontsLoaded, fontsError] = useFonts({
     Inter_400Regular,
     Inter_600SemiBold,
