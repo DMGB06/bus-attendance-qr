@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useMemo, useEffect } from "react";
+import { Fragment, useCallback, useMemo } from "react";
 import { Tabs, useRouter } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

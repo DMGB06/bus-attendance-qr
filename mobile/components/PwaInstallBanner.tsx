@@ -79,7 +79,7 @@ export default function PwaInstallBanner() {
             <Text style={styles.instruction}>
               Presiona el botón de compartir{' '}
               <Text style={styles.boldText}>Compartir 📤</Text> (abajo en Safari) y selecciona{' '}
-              <Text style={styles.boldText}>"Agregar a inicio"</Text>.
+              <Text style={styles.boldText}>Agregar a inicio</Text>.
             </Text>
           </>
         ) : (
