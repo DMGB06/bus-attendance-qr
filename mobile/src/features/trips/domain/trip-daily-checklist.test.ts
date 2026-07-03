@@ -19,7 +19,13 @@ describe("buildDailyChecklist", () => {
   it("muestra pasos de mañana sin viaje activo", () => {
     const steps = buildDailyChecklist(baseContext({ setupPeriod: "mañana" }));
     expect(steps[0]?.status).toBe("current");
-    expect(steps[0]?.label).toMatch(/Iniciar viaje de mañana/);
+    expect(steps[0]?.label).toMatch(/In the morning|mañana/i);
+  });
+
+  it("tarde en piloto flexible no exige mañana cerrada", () => {
+    const steps = buildDailyChecklist(baseContext({ setupPeriod: "tarde" }));
+    expect(steps.find((step) => step.id === "prep_morning")).toBeUndefined();
+    expect(steps[0]?.label).toMatch(/tarde/i);
   });
 
   it("marca cerrar viaje en recojo cuando ya no hay pendientes ni a bordo", () => {

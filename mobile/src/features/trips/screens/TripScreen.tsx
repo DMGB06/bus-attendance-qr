@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Button, HelperText, Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -21,8 +21,7 @@ import {
 import {
   getDefaultAfternoonTurn,
   getDefaultTripPeriod,
-  getTurnStartBlockedMessage,
-  isTurnCompletedToday,
+  getTurnStartSuggestion,
 } from '@/src/features/trips/domain/trip-start.rules';
 import { useMorningRiderSummary } from '@/src/features/trips/hooks/useMorningRiderSummary';
 import { useTodayCompletedTurns } from '@/src/features/trips/hooks/useTodayCompletedTurns';
@@ -75,12 +74,8 @@ export default function TripScreen() {
   const { completedTurns, refresh: refreshCompletedTurns } = useTodayCompletedTurns(
     !visibleTrip ? operationalContext?.busId : null,
   );
-  const morningCompletedToday = isTurnCompletedToday(completedTurns, 'mañana');
   const selectedTurnType = period === 'mañana' ? 'mañana' : afternoonTurn;
-  const selectedTurnBlocked = isTurnCompletedToday(completedTurns, selectedTurnType);
-  const selectedTurnBlockedMessage = selectedTurnBlocked
-    ? getTurnStartBlockedMessage(selectedTurnType)
-    : null;
+  const turnSuggestion = getTurnStartSuggestion(completedTurns, selectedTurnType);
   const dashboardStatLabels = useMemo(
     () => getTripDashboardStatLabels(visibleTrip?.direction ?? 'recojo'),
     [visibleTrip?.direction],
@@ -141,14 +136,22 @@ export default function TripScreen() {
     </Button>
   ) : null;
 
+  useFocusEffect(
+    useCallback(() => {
+      if (!visibleTrip) {
+        void Promise.all([hydrateActiveTrip(), refreshCompletedTurns()]);
+      }
+    }, [visibleTrip, hydrateActiveTrip, refreshCompletedTurns]),
+  );
+
   useEffect(() => {
     if (!closeSuccessMessage) {
       return;
     }
-    void refreshCompletedTurns();
+    void Promise.all([hydrateActiveTrip(), refreshCompletedTurns()]);
     const timer = setTimeout(() => acknowledgeCloseSuccess(), 6000);
     return () => clearTimeout(timer);
-  }, [acknowledgeCloseSuccess, closeSuccessMessage, refreshCompletedTurns]);
+  }, [acknowledgeCloseSuccess, closeSuccessMessage, hydrateActiveTrip, refreshCompletedTurns]);
 
   useEffect(() => {
     if (visibleTrip || isHydrating || capabilitiesLoading || hasHydratedOnce) {
@@ -164,12 +167,7 @@ export default function TripScreen() {
   }, [activeTrip]);
 
   useEffect(() => {
-    if (visibleTrip) {
-      appliedIdleDefaultsKeyRef.current = '';
-      return;
-    }
-
-    if (isStartingTrip || optimisticTrip || completedTurns.length === 0) {
+    if (visibleTrip || isStartingTrip || optimisticTrip || completedTurns.length === 0) {
       return;
     }
 
@@ -183,15 +181,16 @@ export default function TripScreen() {
     setAfternoonTurn(getDefaultAfternoonTurn(completedTurns));
   }, [visibleTrip, completedTurns, isStartingTrip, optimisticTrip]);
 
+  function formatStartTripError(error: unknown): string {
+    const message = getErrorMessage(error, 'No se pudo iniciar el viaje.');
+    if (message.includes('P0001') || /Ya registraste|Ya completaste/i.test(message)) {
+      return 'No se pudo iniciar: Supabase aún tiene reglas estrictas de un tramo por día. Ejecuta el script start_trip flexible (coordinación).';
+    }
+    return message;
+  }
+
   async function handleStartTrip() {
     if (visibleTrip || !capabilities.canStartTrip) return;
-
-    if (selectedTurnBlocked) {
-      setErrorMessage(
-        selectedTurnBlockedMessage ?? getTurnStartBlockedMessage(getSelectedTurnType()),
-      );
-      return;
-    }
 
     setIsStartingTrip(true);
     setErrorMessage(null);
@@ -204,7 +203,7 @@ export default function TripScreen() {
       void rosterStoreActions.hydrateTripRoster(trip.id);
     } catch (error: unknown) {
       setOptimisticTrip(null);
-      setErrorMessage(getErrorMessage(error, 'No se pudo iniciar el viaje.'));
+      setErrorMessage(formatStartTripError(error));
     } finally {
       setIsStartingTrip(false);
     }
@@ -424,17 +423,11 @@ export default function TripScreen() {
               <Text style={styles.sectionLabel}>Turno</Text>
               <View style={styles.selectorContainer}>
                 <Pressable
-                  disabled={morningCompletedToday}
                   style={[
                     styles.selectorButton,
                     period === 'mañana' && styles.selectorButtonActive,
-                    morningCompletedToday && styles.selectorButtonDisabled,
                   ]}
-                  onPress={() => {
-                    if (!morningCompletedToday) {
-                      setPeriod('mañana');
-                    }
-                  }}
+                  onPress={() => setPeriod('mañana')}
                 >
                   <MaterialCommunityIcons
                     name="weather-sunny"
@@ -481,21 +474,14 @@ export default function TripScreen() {
                   <View style={styles.afternoonList}>
                     {AFTERNOON_TURN_OPTIONS.map((option) => {
                       const isActive = afternoonTurn === option.id;
-                      const isCompleted = isTurnCompletedToday(completedTurns, option.id);
                       return (
                         <Pressable
                           key={option.id}
-                          disabled={isCompleted}
                           style={[
                             styles.afternoonOption,
                             isActive && styles.afternoonOptionActive,
-                            isCompleted && styles.afternoonOptionDisabled,
                           ]}
-                          onPress={() => {
-                            if (!isCompleted) {
-                              setAfternoonTurn(option.id);
-                            }
-                          }}
+                          onPress={() => setAfternoonTurn(option.id)}
                         >
                           <MaterialCommunityIcons
                             name={isActive ? 'radiobox-marked' : 'radiobox-blank'}
@@ -525,9 +511,9 @@ export default function TripScreen() {
                 </>
               )}
 
-              {selectedTurnBlockedMessage ? (
+              {turnSuggestion ? (
                 <HelperText type="info" visible style={styles.errorText}>
-                  {selectedTurnBlockedMessage}
+                  {turnSuggestion}
                 </HelperText>
               ) : null}
 
@@ -545,7 +531,7 @@ export default function TripScreen() {
                   icon="play"
                   onPress={handleStartTrip}
                   loading={isStartingTrip}
-                  disabled={isStartingTrip || selectedTurnBlocked}
+                  disabled={isStartingTrip}
                   style={styles.startButton}
                   contentStyle={styles.startButtonContent}
                   labelStyle={styles.startButtonLabel}

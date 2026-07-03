@@ -1,8 +1,9 @@
 import {
   getDefaultAfternoonTurn,
   getDefaultTripPeriod,
-  getTurnStartBlockedMessage,
+  getTurnStartSuggestion,
   isTurnCompletedToday,
+  shouldBlockTurnStart,
 } from "@/src/features/trips/domain/trip-start.rules";
 
 describe("trip-start.rules", () => {
@@ -22,7 +23,9 @@ describe("trip-start.rules", () => {
     expect(getDefaultAfternoonTurn(["tarde_primaria", "tarde_secundaria"])).toBe("tarde_unica");
   });
 
-  it("mensaje de bloqueo para mañana duplicada", () => {
-    expect(getTurnStartBlockedMessage("mañana")).toMatch(/tarde/);
+  it("muestra sugerencia informativa sin bloquear", () => {
+    expect(getTurnStartSuggestion(["mañana"], "mañana")).toMatch(/tarde/i);
+    expect(getTurnStartSuggestion([], "tarde_primaria")).toMatch(/habitual/i);
+    expect(shouldBlockTurnStart(["mañana"], "mañana")).toBe(false);
   });
 });

@@ -139,14 +139,6 @@ function buildIdleChecklist(setupPeriod: "mañana" | "tarde"): DailyChecklistSte
   }
 
   return [
-    withStatus(
-      {
-        id: "prep_morning",
-        label: "Mañana cerrada correctamente",
-        hint: "Si no, el banner amarillo no saldrá bien.",
-      },
-      "done",
-    ),
     withStatus({ id: "start", label: "Iniciar viaje de tarde" }, "current"),
     withStatus(
       { id: "morning_priority", label: "Atender banner amarillo si aparece" },

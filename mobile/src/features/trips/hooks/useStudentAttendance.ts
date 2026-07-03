@@ -10,6 +10,7 @@ import {
 import { findStudentInStudentList } from "@/src/features/trips/services/students-cache.service";
 import {
   findStudentByLookup,
+  refreshStudentGuardianFromPadron,
   searchStudentsByName,
 } from "@/src/features/trips/services/students.service";
 import { loadCachedStudents } from "@/src/features/trips/storage/roster-cache.storage";
@@ -208,6 +209,11 @@ export function useStudentAttendance(
         if (localMatch) {
           void notifyScanSuccess();
           selectStudent(localMatch);
+          void refreshStudentGuardianFromPadron(localMatch).then((enriched) => {
+            if (studentRef.current?.id === enriched.id) {
+              setStudent(enriched);
+            }
+          });
           return;
         }
 
@@ -357,6 +363,11 @@ export function useStudentAttendance(
 
         if (candidates.length === 1) {
           selectStudent(candidates[0]);
+          void refreshStudentGuardianFromPadron(candidates[0]).then((enriched) => {
+            if (studentRef.current?.id === enriched.id) {
+              setStudent(enriched);
+            }
+          });
           return;
         }
 

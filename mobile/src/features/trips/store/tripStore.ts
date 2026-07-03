@@ -61,7 +61,10 @@ async function hydrateActiveTrip() {
     return hydrateInFlight;
   }
 
-  setState({ isHydrating: true });
+  const isFirstHydrate = !getSnapshot().hasHydratedOnce;
+  if (isFirstHydrate) {
+    setState({ isHydrating: true });
+  }
 
   hydrateInFlight = (async () => {
     try {

@@ -298,6 +298,25 @@ export function createTripScreenStyles(
       color: colors.attendanceCompleted,
       flex: 1,
     },
+    dayCompleteBanner: {
+      backgroundColor: 'rgba(47, 133, 90, 0.08)',
+      borderRadius: tokens.radius.lg,
+      padding: tokens.spacing.md,
+      borderWidth: 1,
+      borderColor: colors.attendanceCompleted,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: tokens.spacing.sm,
+      marginBottom: tokens.spacing.sm,
+    },
+    dayCompleteText: {
+      ...tokens.typography.body,
+      color: colors.attendanceCompleted,
+      flex: 1,
+    },
+    refreshDayButton: {
+      borderRadius: tokens.radius.md,
+    },
     startingShell: {
       flex: 1,
       alignItems: 'center',

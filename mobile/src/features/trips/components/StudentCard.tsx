@@ -12,13 +12,13 @@ interface StudentCardProps {
 }
 
 function formatValue(value: string | null | undefined) {
-  return value?.trim() ? value : "No registrado";
+  return value?.trim() ? value : "Sin dato en padrón";
 }
 
 const INFO_ROWS = [
   { key: "colegio", icon: "school-outline", label: "Colegio", field: "colegio" as const },
   { key: "apoderado", icon: "account-heart-outline", label: "Apoderado", field: "nombre_apoderado" as const },
-  { key: "telefono", icon: "phone-outline", label: "Teléfono", field: "telefono_apoderado" as const },
+  { key: "telefono", icon: "phone-outline", label: "Tel. apoderado", field: "telefono_apoderado" as const },
   { key: "direccion", icon: "map-marker-outline", label: "Dirección", field: "direccion" as const },
 ] as const;
 
