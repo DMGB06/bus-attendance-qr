@@ -7,7 +7,6 @@ export default function ParentLayout() {
     <Stack screenOptions={fadeScreenOptions}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="child/[id]" />
-      <Stack.Screen name="index" />
     </Stack>
   );
 }

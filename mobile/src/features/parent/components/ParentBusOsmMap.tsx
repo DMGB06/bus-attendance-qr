@@ -89,6 +89,7 @@ export function ParentBusOsmMap({ locations, selectedTripId }: ParentBusOsmMapPr
           style={styles.map}
           originWhitelist={["*"]}
           source={{ html: mapHtml }}
+          onShouldStartLoadWithRequest={(request) => request.url === "about:blank"}
           scrollEnabled={false}
           setSupportMultipleWindows={false}
           javaScriptEnabled

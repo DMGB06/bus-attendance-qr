@@ -6,6 +6,13 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 defaults:
   run:
     working-directory: mobile
@@ -20,7 +27,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "20.19.4"
           cache: npm
           cache-dependency-path: mobile/package-lock.json
 
@@ -35,3 +42,9 @@ jobs:
 
       - name: Test
         run: npm test
+
+      - name: Expo dependencies
+        run: npx expo install --check
+
+      - name: Web build
+        run: npm run build

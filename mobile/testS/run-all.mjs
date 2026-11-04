@@ -37,6 +37,8 @@ const lines = [
   ``,
 ];
 
+fs.rmSync(jsonPath, { force: true });
+
 const lint = run("npm", ["run", "lint"]);
 lines.push(
   section(

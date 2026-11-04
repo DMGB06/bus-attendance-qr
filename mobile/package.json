@@ -3,10 +3,9 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
-     "build": "expo export --platform web",
-    "start": "expo start --dev-client --lan --clear",
-    "start:lan": "expo start --dev-client --lan --clear",
-    "start:tunnel": "expo start --dev-client --tunnel --clear",
+    "build": "expo export --platform web",
+    "start": "expo start --dev-client --lan",
+    "start:tunnel": "expo start --dev-client --tunnel",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo start --android",
     "ios": "expo start --ios",
@@ -30,7 +29,7 @@
     "@react-navigation/elements": "^2.6.3",
     "@react-navigation/native": "^7.1.8",
     "@supabase/supabase-js": "^2.104.1",
-    "expo": "~54.0.35",
+    "expo": "~54.0.37",
     "expo-camera": "~17.0.10",
     "expo-constants": "~18.0.13",
     "expo-dev-client": "~6.0.21",
@@ -70,5 +69,8 @@
     "ts-jest": "^29.4.11",
     "typescript": "~5.9.2"
   },
-  "private": true
+  "private": true,
+  "engines": {
+    "node": ">=20.19.4"
+  }
 }

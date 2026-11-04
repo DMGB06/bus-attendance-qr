@@ -1,66 +1,71 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+
+import {
+  clearDeferredInstallPrompt,
+  getDeferredInstallPrompt,
+} from '@/components/pwa-install-prompt';
+
+function isAppleMobile(): boolean {
+  const { userAgent, platform, maxTouchPoints } = window.navigator;
+  // iPadOS se anuncia como Mac: solo se distingue por la pantalla tactil.
+  return /iPad|iPhone|iPod/.test(userAgent) || (platform === 'MacIntel' && maxTouchPoints > 1);
+}
 
 export default function PwaInstallBanner() {
   const [showBanner, setShowBanner] = useState(false);
   const [platformType, setPlatformType] = useState<'ios' | 'android' | null>(null);
-  const deferredPromptRef = useRef<any>(null);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
 
-    const isStandalone = 
-      window.matchMedia('(display-mode: standalone)').matches || 
-      (window.navigator as any).standalone === true;
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as { standalone?: boolean }).standalone === true;
 
     if (isStandalone) return;
 
-    const isDismissed = sessionStorage.getItem('pwa-banner-dismissed') === 'true';
-    if (isDismissed) return;
+    if (sessionStorage.getItem('pwa-banner-dismissed') === 'true') return;
 
-    const userAgent = window.navigator.userAgent || '';
-    const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream;
-
+    const isIOS = isAppleMobile();
     if (isIOS) {
       setPlatformType('ios');
       setShowBanner(true);
+      return;
     }
 
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      deferredPromptRef.current = e;
-
-      if (!isIOS) {
-        setPlatformType('android');
-        setShowBanner(true);
-      }
+    const showInstallButton = () => {
+      setPlatformType('android');
+      setShowBanner(true);
     };
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    if (getDeferredInstallPrompt()) {
+      showInstallButton();
+    }
+
+    window.addEventListener('beforeinstallprompt', showInstallButton);
 
     const handleAppInstalled = () => {
       setShowBanner(false);
-      deferredPromptRef.current = null;
+      clearDeferredInstallPrompt();
     };
     window.addEventListener('appinstalled', handleAppInstalled);
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('beforeinstallprompt', showInstallButton);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
 
   const handleInstallAndroid = async () => {
-    const promptEvent = deferredPromptRef.current;
+    const promptEvent = getDeferredInstallPrompt();
     if (!promptEvent) return;
 
-    promptEvent.prompt();
-
-    const { outcome } = await promptEvent.userChoice;
-    if (outcome === 'accepted') {
-      setShowBanner(false);
-    }
-    deferredPromptRef.current = null;
+    await promptEvent.prompt();
+    await promptEvent.userChoice;
+    // El evento solo sirve una vez: el boton ya no podria hacer nada.
+    clearDeferredInstallPrompt();
+    setShowBanner(false);
   };
 
   const handleDismiss = () => {
@@ -94,11 +99,21 @@ export default function PwaInstallBanner() {
 
       <View style={styles.actionsContainer}>
         {platformType === 'android' && (
-          <TouchableOpacity style={styles.installButton} onPress={handleInstallAndroid}>
+          <TouchableOpacity
+            style={styles.installButton}
+            onPress={handleInstallAndroid}
+            accessibilityRole="button"
+            accessibilityLabel="Instalar CerroBus"
+          >
             <Text style={styles.installButtonText}>Instalar</Text>
           </TouchableOpacity>
         )}
-        <TouchableOpacity style={styles.closeButton} onPress={handleDismiss}>
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={handleDismiss}
+          accessibilityRole="button"
+          accessibilityLabel="Cerrar aviso de instalación"
+        >
           <Text style={styles.closeButtonText}>✕</Text>
         </TouchableOpacity>
       </View>
@@ -154,7 +169,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   closeButton: {
-    padding: 6,
+    padding: 10,
   },
   closeButtonText: {
     color: '#FFFFFF',

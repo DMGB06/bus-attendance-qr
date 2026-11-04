@@ -1,3 +1,4 @@
+import '@/components/pwa-install-prompt';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
