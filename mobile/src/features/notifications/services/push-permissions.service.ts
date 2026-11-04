@@ -159,3 +159,46 @@ export async function getExpoPushToken(): Promise<string | null> {
 export function getPushPlatformLabel(): string {
   return Platform.OS;
 }
+
+/** Revisa el permiso sin mostrar el dialogo del sistema. */
+export async function hasPushPermission(): Promise<boolean> {
+  const Notifications = await loadNotificationsModule();
+  if (!Notifications) {
+    return false;
+  }
+
+  const current = await Notifications.getPermissionsAsync();
+  return (
+    current.granted || current.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL
+  );
+}
+
+let lastHandledNotificationId: string | null = null;
+
+/** Avisa al tocar una notificacion, tambien la que abrio la app estando cerrada. */
+export async function subscribeToNotificationTaps(
+  onTap: (data: unknown) => void,
+): Promise<() => void> {
+  const Notifications = await loadNotificationsModule();
+  if (!Notifications || Platform.OS === "web") {
+    return () => undefined;
+  }
+
+  const handle = (response: {
+    notification: { request: { identifier: string; content: { data: unknown } } };
+  }) => {
+    const { identifier, content } = response.notification.request;
+    if (identifier !== lastHandledNotificationId) {
+      lastHandledNotificationId = identifier;
+      onTap(content.data);
+    }
+  };
+
+  const subscription = Notifications.addNotificationResponseReceivedListener(handle);
+  const opening = await Notifications.getLastNotificationResponseAsync();
+  if (opening) {
+    handle(opening);
+  }
+
+  return () => subscription.remove();
+}
