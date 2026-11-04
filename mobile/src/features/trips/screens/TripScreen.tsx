@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Button, HelperText, Text } from 'react-native-paper';
+import { HelperText, Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { OPS_ROUTES } from '@/src/core/routes';
@@ -27,6 +27,8 @@ import { useMorningRiderSummary } from '@/src/features/trips/hooks/useMorningRid
 import { useTodayCompletedTurns } from '@/src/features/trips/hooks/useTodayCompletedTurns';
 import { WaitingForDriverView } from '@/src/features/trips/components/WaitingForDriverView';
 import { TripDailyChecklist } from '@/src/features/trips/components/TripDailyChecklist';
+import { RosterStudentRow } from '@/src/features/trips/components/roster/RosterStudentRow';
+import { getTripPrimaryAction } from '@/src/features/trips/domain/trip-primary-action';
 import type { DailyChecklistContext } from '@/src/features/trips/domain/trip-daily-checklist';
 import { useTripDashboard } from '@/src/features/trips/hooks/useTripDashboard';
 import { createTripScreenStyles } from '@/src/features/trips/screens/tripScreen.styles';
@@ -37,7 +39,10 @@ import { requestRosterView } from '@/src/features/trips/utils/roster-navigation'
 import { getErrorMessage } from '@/src/shared/utils/errors';
 import type { Trip, TurnType } from '@/src/features/trips/types';
 import { useAppTheme } from '@/src/core/theme/ThemeProvider';
+import { AppButton } from '@/src/shared/ui/AppButton';
 import { AppScrollView } from '@/src/shared/ui/AppScrollView';
+import { HeaderStats } from '@/src/shared/ui/HeaderStats';
+import { WaveHeader } from '@/src/shared/ui/WaveHeader';
 import { useCompactScreen } from '@/src/shared/hooks/useCompactScreen';
 import { useScreenPerfMark } from '@/src/shared/hooks/useScreenPerfMark';
 
@@ -124,17 +129,35 @@ export default function TripScreen() {
     visibleTrip && capabilities.canBulkDropoff && dashboard.totalOnboardCount > 0,
   );
 
+  const primaryAction = visibleTrip
+    ? getTripPrimaryAction(
+        {
+          pendingCount: dashboard.stats.pendingCount,
+          onboardCount: dashboard.totalOnboardCount,
+        },
+        capabilities,
+      )
+    : null;
+  const lastOnboard = useMemo(
+    () =>
+      rosterItems
+        .filter((item) => item.status === 'onboard')
+        .sort((left, right) =>
+          (right.attendance?.scanned_at ?? '').localeCompare(left.attendance?.scanned_at ?? ''),
+        )
+        .slice(0, 2),
+    [rosterItems],
+  );
+  const rowTheme = useMemo(() => ({ colors, tokens }), [colors, tokens]);
+
   const historyFooter = capabilities.canViewRoster ? (
-    <Button
-      mode="outlined"
+    <AppButton
+      variant="secondary"
       icon="history"
-      textColor={colors.primary}
       onPress={() => router.push(OPS_ROUTES.activity)}
-      style={styles.historyButton}
-      contentStyle={styles.actionButtonContent}
     >
       Ver historial (7 días)
-    </Button>
+    </AppButton>
   ) : null;
 
   useFocusEffect(
@@ -208,15 +231,16 @@ export default function TripScreen() {
     return period === 'mañana' ? 'mañana' : afternoonTurn;
   }
 
-  const activeTripMeta = visibleTrip?.started_at
-    ? new Date(visibleTrip.started_at).toLocaleString('es-PE', {
-        day: 'numeric',
-        month: 'numeric',
-        year: 'numeric',
+  const activeTripTime = visibleTrip?.started_at
+    ? new Date(visibleTrip.started_at).toLocaleTimeString('es-PE', {
         hour: '2-digit',
         minute: '2-digit',
       })
     : null;
+  const bulkLabel = visibleTrip
+    ? `${visibleTrip.direction === 'recojo' ? 'Dejar todos en colegio' : 'Dejar todos en casa'} (${dashboard.totalOnboardCount})`
+    : '';
+  const bulkIcon = visibleTrip?.direction === 'recojo' ? 'school' : 'home';
 
   if (capabilitiesLoading || (isHydrating && !visibleTrip) || (!hasHydratedOnce && !visibleTrip)) {
     return (
@@ -255,135 +279,122 @@ export default function TripScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
+      <WaveHeader
+        title={visibleTrip ? formatTripTitle(visibleTrip) : 'Iniciar viaje'}
+        subtitle={
+          visibleTrip
+            ? `${getTripSegmentSubtitle(visibleTrip)}${activeTripTime ? ` · Iniciado ${activeTripTime}` : ''}`
+            : operationalContext?.busLabel
+        }
+      >
+        {visibleTrip ? (
+          <HeaderStats
+            items={[
+              { key: 'pending', value: dashboard.stats.pendingCount, label: dashboardStatLabels.pending },
+              { key: 'onboard', value: dashboard.stats.onboardCount, label: dashboardStatLabels.onboard },
+              { key: 'third', value: dashboard.stats.completedCount, label: dashboardStatLabels.third },
+            ]}
+          />
+        ) : null}
+      </WaveHeader>
       {visibleTrip ? (
-        <View style={styles.activeTripShell}>
-          <View style={styles.activeTripFixed}>
-            <View style={styles.pageHeaderCompact}>
-              <Text style={styles.titleCompact}>{formatTripTitle(visibleTrip)}</Text>
-              <Text style={styles.subtitleCompact}>
-                {getTripSegmentSubtitle(visibleTrip)}
-                {activeTripMeta ? ` · Iniciado ${activeTripMeta}` : ''}
-              </Text>
-              {capabilities.canViewRoster ? (
-                <Pressable
-                  style={styles.historyLink}
-                  onPress={() => router.push(OPS_ROUTES.activity)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Ver historial de 7 días"
-                >
-                  <MaterialCommunityIcons name="history" size={16} color={colors.primary} />
-                  <Text style={styles.historyLinkText}>Historial (7 días)</Text>
-                </Pressable>
-              ) : null}
-            </View>
+        <AppScrollView
+          style={styles.scroll}
+          extraBottomInset={tokens.spacing.sm}
+          contentGrow={false}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.activeScrollBody}>
+            {primaryAction === 'scan' ? (
+              <AppButton icon="qrcode-scan" onPress={() => router.push(OPS_ROUTES.scanner)}>
+                Escanear QR
+              </AppButton>
+            ) : null}
+            {primaryAction === 'bulk' ? (
+              <AppButton
+                icon={bulkIcon}
+                loading={dashboard.isBulkDropping}
+                disabled={dashboard.isBulkDropping}
+                onPress={() => void dashboard.handleBulkDropoff()}
+              >
+                {bulkLabel}
+              </AppButton>
+            ) : null}
+            {primaryAction === 'close' ? (
+              <AppButton icon="check-circle-outline" onPress={() => router.push(OPS_ROUTES.closeTrip)}>
+                Cerrar viaje
+              </AppButton>
+            ) : null}
 
-            <View style={styles.activeMainCard}>
-              <View style={styles.statsRow}>
-                <View style={styles.statChip}>
-                  <Text style={styles.statValue}>{dashboard.stats.onboardCount}</Text>
-                  <Text style={styles.statLabel}>{dashboardStatLabels.onboard}</Text>
-                </View>
-                <View style={styles.statChip}>
-                  <Text style={styles.statValue}>{dashboard.stats.pendingCount}</Text>
-                  <Text style={styles.statLabel}>{dashboardStatLabels.pending}</Text>
-                </View>
-                <View style={styles.statChip}>
-                  <Text style={styles.statValue}>{dashboard.stats.completedCount}</Text>
-                  <Text style={styles.statLabel}>{dashboardStatLabels.third}</Text>
-                </View>
+            {dashboard.bulkError ? (
+              <HelperText type="error" visible>
+                {dashboard.bulkError}
+              </HelperText>
+            ) : null}
+
+            {morningRiders.isVisible ? (
+              <MorningRiderReminderBanner
+                count={morningRiders.count}
+                preview={morningRiders.preview}
+                onPress={() => {
+                  requestRosterView('prioritarios');
+                  router.push(OPS_ROUTES.roster);
+                }}
+              />
+            ) : null}
+
+            {lastOnboard.length ? (
+              <View>
+                <Text style={styles.sectionLabel}>Últimos registros</Text>
+                {lastOnboard.map((item) => (
+                  <RosterStudentRow
+                    key={item.student.id}
+                    item={item}
+                    tripDirection={visibleTrip.direction}
+                    theme={rowTheme}
+                  />
+                ))}
               </View>
+            ) : null}
 
-              <View style={styles.primaryActionRow}>
-                {capabilities.canScan ? (
-                  <Button
-                    mode="contained"
-                    icon="qrcode-scan"
-                    buttonColor={colors.primary}
-                    onPress={() => router.push(OPS_ROUTES.scanner)}
-                    style={styles.primaryActionButton}
-                    contentStyle={styles.compactActionContent}
-                    labelStyle={styles.startButtonLabel}
-                  >
-                    Escáner
-                  </Button>
-                ) : null}
+            <TripDailyChecklist context={checklistContext} compact />
 
-                {capabilities.canViewRoster ? (
-                  <Button
-                    mode="outlined"
-                    icon="format-list-bulleted"
-                    textColor={colors.primary}
-                    onPress={() => router.push(OPS_ROUTES.roster)}
-                    style={styles.primaryActionButton}
-                    contentStyle={styles.compactActionContent}
-                  >
-                    Lista
-                  </Button>
-                ) : null}
-              </View>
+            {showBulkDropoff && primaryAction !== 'bulk' ? (
+              <AppButton
+                variant="secondary"
+                icon={bulkIcon}
+                loading={dashboard.isBulkDropping}
+                disabled={dashboard.isBulkDropping}
+                onPress={() => void dashboard.handleBulkDropoff()}
+              >
+                {bulkLabel}
+              </AppButton>
+            ) : null}
 
-              {showBulkDropoff ? (
-                <Button
-                  mode="contained"
-                  buttonColor={colors.primaryPressed}
-                  icon={visibleTrip.direction === 'recojo' ? 'school' : 'home'}
-                  loading={dashboard.isBulkDropping}
-                  disabled={dashboard.isBulkDropping}
-                  onPress={() => void dashboard.handleBulkDropoff()}
-                  style={styles.actionButton}
-                  contentStyle={styles.compactActionContent}
-                  labelStyle={styles.startButtonLabel}
-                >
-                  {visibleTrip.direction === 'recojo'
-                    ? `Dejar todos en colegio (${dashboard.totalOnboardCount})`
-                    : `Dejar todos en casa (${dashboard.totalOnboardCount})`}
-                </Button>
-              ) : null}
+            {capabilities.canCloseTrip && primaryAction !== 'close' ? (
+              <AppButton
+                variant="secondary"
+                icon="check-circle-outline"
+                onPress={() => router.push(OPS_ROUTES.closeTrip)}
+              >
+                Cerrar viaje
+              </AppButton>
+            ) : null}
 
-              {dashboard.bulkError ? (
-                <HelperText type="error" visible>
-                  {dashboard.bulkError}
-                </HelperText>
-              ) : null}
-            </View>
+            {capabilities.canViewRoster ? (
+              <Pressable
+                style={styles.historyLink}
+                onPress={() => router.push(OPS_ROUTES.activity)}
+                accessibilityRole="button"
+                accessibilityLabel="Ver historial de 7 días"
+              >
+                <MaterialCommunityIcons name="history" size={18} color={colors.textLink} />
+                <Text style={styles.historyLinkText}>Historial (7 días)</Text>
+              </Pressable>
+            ) : null}
           </View>
-
-          <AppScrollView
-            style={styles.scroll}
-            extraBottomInset={tokens.spacing.sm}
-            contentGrow={false}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.activeScrollBody}>
-              <TripDailyChecklist context={checklistContext} compact />
-
-              {morningRiders.isVisible ? (
-                <MorningRiderReminderBanner
-                  count={morningRiders.count}
-                  preview={morningRiders.preview}
-                  onPress={() => {
-                    requestRosterView('prioritarios');
-                    router.push(OPS_ROUTES.roster);
-                  }}
-                />
-              ) : null}
-
-              {capabilities.canCloseTrip ? (
-                <Button
-                  mode="outlined"
-                  icon="check-circle-outline"
-                  textColor={colors.tripActionOutlineText}
-                  onPress={() => router.push(OPS_ROUTES.closeTrip)}
-                  style={styles.closeTripButton}
-                  contentStyle={styles.compactActionContent}
-                >
-                  Cerrar viaje
-                </Button>
-              ) : null}
-            </View>
-          </AppScrollView>
-        </View>
+        </AppScrollView>
       ) : isStartingTrip ? (
         <View style={styles.startingShell}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -403,16 +414,11 @@ export default function TripScreen() {
                 <MaterialCommunityIcons
                   name="check-circle-outline"
                   size={20}
-                  color={colors.attendanceCompleted}
+                  color={colors.statusCompletedText}
                 />
                 <Text style={styles.closeSuccessText}>{closeSuccessMessage}</Text>
               </View>
             ) : null}
-
-            <View style={styles.pageHeader}>
-              <Text style={styles.title}>Iniciar viaje</Text>
-              <Text style={styles.subtitle}>Elige el tramo del día para comenzar.</Text>
-            </View>
 
             <View style={styles.mainCard}>
               <Text style={styles.sectionLabel}>Turno</Text>
@@ -463,11 +469,7 @@ export default function TripScreen() {
                 </Pressable>
               </View>
 
-              {period === 'mañana' ? (
-                <Text style={styles.morningHint}>
-                  Recojo matutino: casas y paradas hacia el colegio.
-                </Text>
-              ) : (
+              {period === 'tarde' ? (
                 <>
                   <Text style={styles.sectionLabel}>Tramo tarde</Text>
                   <View style={styles.afternoonList}>
@@ -509,7 +511,7 @@ export default function TripScreen() {
                     })}
                   </View>
                 </>
-              )}
+              ) : null}
 
               {turnSuggestion ? (
                 <HelperText type="info" visible style={styles.errorText}>
@@ -526,19 +528,14 @@ export default function TripScreen() {
               <TripDailyChecklist context={checklistContext} />
 
               {capabilities.canStartTrip ? (
-                <Button
-                  mode="contained"
+                <AppButton
                   icon="play"
                   onPress={handleStartTrip}
                   loading={isStartingTrip}
                   disabled={isStartingTrip}
-                  style={styles.startButton}
-                  contentStyle={styles.startButtonContent}
-                  labelStyle={styles.startButtonLabel}
-                  buttonColor={colors.primary}
                 >
                   Iniciar viaje
-                </Button>
+                </AppButton>
               ) : null}
             </View>
 

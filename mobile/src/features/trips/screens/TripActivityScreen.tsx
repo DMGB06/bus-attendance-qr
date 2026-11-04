@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo } from "react";
 import {
   ActivityIndicator,
   Platform,
-  Pressable,
   RefreshControl,
   ScrollView,
   SectionList,
@@ -10,7 +9,6 @@ import {
   View,
 } from "react-native";
 import { HelperText, Searchbar, Text } from "react-native-paper";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -33,6 +31,7 @@ import type {
   OperatorActivityRow,
 } from "@/src/features/trips/types/activity.types";
 import { useScreenPerfMark } from "@/src/shared/hooks/useScreenPerfMark";
+import { WaveHeader } from "@/src/shared/ui/WaveHeader";
 
 type ActivityListItem = OperatorActivityRow | ActivityStudentGroup;
 
@@ -136,7 +135,7 @@ export default function TripActivityScreen() {
           width: "100%",
           maxWidth: 520,
           alignSelf: "center",
-          paddingHorizontal: tokens.spacing.xl,
+          paddingHorizontal: tokens.spacing.lg,
         },
         loadingContainer: {
           flex: 1,
@@ -144,30 +143,9 @@ export default function TripActivityScreen() {
           alignItems: "center",
         },
         topBar: {
-          gap: tokens.spacing.md,
+          gap: tokens.spacing.sm,
           paddingBottom: tokens.spacing.sm,
           flexShrink: 0,
-        },
-        header: {
-          flexDirection: "row",
-          alignItems: "center",
-          gap: tokens.spacing.sm,
-          paddingTop: tokens.spacing.md,
-        },
-        backButton: {
-          width: 40,
-          height: 40,
-          borderRadius: tokens.radius.full,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: colors.surfaceListItem,
-          borderWidth: 1,
-          borderColor: colors.surfaceCardBorder,
-        },
-        title: {
-          ...tokens.typography.title2,
-          color: colors.textTitle,
-          flex: 1,
         },
         searchWrap: {},
         search: {
@@ -268,6 +246,7 @@ export default function TripActivityScreen() {
   if (loading) {
     return (
       <SafeAreaView edges={["left", "right"]} style={[styles.safeArea, { paddingBottom: tabBarInset }]}>
+        <WaveHeader title="Historial" subtitle="Últimos 7 días" onBack={() => router.back()} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -277,20 +256,9 @@ export default function TripActivityScreen() {
 
   return (
     <SafeAreaView edges={["left", "right"]} style={[styles.safeArea, { paddingBottom: tabBarInset }]}>
+      <WaveHeader title="Historial" subtitle="Últimos 7 días" onBack={() => router.back()} />
       <View style={styles.contentShell}>
         <View style={styles.topBar}>
-          <View style={styles.header}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Volver"
-              onPress={() => router.back()}
-              style={styles.backButton}
-            >
-              <MaterialCommunityIcons name="arrow-left" size={22} color={colors.textTitle} />
-            </Pressable>
-            <Text style={styles.title}>Historial</Text>
-          </View>
-
           <View style={styles.searchWrap}>
             <Searchbar
               placeholder="Buscar alumno..."

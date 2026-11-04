@@ -70,11 +70,11 @@ export function ScannerFeedbackDock({
           color: colors.feedbackWarningBody,
         },
         successBanner: {
-          backgroundColor: "rgba(47, 133, 90, 0.1)",
-          borderColor: "rgba(47, 133, 90, 0.2)",
+          backgroundColor: colors.statusCompletedBg,
+          borderColor: colors.surfaceCardBorder,
         },
         successText: {
-          color: colors.attendanceCompleted,
+          color: colors.statusCompletedText,
         },
         infoBanner: {
           backgroundColor: colors.surfaceTrack,
@@ -143,7 +143,7 @@ export function ScannerFeedbackDock({
 
       {successMessage ? (
         <View style={[styles.banner, styles.successBanner]}>
-          <MaterialCommunityIcons name="check-circle-outline" size={18} color={colors.attendanceCompleted} />
+          <MaterialCommunityIcons name="check-circle-outline" size={18} color={colors.statusCompletedText} />
           <Text style={[styles.bannerText, styles.successText]}>{successMessage}</Text>
         </View>
       ) : null}

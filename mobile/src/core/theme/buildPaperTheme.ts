@@ -3,7 +3,7 @@ import { configureFonts, MD3DarkTheme, MD3LightTheme, type MD3Theme } from "reac
 import type { SemanticColors } from "@/src/core/theme/semanticColors";
 import { fontFamily } from "@/src/core/theme/tokens";
 
-function interTypescale(base: typeof MD3LightTheme.fonts) {
+function appTypescale(base: typeof MD3LightTheme.fonts) {
   return configureFonts({
     isV3: true,
     config: {
@@ -32,7 +32,7 @@ export function buildPaperTheme(colors: SemanticColors, isDark: boolean): MD3The
 
   return {
     ...base,
-    fonts: interTypescale(base.fonts),
+    fonts: appTypescale(base.fonts),
     colors: {
       ...base.colors,
       primary: colors.primary,
@@ -52,6 +52,6 @@ export function buildPaperTheme(colors: SemanticColors, isDark: boolean): MD3The
       onBackground: colors.textBody,
       elevation: base.colors.elevation,
     },
-    roundness: 10,
+    roundness: 14,
   };
 }

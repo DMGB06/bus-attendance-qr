@@ -22,10 +22,10 @@ export const radius = {
 
 /** Escala legible en campo (bus, sol directo). */
 export const fontSize = {
-  xs: 11,
+  xs: 13,
   sm: 13,
-  md: 15,
-  lg: 17,
+  md: 16,
+  lg: 18,
   xl: 20,
   '2xl': 22,
   '3xl': 26,
@@ -33,19 +33,19 @@ export const fontSize = {
 } as const;
 
 export const fontFamily = {
-  regular: 'Inter_400Regular',
-  semiBold: 'Inter_600SemiBold',
-  bold: 'Inter_700Bold',
+  regular: 'NunitoSans_400Regular',
+  semiBold: 'NunitoSans_600SemiBold',
+  bold: 'NunitoSans_700Bold',
 } as const;
 
 /** Espaciado global y chrome de navegación (tab bar flotante). */
 export const layout = {
-  tabBarBaseHeight: 58,
-  scrollBottomInset: 82,
+  tabBarBaseHeight: 66,
+  scrollBottomInset: 90,
   minTouchTarget: 48,
   appearanceNavbarWidth: 58,
   appearanceNavbarHeight: 40,
-  buttonHeight: 56,
+  buttonHeight: 58,
   /** Ancho del área lateral del header para centrar el título */
   headerSideWidth: 96,
   emptyStateMinHeight: 120,
@@ -93,40 +93,37 @@ export const typography = {
   headline: {
     fontFamily: fontFamily.semiBold,
     fontSize: fontSize.lg,
-    lineHeight: 22,
+    lineHeight: 24,
     fontWeight: '600' as TextStyle['fontWeight'],
   },
   body: {
     fontFamily: fontFamily.regular,
     fontSize: fontSize.md,
-    lineHeight: 20,
+    lineHeight: 22,
     fontWeight: '400' as TextStyle['fontWeight'],
   },
   bodyStrong: {
     fontFamily: fontFamily.semiBold,
     fontSize: fontSize.md,
-    lineHeight: 20,
+    lineHeight: 22,
     fontWeight: '600' as TextStyle['fontWeight'],
   },
   caption: {
     fontFamily: fontFamily.regular,
     fontSize: fontSize.sm,
-    lineHeight: 16,
-    letterSpacing: 0.1,
+    lineHeight: 18,
     fontWeight: '400' as TextStyle['fontWeight'],
   },
   label: {
     fontFamily: fontFamily.semiBold,
     fontSize: fontSize.sm,
-    lineHeight: 16,
-    letterSpacing: 0.25,
+    lineHeight: 18,
     fontWeight: '600' as TextStyle['fontWeight'],
   },
   overline: {
     fontFamily: fontFamily.semiBold,
     fontSize: fontSize.xs,
-    lineHeight: 13,
-    letterSpacing: 0.8,
+    lineHeight: 16,
     fontWeight: '600' as TextStyle['fontWeight'],
   },
 } as const satisfies Record<string, TextStyle>;

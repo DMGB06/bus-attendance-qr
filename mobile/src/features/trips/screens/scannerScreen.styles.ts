@@ -19,8 +19,7 @@ export function createScannerScreenStyles(
     },
     screenContainer: {
       flex: 1,
-      paddingHorizontal: compact ? tokens.spacing.lg : tokens.spacing.xl,
-      paddingTop: tokens.spacing.md,
+      paddingHorizontal: tokens.spacing.lg,
       maxWidth: CONTENT_MAX_WIDTH,
       width: "100%",
       alignSelf: "center",
@@ -51,30 +50,19 @@ export function createScannerScreenStyles(
       alignItems: "center",
       justifyContent: "center",
       gap: tokens.spacing.sm,
-      paddingVertical: tokens.spacing.sm + 2,
+      minHeight: tokens.layout.minTouchTarget - tokens.spacing.xs,
       paddingHorizontal: tokens.spacing.md,
       borderRadius: tokens.radius.full,
     },
     modeButtonActive: {
-      backgroundColor: colors.surfaceCard,
-      shadowColor: colors.scannerCameraShadow,
-      shadowOpacity: 0.12,
-      shadowRadius: 6,
-      shadowOffset: { width: 0, height: 2 },
-      elevation: 2,
+      backgroundColor: colors.headerBg,
     },
     modeButtonLabel: {
       ...tokens.typography.bodyStrong,
       color: colors.textMuted,
     },
     modeButtonLabelActive: {
-      color: colors.textTitle,
-    },
-    modeHint: {
-      ...tokens.typography.caption,
-      color: colors.textMuted,
-      textAlign: "center",
-      lineHeight: 18,
+      color: colors.onHeader,
     },
     scannerBody: {
       flex: 1,

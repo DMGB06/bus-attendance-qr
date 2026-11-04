@@ -52,29 +52,29 @@ export const RosterStudentRow = memo(function RosterStudentRow({
   const statusColors = useMemo(() => {
     if (item.status === "pending") {
       return {
-        stripe: colors.attendancePending,
-        tagBg: "rgba(197, 48, 48, 0.1)",
-        tagText: colors.attendancePending,
+        avatar: colors.attendancePending,
+        tagBg: colors.statusPendingBg,
+        tagText: colors.statusPendingText,
       };
     }
     if (item.attendance?.event_type === "ausente") {
       return {
-        stripe: colors.textMuted,
+        avatar: colors.textMuted,
         tagBg: colors.surfaceTrack,
         tagText: colors.textMuted,
       };
     }
     if (item.status === "completed") {
       return {
-        stripe: colors.attendanceCompleted,
-        tagBg: "rgba(47, 133, 90, 0.12)",
-        tagText: colors.attendanceCompleted,
+        avatar: colors.attendanceCompleted,
+        tagBg: colors.statusCompletedBg,
+        tagText: colors.statusCompletedText,
       };
     }
     return {
-      stripe: colors.attendanceOnboard,
-      tagBg: colors.primarySoftBg,
-      tagText: colors.primarySoftText,
+      avatar: colors.attendanceOnboard,
+      tagBg: colors.statusOnboardBg,
+      tagText: colors.statusOnboardText,
     };
   }, [colors, item.attendance?.event_type, item.status]);
 
@@ -84,19 +84,14 @@ export const RosterStudentRow = memo(function RosterStudentRow({
         row: {
           flexDirection: "row",
           alignItems: "center",
-          backgroundColor: colors.surfaceListItem,
           borderBottomWidth: 1,
           borderBottomColor: colors.borderMuted,
-          borderLeftWidth: 4,
-          borderLeftColor: statusColors.stripe,
-          paddingLeft: tokens.spacing.md,
-          paddingRight: tokens.spacing.md,
           paddingVertical: tokens.spacing.md,
           gap: tokens.spacing.md,
           minHeight: 64,
         },
         avatar: {
-          backgroundColor: colors.primary,
+          backgroundColor: statusColors.avatar,
         },
         body: {
           flex: 1,
@@ -113,11 +108,11 @@ export const RosterStudentRow = memo(function RosterStudentRow({
         },
         meta: {
           ...tokens.typography.caption,
-          color: colors.sky,
+          color: colors.statusCompletedText,
         },
         onboardMeta: {
           ...tokens.typography.caption,
-          color: colors.primarySoftText,
+          color: colors.statusOnboardText,
           fontWeight: "600",
         },
         morningHint: {
@@ -125,35 +120,34 @@ export const RosterStudentRow = memo(function RosterStudentRow({
           color: isMorningRider ? colors.primarySoftText : colors.textMuted,
         },
         trailing: {
-          minWidth: 108,
           alignItems: "flex-end",
           justifyContent: "center",
         },
         statusTag: {
           backgroundColor: statusColors.tagBg,
-          borderRadius: tokens.radius.xs,
+          borderRadius: tokens.radius.sm,
           paddingHorizontal: tokens.spacing.sm,
-          paddingVertical: 5,
-          minWidth: 88,
+          paddingVertical: tokens.spacing.xs,
           alignItems: "center",
         },
         statusTagText: {
-          ...tokens.typography.overline,
+          ...tokens.typography.label,
           color: statusColors.tagText,
-          letterSpacing: 0.2,
           textAlign: "center",
         },
         dropoffButton: {
           backgroundColor: colors.attendanceCompleted,
-          borderRadius: tokens.radius.sm,
+          borderRadius: tokens.radius.md,
           paddingHorizontal: tokens.spacing.sm,
-          paddingVertical: tokens.spacing.sm,
-          minWidth: 108,
+          paddingVertical: tokens.spacing.xs,
+          width: 92,
+          minHeight: 44,
           alignItems: "center",
+          justifyContent: "center",
         },
         dropoffButtonText: {
           ...tokens.typography.label,
-          color: colors.textOnPrimary,
+          color: colors.attendanceLabel,
           textAlign: "center",
         },
         pendingActions: {
@@ -183,7 +177,7 @@ export const RosterStudentRow = memo(function RosterStudentRow({
         },
         correctionText: {
           ...tokens.typography.caption,
-          color: colors.attendancePending,
+          color: colors.statusPendingText,
           textDecorationLine: "underline",
         },
         voidText: {
@@ -211,7 +205,7 @@ export const RosterStudentRow = memo(function RosterStudentRow({
 
   function renderTrailing() {
     if (isMarkingExit || isCorrecting) {
-      return <ActivityIndicator size="small" color={colors.attendanceCompleted} />;
+      return <ActivityIndicator size="small" color={colors.statusCompletedText} />;
     }
 
     if (showDropoffButton) {
@@ -235,6 +229,7 @@ export const RosterStudentRow = memo(function RosterStudentRow({
           </View>
           <Pressable
             onPress={() => onMarkAbsent?.(item.student.id)}
+            hitSlop={8}
             style={styles.absentButton}
             accessibilityRole="button"
             accessibilityLabel={`Marcar ausente a ${item.student.nombre_alumno}`}
@@ -258,6 +253,7 @@ export const RosterStudentRow = memo(function RosterStudentRow({
             {canUndo ? (
               <Pressable
                 onPress={() => onUndo?.(item.student.id)}
+                hitSlop={8}
                 style={styles.correctionButton}
                 accessibilityRole="button"
                 accessibilityLabel={`Deshacer registro de ${item.student.nombre_alumno}`}
@@ -268,6 +264,7 @@ export const RosterStudentRow = memo(function RosterStudentRow({
             {canVoid ? (
               <Pressable
                 onPress={() => onVoid?.(item.student.id)}
+                hitSlop={8}
                 style={styles.correctionButton}
                 accessibilityRole="button"
                 accessibilityLabel={`Anular registro de ${item.student.nombre_alumno}`}
@@ -283,7 +280,12 @@ export const RosterStudentRow = memo(function RosterStudentRow({
 
   return (
     <View style={styles.row}>
-      <Avatar.Text size={36} label={initials || "AL"} style={styles.avatar} />
+      <Avatar.Text
+        size={36}
+        label={initials || "AL"}
+        style={styles.avatar}
+        color={colors.attendanceLabel}
+      />
 
       <View style={styles.body}>
         <Text style={styles.name} numberOfLines={2}>

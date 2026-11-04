@@ -106,7 +106,7 @@ async function ensureAndroidChannel(
     name: "CerroBus",
     importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 250, 250, 250],
-    lightColor: "#1C3284",
+    lightColor: "#0A4F8A",
   });
 }
 

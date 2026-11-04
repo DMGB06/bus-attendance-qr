@@ -1,7 +1,7 @@
-import { Fragment, useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { HelperText, Searchbar, Text, Button } from "react-native-paper";
+import { HelperText, Searchbar, Text } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { useNetworkStatus } from "@/src/core/connectivity/useNetworkStatus";
@@ -27,6 +27,9 @@ import type { TripRosterItem } from "@/src/features/trips/services/trip-roster.s
 import { useTripStore } from "@/src/features/trips/store/tripStore";
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
 import { useScreenPerfMark } from "@/src/shared/hooks/useScreenPerfMark";
+import { AppButton } from "@/src/shared/ui/AppButton";
+import { HeaderStats } from "@/src/shared/ui/HeaderStats";
+import { WaveHeader } from "@/src/shared/ui/WaveHeader";
 
 function buildChipFilters(direction: TripDirection) {
   const dropoffLabel = getDropoffLabel(direction);
@@ -83,7 +86,6 @@ export default function RosterScreen() {
         listWrap: {
           flex: 1,
           minHeight: 0,
-          paddingTop: tokens.spacing.sm,
         },
         centerFill: {
           flex: 1,
@@ -93,114 +95,49 @@ export default function RosterScreen() {
         },
         toolbar: {
           paddingHorizontal: tokens.spacing.lg,
-          paddingTop: tokens.spacing.md,
           paddingBottom: tokens.spacing.sm,
           gap: tokens.spacing.sm,
         },
-        titleRow: {
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: tokens.spacing.sm,
-        },
-        title: {
-          ...tokens.typography.title2,
-          color: colors.textTitle,
-        },
-        subtitle: {
-          ...tokens.typography.caption,
-          color: colors.textMuted,
-        },
         searchToggle: {
-          width: 40,
-          height: 40,
+          width: 44,
+          height: 44,
           borderRadius: tokens.radius.full,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: colors.surfaceTrack,
         },
         searchToggleActive: {
-          backgroundColor: colors.primarySoftBg,
+          backgroundColor: colors.headerStatBg,
         },
         filterBar: {
           flexDirection: "row",
-          backgroundColor: colors.surfaceTrack,
-          borderRadius: tokens.radius.md,
-          padding: tokens.spacing.xs,
+          flexWrap: "wrap",
           gap: tokens.spacing.xs,
         },
         filterButton: {
-          flex: 1,
+          flexGrow: 1,
           alignItems: "center",
-          paddingVertical: tokens.spacing.sm,
-          borderRadius: tokens.radius.sm,
-          gap: 2,
-          minWidth: 0,
+          justifyContent: "center",
+          minHeight: 44,
+          paddingHorizontal: tokens.spacing.sm,
+          borderRadius: tokens.radius.full,
+          backgroundColor: colors.surfaceTrack,
         },
         filterButtonActive: {
-          backgroundColor: colors.surfaceCard,
+          backgroundColor: colors.headerBg,
         },
         filterLabel: {
-          ...tokens.typography.caption,
-          color: colors.textMuted,
+          ...tokens.typography.label,
+          color: colors.textBody,
           textAlign: "center",
-          fontSize: 11,
-        },
-        backLink: {
-          flexDirection: "row",
-          alignItems: "center",
-          gap: tokens.spacing.xs,
-        },
-        backLinkText: {
-          ...tokens.typography.bodyStrong,
-          color: colors.primary,
         },
         filterLabelActive: {
-          color: colors.textTitle,
-          fontWeight: "600",
-        },
-        statsBar: {
-          flexDirection: "row",
-          backgroundColor: colors.primary,
-          borderRadius: tokens.radius.md,
-          overflow: "hidden",
-        },
-        statCell: {
-          flex: 1,
-          alignItems: "center",
-          paddingVertical: tokens.spacing.md,
-          gap: 2,
-          minWidth: 0,
-        },
-        statCellActive: {
-          backgroundColor: "rgba(255, 255, 255, 0.14)",
-        },
-        statDivider: {
-          width: 1,
-          backgroundColor: "rgba(255, 255, 255, 0.2)",
-          marginVertical: tokens.spacing.sm,
-        },
-        statValue: {
-          ...tokens.typography.title3,
-          color: colors.textOnPrimary,
-        },
-        statLabel: {
-          ...tokens.typography.overline,
-          color: "rgba(255, 255, 255, 0.75)",
-          letterSpacing: 0.3,
-          textAlign: "center",
-          fontSize: 10,
-        },
-        statLabelActive: {
-          color: colors.textOnPrimary,
+          color: colors.onHeader,
         },
         listHeader: {
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "space-between",
-          paddingHorizontal: tokens.spacing.md,
-          paddingVertical: tokens.spacing.sm,
-          backgroundColor: colors.surfaceTrack,
+          paddingVertical: tokens.spacing.xs,
           borderBottomWidth: 1,
           borderBottomColor: colors.borderMuted,
         },
@@ -228,10 +165,6 @@ export default function RosterScreen() {
           flex: 1,
           marginHorizontal: tokens.spacing.lg,
           marginBottom: tokens.spacing.sm,
-          backgroundColor: colors.surfaceCard,
-          borderRadius: tokens.radius.md,
-          borderWidth: 1,
-          borderColor: colors.borderMuted,
           overflow: "hidden",
         },
         listFill: {
@@ -256,17 +189,6 @@ export default function RosterScreen() {
         },
         messages: {
           paddingHorizontal: tokens.spacing.lg,
-        },
-        bulkButton: {
-          borderRadius: tokens.radius.md,
-          backgroundColor: colors.primary,
-        },
-        bulkButtonContent: {
-          height: tokens.layout.buttonHeight,
-        },
-        bulkButtonLabel: {
-          ...tokens.typography.bodyStrong,
-          color: colors.textOnPrimary,
         },
       }),
     [colors, tokens],
@@ -369,23 +291,11 @@ export default function RosterScreen() {
       edges={["left", "right"]}
       style={[styles.container, { paddingBottom: tabBarInset }]}
     >
-      <View style={styles.toolbar}>
-        <View style={styles.titleRow}>
-          {roster.viewMode === "prioritarios" ? (
-            <Pressable
-              style={styles.backLink}
-              onPress={() => roster.setViewMode("pending")}
-              accessibilityRole="button"
-            >
-              <MaterialCommunityIcons name="chevron-left" size={24} color={colors.primary} />
-              <Text style={styles.title}>Vino en la mañana</Text>
-            </Pressable>
-          ) : (
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={styles.title}>Lista</Text>
-              {rosterSubtitle ? <Text style={styles.subtitle}>{rosterSubtitle}</Text> : null}
-            </View>
-          )}
+      <WaveHeader
+        title={roster.viewMode === "prioritarios" ? "Vino en la mañana" : "Lista"}
+        subtitle={roster.viewMode === "prioritarios" ? null : rosterSubtitle}
+        onBack={roster.viewMode === "prioritarios" ? () => roster.setViewMode("pending") : undefined}
+        right={
           <Pressable
             style={[
               styles.searchToggle,
@@ -400,72 +310,52 @@ export default function RosterScreen() {
             accessibilityRole="button"
             accessibilityLabel="Buscar alumno"
           >
-            <MaterialCommunityIcons
-              name="magnify"
-              size={22}
-              color={
-                searchOpen || roster.searchQuery.length > 0
-                  ? colors.primarySoftText
-                  : colors.textBody
-              }
-            />
+            <MaterialCommunityIcons name="magnify" size={24} color={colors.onHeader} />
           </Pressable>
-        </View>
-
+        }
+      >
         {roster.viewMode !== "prioritarios" ? (
-          <>
-            <View style={styles.statsBar}>
-              {statFilters.map((statId, index) => {
-                const isActive = roster.viewMode === statId;
-                const count = statCountByMode(statId);
+          <HeaderStats
+            items={statFilters.map((statId) => ({
+              key: statId,
+              value: statCountByMode(statId),
+              label: getStatFilterLabel(statId, tripDirection),
+              active: roster.viewMode === statId,
+              onPress: () => roster.setViewMode(statId),
+            }))}
+          />
+        ) : null}
+      </WaveHeader>
 
-                return (
-                  <Fragment key={statId}>
-                    {index > 0 ? <View style={styles.statDivider} /> : null}
-                    <Pressable
-                      style={[styles.statCell, isActive && styles.statCellActive]}
-                      onPress={() => roster.setViewMode(statId)}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: isActive }}
-                    >
-                      <Text style={styles.statValue}>{count}</Text>
-                      <Text style={[styles.statLabel, isActive && styles.statLabelActive]}>
-                        {getStatFilterLabel(statId, tripDirection)}
-                      </Text>
-                    </Pressable>
-                  </Fragment>
-                );
-              })}
-            </View>
+      <View style={styles.toolbar}>
+        {roster.viewMode !== "prioritarios" ? (
+          <View style={styles.filterBar}>
+            {chipFilters.map((filter) => {
+              const isActive = roster.viewMode === filter.id;
+              const chipCount =
+                filter.id === "pending"
+                  ? roster.stats.pendingCount
+                  : filter.id === "completed"
+                    ? roster.stats.completedCount
+                    : roster.totalStudentCount;
+              const chipLabel =
+                filter.id === "all" ? filter.label : filter.label(chipCount);
 
-            <View style={styles.filterBar}>
-              {chipFilters.map((filter) => {
-                const isActive = roster.viewMode === filter.id;
-                const chipCount =
-                  filter.id === "pending"
-                    ? roster.stats.pendingCount
-                    : filter.id === "completed"
-                      ? roster.stats.completedCount
-                      : roster.totalStudentCount;
-                const chipLabel =
-                  filter.id === "all" ? filter.label : filter.label(chipCount);
-
-                return (
-                  <Pressable
-                    key={filter.id}
-                    style={[styles.filterButton, isActive && styles.filterButtonActive]}
-                    onPress={() => roster.setViewMode(filter.id)}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: isActive }}
-                  >
-                    <Text style={[styles.filterLabel, isActive && styles.filterLabelActive]}>
-                      {chipLabel}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </>
+              return (
+                <Pressable
+                  key={filter.id}
+                  style={[styles.filterButton, isActive && styles.filterButtonActive]}
+                  onPress={() => roster.setViewMode(filter.id)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isActive }}
+                >
+                  <Text style={[styles.filterLabel, isActive && styles.filterLabelActive]}>
+                    {chipLabel}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
         ) : null}
 
         <RosterTurnHintBanner turnType={activeTrip.turn_type} />
@@ -497,20 +387,16 @@ export default function RosterScreen() {
         ) : null}
 
         {capabilities.canBulkDropoff && roster.totalOnboardCount > 0 ? (
-          <Button
-            mode="contained"
+          <AppButton
             icon={activeTrip.direction === "recojo" ? "school" : "home"}
             loading={roster.isBulkDropping}
             disabled={roster.isBulkDropping}
             onPress={() => void roster.handleBulkDropoff()}
-            style={styles.bulkButton}
-            contentStyle={styles.bulkButtonContent}
-            labelStyle={styles.bulkButtonLabel}
           >
             {activeTrip.direction === "recojo"
               ? `Dejar todos en colegio (${roster.totalOnboardCount})`
               : `Dejar todos en casa (${roster.totalOnboardCount})`}
-          </Button>
+          </AppButton>
         ) : null}
       </View>
 
@@ -533,9 +419,7 @@ export default function RosterScreen() {
           </View>
         ) : roster.errorMessage && roster.items.length === 0 ? (
           <View style={styles.centerFill}>
-            <Button mode="contained" onPress={() => void roster.loadRoster()}>
-              Reintentar
-            </Button>
+            <AppButton onPress={() => void roster.loadRoster()}>Reintentar</AppButton>
           </View>
         ) : !roster.isLoading && roster.filteredItems.length === 0 ? (
           <View style={styles.centerFill}>

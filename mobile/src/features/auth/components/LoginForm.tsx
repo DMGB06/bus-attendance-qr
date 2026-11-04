@@ -4,17 +4,18 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   TextInput as NativeTextInput,
   View,
 } from 'react-native';
-import { HelperText, Text } from 'react-native-paper';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Text } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAppTheme } from '@/src/core/theme/ThemeProvider';
 import { AppButton } from '@/src/shared/ui/AppButton';
 import { AppInput } from '@/src/shared/ui/AppInput';
-import { AppScrollView } from '@/src/shared/ui/AppScrollView';
+import { WaveBand } from '@/src/shared/ui/WaveBand';
 
 type LoginFormProps = {
   email: string;
@@ -44,119 +45,129 @@ export function LoginForm({
   const passwordInputRef = useRef<NativeTextInput | null>(null);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const { colors, tokens } = useAppTheme();
+  const insets = useSafeAreaInsets();
 
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        safeArea: {
+        root: {
           flex: 1,
-          backgroundColor: colors.screenSolid,
-        },
-        keyboardRoot: {
-          flex: 1,
+          backgroundColor: colors.authSea,
         },
         scrollInner: {
           flexGrow: 1,
-          justifyContent: 'center',
-          paddingHorizontal: tokens.spacing.xl,
-          paddingVertical: tokens.spacing['2xl'],
         },
-        panel: {
-          width: '100%',
-          maxWidth: 420,
-          alignSelf: 'center',
-          gap: tokens.spacing.lg,
-        },
-        brandBlock: {
+        sky: {
+          flexGrow: 1,
+          backgroundColor: colors.authSky,
           alignItems: 'center',
+          justifyContent: 'center',
           gap: tokens.spacing.sm,
+          paddingTop: insets.top + tokens.spacing.xl,
+          paddingBottom: tokens.spacing.lg,
+          paddingHorizontal: tokens.spacing.lg,
         },
         logo: {
-          width: 88,
-          height: 88,
+          width: 148,
+          height: 148,
         },
         brandTitle: {
           ...tokens.typography.title1,
-          color: colors.textTitle,
+          fontSize: 30,
+          lineHeight: 34,
+          color: colors.authSkyTitle,
           textAlign: 'center',
         },
         brandSubtitle: {
           ...tokens.typography.body,
-          color: colors.textMuted,
+          color: colors.authSkyText,
           textAlign: 'center',
         },
-        accentLine: {
-          height: 3,
-          width: 56,
-          borderRadius: tokens.radius.full,
-          backgroundColor: colors.accent,
-          alignSelf: 'center',
+        waves: {
+          backgroundColor: colors.authSky,
         },
-        formHeader: {
-          alignItems: 'center',
+        sea: {
+          backgroundColor: colors.authSea,
+          paddingTop: tokens.spacing.sm,
+          paddingHorizontal: tokens.spacing.xl,
+          paddingBottom: insets.bottom + tokens.spacing.xl,
+        },
+        form: {
+          width: '100%',
+          maxWidth: 420,
+          alignSelf: 'center',
+          gap: tokens.spacing.md,
+        },
+        field: {
           gap: tokens.spacing.xs,
         },
-        formTitle: {
-          ...tokens.typography.title3,
-          color: colors.textTitle,
-          textAlign: 'center',
+        label: {
+          ...tokens.typography.bodyStrong,
+          color: colors.authInputText,
         },
-        formHint: {
+        message: {
           ...tokens.typography.body,
-          color: colors.textMuted,
-          textAlign: 'center',
+          color: colors.feedbackWarningBody,
+          backgroundColor: colors.feedbackWarningBg,
+          borderRadius: tokens.radius.md,
+          paddingHorizontal: tokens.spacing.md,
+          paddingVertical: tokens.spacing.sm,
+          overflow: 'hidden',
         },
-        fields: {
-          gap: tokens.spacing.md,
+        info: {
+          ...tokens.typography.body,
+          color: colors.authInputText,
+        },
+        forgotButton: {
+          alignSelf: 'flex-end',
+          minHeight: tokens.layout.minTouchTarget,
+          justifyContent: 'center',
         },
         forgotPassword: {
           ...tokens.typography.label,
           color: colors.authForgotPassword,
-          textAlign: 'right',
-        },
-        buttonContent: {
-          height: tokens.layout.buttonHeight - 4,
         },
       }),
-    [colors, tokens],
+    [colors, insets.bottom, insets.top, tokens],
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.keyboardRoot}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={styles.root}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollInner}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <AppScrollView
-          omitTabBarInset
-          extraBottomInset={0}
-          contentContainerStyle={styles.scrollInner}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.panel}>
-            <View style={styles.brandBlock}>
-              <Image
-                source={require('../../../../assets/images/escudo_MDCA.png')}
-                style={styles.logo}
-                resizeMode="contain"
-                accessibilityLabel="Escudo Municipalidad de Cerro Azul"
-              />
-              <Text style={styles.brandTitle}>Bus Escolar</Text>
-              <Text style={styles.brandSubtitle}>Municipalidad de Cerro Azul</Text>
-            </View>
+        <View style={styles.sky}>
+          <Image
+            source={require('../../../../assets/images/escudo_MDCA.png')}
+            style={styles.logo}
+            resizeMode="contain"
+            accessibilityLabel="Escudo Municipalidad de Cerro Azul"
+          />
+          <Text style={styles.brandTitle} accessibilityRole="header">
+            CerroBus
+          </Text>
+          <Text style={styles.brandSubtitle}>Municipalidad de Cerro Azul</Text>
+        </View>
 
-            <View style={styles.accentLine} />
+        <View style={styles.waves}>
+          <WaveBand
+            animated
+            height={44}
+            colors={[colors.authWaveBack, colors.authWaveMid, colors.authSea]}
+          />
+        </View>
 
-            <View style={styles.formHeader}>
-              <Text style={styles.formTitle}>Iniciar sesión</Text>
-              <Text style={styles.formHint}>Control de asistencia en ruta escolar</Text>
-            </View>
-
-            <View style={styles.fields}>
+        <View style={styles.sea}>
+          <View style={styles.form}>
+            <View style={styles.field}>
+              <Text style={styles.label}>Usuario</Text>
               <AppInput
                 variant="auth"
-                placeholder="Usuario"
                 value={email}
                 onChangeText={onChangeEmail}
                 keyboardType="email-address"
@@ -169,13 +180,14 @@ export function LoginForm({
                 onSubmitEditing={() => passwordInputRef.current?.focus()}
                 blurOnSubmit={false}
                 disabled={isSubmitting}
-                left={<AppInput.Icon icon="account-outline" color={colors.authIconMuted} />}
               />
+            </View>
 
+            <View style={styles.field}>
+              <Text style={styles.label}>Contraseña</Text>
               <AppInput
                 ref={passwordInputRef}
                 variant="auth"
-                placeholder="Contraseña"
                 accessibilityLabel="Contraseña"
                 value={password}
                 onChangeText={onChangePassword}
@@ -187,7 +199,6 @@ export function LoginForm({
                 returnKeyType="go"
                 onSubmitEditing={onSubmit}
                 disabled={isSubmitting}
-                left={<AppInput.Icon icon="lock-outline" color={colors.authIconMuted} />}
                 right={
                   <AppInput.Icon
                     icon={isPasswordVisible ? 'eye-off-outline' : 'eye-outline'}
@@ -203,45 +214,39 @@ export function LoginForm({
             </View>
 
             {!hasSupabaseConfig ? (
-              <HelperText type="error" visible>
+              <Text style={styles.message} accessibilityRole="alert">
                 Configura Supabase correctamente.
-              </HelperText>
+              </Text>
             ) : null}
 
             {errorMessage ? (
-              <HelperText type="error" visible>
+              <Text style={styles.message} accessibilityRole="alert">
                 {errorMessage}
-              </HelperText>
-            ) : null}
-
-            {infoMessage ? (
-              <HelperText type="info" visible>
-                {infoMessage}
-              </HelperText>
-            ) : null}
-
-            <Pressable
-              onPress={onForgotPassword}
-              disabled={isSubmitting}
-              accessibilityRole="button"
-            >
-              <Text style={styles.forgotPassword}>
-                ¿Olvidaste tu contraseña?
               </Text>
-            </Pressable>
+            ) : null}
+
+            {infoMessage ? <Text style={styles.info}>{infoMessage}</Text> : null}
 
             <AppButton
               variant="authPrimary"
               onPress={onSubmit}
               loading={isSubmitting}
               disabled={isSubmitting}
-              contentStyle={styles.buttonContent}
             >
               Ingresar
             </AppButton>
+
+            <Pressable
+              onPress={onForgotPassword}
+              disabled={isSubmitting}
+              accessibilityRole="button"
+              style={styles.forgotButton}
+            >
+              <Text style={styles.forgotPassword}>¿Olvidaste tu contraseña?</Text>
+            </Pressable>
           </View>
-        </AppScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }

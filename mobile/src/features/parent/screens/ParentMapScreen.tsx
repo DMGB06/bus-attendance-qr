@@ -9,6 +9,7 @@ import { ParentBusMap } from "@/src/features/parent/components/ParentBusMap";
 import { ParentMapEmptyState } from "@/src/features/parent/components/ParentMapEmptyState";
 import { useParentBusLocations } from "@/src/features/parent/hooks/useParentBusLocations";
 import { AppScrollView } from "@/src/shared/ui/AppScrollView";
+import { WaveHeader } from "@/src/shared/ui/WaveHeader";
 
 export default function ParentMapScreen() {
   const { colors, tokens } = useAppTheme();
@@ -38,19 +39,7 @@ export default function ParentMapScreen() {
         content: {
           flex: 1,
           paddingHorizontal: tokens.spacing.lg,
-          paddingTop: tokens.spacing.md,
           gap: tokens.spacing.md,
-        },
-        intro: {
-          gap: tokens.spacing.xs,
-        },
-        title: {
-          ...tokens.typography.title2,
-          color: colors.textTitle,
-        },
-        subtitle: {
-          ...tokens.typography.body,
-          color: colors.textBody,
         },
         selectorRow: {
           flexDirection: "row",
@@ -90,7 +79,8 @@ export default function ParentMapScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>
+      <SafeAreaView edges={["left", "right"]} style={styles.safeArea}>
+        <WaveHeader title="Ubicación del bus" subtitle="Posición aproximada" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator animating size={36} color={colors.primary} />
         </View>
@@ -100,7 +90,8 @@ export default function ParentMapScreen() {
 
   if (!hasActiveTrip) {
     return (
-      <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>
+      <SafeAreaView edges={["left", "right"]} style={styles.safeArea}>
+        <WaveHeader title="Ubicación del bus" subtitle="Posición aproximada" />
         <AppScrollView
           contentContainerStyle={styles.content}
           extraBottomInset={tokens.spacing.lg}
@@ -113,13 +104,6 @@ export default function ParentMapScreen() {
             />
           }
         >
-          <View style={styles.intro}>
-            <Text style={styles.title}>Ubicación del bus</Text>
-            <Text style={styles.subtitle}>
-              Solo verás el mapa cuando tu hijo esté en un viaje activo con GPS publicado.
-            </Text>
-          </View>
-
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <ParentMapEmptyState
@@ -133,7 +117,8 @@ export default function ParentMapScreen() {
 
   if (waitingForGps || !locations.length) {
     return (
-      <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>
+      <SafeAreaView edges={["left", "right"]} style={styles.safeArea}>
+        <WaveHeader title="Ubicación del bus" subtitle="Posición aproximada" />
         <AppScrollView
           contentContainerStyle={styles.content}
           extraBottomInset={tokens.spacing.lg}
@@ -146,11 +131,6 @@ export default function ParentMapScreen() {
             />
           }
         >
-          <View style={styles.intro}>
-            <Text style={styles.title}>Ubicación del bus</Text>
-            <Text style={styles.subtitle}>Viaje activo — esperando la primera señal GPS del chofer.</Text>
-          </View>
-
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <ParentMapEmptyState
@@ -163,15 +143,9 @@ export default function ParentMapScreen() {
   }
 
   return (
-    <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>
+    <SafeAreaView edges={["left", "right"]} style={styles.safeArea}>
+        <WaveHeader title="Ubicación del bus" subtitle="Posición aproximada" />
       <View style={[styles.content, { paddingBottom: scrollBottom }]}>
-        <View style={styles.intro}>
-          <Text style={styles.title}>Ubicación del bus</Text>
-          <Text style={styles.subtitle}>
-            Posición aproximada durante el viaje activo. No es tracking permanente.
-          </Text>
-        </View>
-
         {locations.length > 1 ? (
           <View style={styles.selectorRow}>
             {locations.map((location) => {

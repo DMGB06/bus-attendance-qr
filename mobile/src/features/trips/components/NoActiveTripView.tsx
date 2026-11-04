@@ -9,6 +9,7 @@ import { OPS_ROUTES } from "@/src/core/routes";
 import { useAppCapabilities } from "@/src/features/auth/hooks/useAppCapabilities";
 import { WaitingForDriverView } from "@/src/features/trips/components/WaitingForDriverView";
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
+import { WaveHeader } from "@/src/shared/ui/WaveHeader";
 
 export type NoActiveTripContext = "roster" | "scanner" | "close-trip";
 
@@ -16,6 +17,12 @@ const BODY_BY_CONTEXT: Record<NoActiveTripContext, string> = {
   roster: "Inicia un viaje para ver la lista de asistencia.",
   scanner: "Inicia un viaje para habilitar el escáner QR y registrar asistencia.",
   "close-trip": "No hay un viaje en curso para cerrar.",
+};
+
+const HEADER_BY_CONTEXT: Record<NoActiveTripContext, string> = {
+  roster: "Lista",
+  scanner: "Escanear",
+  "close-trip": "Cerrar viaje",
 };
 
 type NoActiveTripViewProps = {
@@ -69,15 +76,16 @@ export function NoActiveTripView({ context }: NoActiveTripViewProps) {
   );
 
   if (capabilities.isAssistant) {
-    return <WaitingForDriverView />;
+    return <WaitingForDriverView headerTitle={HEADER_BY_CONTEXT[context]} />;
   }
 
   if (context === "close-trip" && !capabilities.canCloseTrip) {
     return (
       <SafeAreaView
-        edges={["bottom", "left", "right"]}
+        edges={["left", "right"]}
         style={[styles.safeArea, { paddingBottom: insets.bottom + tokens.spacing.lg }]}
       >
+        <WaveHeader title={HEADER_BY_CONTEXT[context]} />
         <View style={styles.centerFill}>
           <MaterialCommunityIcons name="lock-outline" size={44} color={colors.textBody} />
           <Text style={styles.title}>Acceso restringido</Text>
@@ -89,9 +97,10 @@ export function NoActiveTripView({ context }: NoActiveTripViewProps) {
 
   return (
     <SafeAreaView
-      edges={["bottom", "left", "right"]}
+      edges={["left", "right"]}
       style={[styles.safeArea, { paddingBottom: insets.bottom + tokens.spacing.lg }]}
     >
+      <WaveHeader title={HEADER_BY_CONTEXT[context]} />
       <View style={styles.centerFill}>
         <MaterialCommunityIcons name="bus-alert" size={44} color={colors.textBody} />
         <Text style={styles.title}>Sin viaje activo</Text>

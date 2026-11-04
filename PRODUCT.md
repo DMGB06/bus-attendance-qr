@@ -17,7 +17,7 @@ El usuario pidio que el diseno luzca en todos los roles por igual, sin una panta
 
 ## Product Purpose
 
-CerroBus (hoy rotulada "Bus Escolar") es el control de asistencia del bus escolar de la Municipalidad de Cerro Azul. Exito: que el chofer registre sin errores aunque no haya senal, y que cada familia sepa donde esta su hijo sin tener que llamar.
+CerroBus es el control de asistencia del bus escolar de la Municipalidad de Cerro Azul. Exito: que el chofer registre sin errores aunque no haya senal, y que cada familia sepa donde esta su hijo sin tener que llamar.
 
 ## Positioning
 

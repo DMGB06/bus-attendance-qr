@@ -116,8 +116,6 @@ export function ScannerControlPanel({
           borderRadius: tokens.radius.lg,
           borderWidth: 1,
           borderColor: colors.surfaceCardBorder,
-          borderTopWidth: 4,
-          borderTopColor: colors.accent,
           paddingHorizontal: tokens.spacing.lg,
           paddingVertical: tokens.spacing.lg,
           gap: tokens.spacing.md,
@@ -202,15 +200,15 @@ export function ScannerControlPanel({
           flexDirection: "row",
           alignItems: "center",
           gap: tokens.spacing.sm,
-          backgroundColor: "rgba(47, 133, 90, 0.1)",
+          backgroundColor: colors.statusCompletedBg,
           borderRadius: tokens.radius.md,
           padding: tokens.spacing.md,
           borderWidth: 1,
-          borderColor: "rgba(47, 133, 90, 0.2)",
+          borderColor: colors.surfaceCardBorder,
         },
         successText: {
           ...tokens.typography.bodyStrong,
-          color: colors.attendanceCompleted,
+          color: colors.statusCompletedText,
           flex: 1,
         },
         primaryAction: {
@@ -381,7 +379,7 @@ export function ScannerControlPanel({
 
       {successMessage ? (
         <View style={styles.successBlock}>
-          <MaterialCommunityIcons name="check-circle-outline" size={20} color={colors.attendanceCompleted} />
+          <MaterialCommunityIcons name="check-circle-outline" size={20} color={colors.statusCompletedText} />
           <Text style={styles.successText}>{successMessage}</Text>
         </View>
       ) : null}

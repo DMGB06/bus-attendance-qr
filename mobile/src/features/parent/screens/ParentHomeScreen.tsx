@@ -9,12 +9,17 @@ import { useAppTheme } from "@/src/core/theme/ThemeProvider";
 import { ChildStatusCard } from "@/src/features/parent/components/ChildStatusCard";
 import { ParentEmptyState } from "@/src/features/parent/components/ParentEmptyState";
 import { useParentChildren } from "@/src/features/parent/hooks/useParentChildren";
+import { useProfile } from "@/src/features/profile/hooks/useProfile";
 import { AppScrollView } from "@/src/shared/ui/AppScrollView";
+import { WaveHeader } from "@/src/shared/ui/WaveHeader";
 
 export default function ParentHomeScreen() {
   const router = useRouter();
   const { colors, tokens } = useAppTheme();
   const { children, loading, refreshing, error, refresh } = useParentChildren();
+  const { displayName } = useProfile();
+  const firstName = displayName?.split(" ")[0];
+  const headerTitle = firstName ? `Hola, ${firstName}` : "Mis hijos";
 
   const handleRefresh = useCallback(() => {
     void refresh();
@@ -41,20 +46,7 @@ export default function ParentHomeScreen() {
         },
         content: {
           paddingHorizontal: tokens.spacing.lg,
-          paddingTop: tokens.spacing.md,
           gap: tokens.spacing.lg,
-        },
-        intro: {
-          gap: tokens.spacing.xs,
-          marginBottom: tokens.spacing.xs,
-        },
-        title: {
-          ...tokens.typography.title2,
-          color: colors.textTitle,
-        },
-        subtitle: {
-          ...tokens.typography.body,
-          color: colors.textBody,
         },
         list: {
           gap: tokens.spacing.md,
@@ -70,7 +62,8 @@ export default function ParentHomeScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>
+      <SafeAreaView edges={["left", "right"]} style={styles.safeArea}>
+        <WaveHeader title={headerTitle} subtitle="Apoderado" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator animating size={36} color={colors.primary} />
         </View>
@@ -79,7 +72,8 @@ export default function ParentHomeScreen() {
   }
 
   return (
-    <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>
+    <SafeAreaView edges={["left", "right"]} style={styles.safeArea}>
+      <WaveHeader title={headerTitle} subtitle="Apoderado" />
       <AppScrollView
         contentContainerStyle={styles.content}
         extraBottomInset={tokens.spacing.lg}
@@ -92,13 +86,6 @@ export default function ParentHomeScreen() {
           />
         }
       >
-        <View style={styles.intro}>
-          <Text style={styles.title}>Mis hijos</Text>
-          <Text style={styles.subtitle}>
-            Estado actual e historial del día en el bus escolar.
-          </Text>
-        </View>
-
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         {!children.length && error ? null : !children.length ? (

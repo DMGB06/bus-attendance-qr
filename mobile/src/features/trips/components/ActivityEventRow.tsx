@@ -92,7 +92,6 @@ export function ActivityEventRow({ event }: ActivityEventRowProps) {
         },
         badgeText: {
           ...tokens.typography.caption,
-          fontSize: 10,
           color: colors.textMuted,
         },
       }),

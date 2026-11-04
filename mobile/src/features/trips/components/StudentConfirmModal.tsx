@@ -84,7 +84,7 @@ export function StudentConfirmModal({
           borderRadius: tokens.radius.full,
           backgroundColor: colors.modalAvatarBg,
           borderWidth: 2,
-          borderColor: colors.accent,
+          borderColor: colors.modalSheetBorder,
           alignItems: "center",
           justifyContent: "center",
         },

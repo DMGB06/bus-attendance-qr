@@ -6,10 +6,7 @@ export type ColorSchemeId = "light" | "dark";
 
 export type SemanticColors = {
   screenSolid: string;
-  screenGradient: readonly [string, string, string];
-  headerGradient: readonly [string, string];
 
-  textHero: string;
   textTitle: string;
   textSubtitle: string;
   textBody: string;
@@ -20,11 +17,7 @@ export type SemanticColors = {
 
   borderDefault: string;
   borderMuted: string;
-  borderHighlight: string;
-  shadowColor: string;
 
-  surfaceGlass: string;
-  surfaceGlassBorder: string;
   surfaceCard: string;
   surfaceCardBorder: string;
   surfaceTrack: string;
@@ -37,65 +30,56 @@ export type SemanticColors = {
   primarySoftText: string;
   primaryIconContrast: string;
 
-  /** Amarillo del borde del escudo municipal */
-  accent: string;
-  accentOn: string;
-  accentSoftBg: string;
-
-  /** Celeste del cielo/corona del escudo */
   sky: string;
   skySoftBg: string;
 
-  /** Barra superior de navegación */
-  navHeaderBg: string;
+  /** Cabecera con olas */
+  headerBg: string;
+  onHeader: string;
+  onHeaderMuted: string;
+  headerStatBg: string;
+  waveBack: string;
+  waveMid: string;
 
-  ctaGradient: readonly [string, string];
+  /** Ingreso: cielo, olas y mar */
+  authSky: string;
+  authSkyTitle: string;
+  authSkyText: string;
+  authSea: string;
+  authWaveBack: string;
+  authWaveMid: string;
+
+  /** Etiquetas de estado: texto sobre su fondo */
+  statusPendingText: string;
+  statusPendingBg: string;
+  statusOnboardText: string;
+  statusOnboardBg: string;
+  statusCompletedText: string;
+  statusCompletedBg: string;
+  destructive: string;
+
 
   tabBarBg: string;
   tabBarBorder: string;
   tabBarActive: string;
   tabBarInactive: string;
 
-  navHeaderTitle: string;
-  navHeaderSubtitle: string;
-  navLogoWrapBg: string;
-  navLogoWrapBorder: string;
-  navBusIcon: string;
-  navLogoutPillBg: string;
-  navLogoutPillBorder: string;
-  navLogoutIcon: string;
-  navLogoutText: string;
-  navTabRingActiveBg: string;
-  navTabRingActiveBorder: string;
 
-  authScreenGradient: readonly [string, string, string];
-  authCardBg: string;
-  authCardBorder: string;
-  authCardShadow: string;
   authInputBg: string;
   authInputBorder: string;
   authInputBorderActive: string;
   authInputPlaceholder: string;
   authInputText: string;
-  authCtaGradient: readonly [string, string];
   authCtaSolid: string;
   authCtaText: string;
   authIconMuted: string;
   authForgotPassword: string;
-  authFooter: string;
-  authBottomNote: string;
 
-  loadingGradient: readonly [string, string, string];
-  loadingBg: string;
-  loadingGlowBlue: string;
-  loadingGlowPurple: string;
-  loadingDot: string;
 
   feedbackError: string;
   feedbackSuccess: string;
   feedbackWarningBg: string;
   feedbackWarningBorder: string;
-  feedbackWarningIconCircle: string;
   feedbackWarningTitle: string;
   feedbackWarningBody: string;
   feedbackWarningGlyph: string;
@@ -103,31 +87,16 @@ export type SemanticColors = {
   tripSelectorIdleText: string;
   tripActionOutlineText: string;
 
-  scannerRootBg: string;
-  scannerScreenContainerBg: string;
-  scannerBadgeBg: string;
-  scannerBadgeText: string;
   scannerCameraBg: string;
-  scannerCameraBorder: string;
-  scannerCameraShadow: string;
   scannerOverlay: string;
   scannerCorner: string;
-  scannerScanLine: string;
-  scannerHintText: string;
-  scannerHintPillBg: string;
   scannerPanelBg: string;
   scannerPanelBorder: string;
-  scannerMatchContainerBg: string;
-  scannerMatchItemBg: string;
-  scannerSelectionBg: string;
-  scannerSelectionLabel: string;
-  scannerSelectionMuted: string;
 
   modalSheetBg: string;
   modalSheetBorder: string;
   modalBackdrop: string;
   modalHandle: string;
-  modalTitle: string;
   modalSubtitle: string;
   modalStudentBannerBg: string;
   modalAvatarBg: string;
@@ -139,177 +108,120 @@ export type SemanticColors = {
   attendanceCompleted: string;
   attendanceLabel: string;
 
-  statusBadgeBg: string;
-  statusBadgeText: string;
-  statusBadgeActiveBg: string;
-  statusSuccessText: string;
 
-  switchTrackOff: string;
-  switchTrackOn: string;
-  switchThumb: string;
 
   /** Control segmentado claro/oscuro (navbar y formularios) */
-  appearanceControlBg: string;
-  appearanceControlBorder: string;
-  appearanceControlKnob: string;
-  appearanceControlKnobBorder: string;
   appearanceControlIconActive: string;
-  appearanceControlIconMuted: string;
 };
 
 export const lightSemanticColors: SemanticColors = {
-  screenSolid: "#F2F5FA",
-  screenGradient: ["#F2F5FA", "#F2F5FA", "#F2F5FA"],
-  headerGradient: ["#FFFFFF", "#FFFFFF"],
+  screenSolid: "#FFFFFF",
 
-  textHero: "#1C3284",
-  textTitle: "#1C3284",
-  textSubtitle: "#3A4A6B",
-  textBody: "#3A4A6B",
-  textMuted: "#5A6A84",
+  textTitle: "#0D2C47",
+  textSubtitle: "#4A6478",
+  textBody: "#0D2C47",
+  textMuted: "#4A6478",
   textInverse: "#FFFFFF",
-  textLink: "#1C3284",
+  textLink: "#0A4F8A",
   textOnPrimary: "#FFFFFF",
 
-  borderDefault: "rgba(28, 50, 132, 0.14)",
-  borderMuted: "rgba(28, 50, 132, 0.08)",
-  borderHighlight: "rgba(255, 204, 0, 0.7)",
-  shadowColor: "rgba(28, 50, 132, 0.08)",
+  borderDefault: "#C4D4DF",
+  borderMuted: "#E1EBF1",
 
-  surfaceGlass: "#FFFFFF",
-  surfaceGlassBorder: "rgba(28, 50, 132, 0.1)",
   surfaceCard: "#FFFFFF",
-  surfaceCardBorder: "rgba(28, 50, 132, 0.12)",
-  surfaceTrack: "#E6EBF4",
-  surfaceDivider: "rgba(28, 50, 132, 0.08)",
+  surfaceCardBorder: "#E1EBF1",
+  surfaceTrack: "#F3F8FB",
+  surfaceDivider: "#E1EBF1",
   surfaceListItem: "#FFFFFF",
 
-  primary: "#1C3284",
-  primaryPressed: "#152766",
-  primarySoftBg: "rgba(28, 50, 132, 0.1)",
-  primarySoftText: "#1C3284",
+  primary: "#12395F",
+  primaryPressed: "#0C2A47",
+  primarySoftBg: "#E1F0FB",
+  primarySoftText: "#0B5FB0",
   primaryIconContrast: "#FFFFFF",
 
-  accent: "#FFCC00",
-  accentOn: "#1C3284",
-  accentSoftBg: "rgba(255, 204, 0, 0.18)",
-  sky: "#5DB8E5",
-  skySoftBg: "rgba(93, 184, 229, 0.16)",
-  navHeaderBg: "#FFFFFF",
+  sky: "#0B5FB0",
+  skySoftBg: "#E1F0FB",
+  headerBg: "#0A4F8A",
+  onHeader: "#FFFFFF",
+  onHeaderMuted: "#D6ECFB",
+  headerStatBg: "rgba(255, 255, 255, 0.14)",
+  waveBack: "#3F9EE0",
+  waveMid: "#9AD4F5",
 
-  ctaGradient: ["#1C3284", "#152766"],
+  authSky: "#E8F6FE",
+  authSkyTitle: "#083E6E",
+  authSkyText: "#2A5777",
+  authSea: "#083E6E",
+  authWaveBack: "#A9DCF6",
+  authWaveMid: "#4CAEE6",
+
+  statusPendingText: "#B4480F",
+  statusPendingBg: "#FCEDE3",
+  statusOnboardText: "#0B5FB0",
+  statusOnboardBg: "#E1F0FB",
+  statusCompletedText: "#157045",
+  statusCompletedBg: "#E2F4EA",
+  destructive: "#B3261E",
+
 
   tabBarBg: "#FFFFFF",
-  tabBarBorder: "rgba(28, 50, 132, 0.1)",
-  tabBarActive: "#1C3284",
-  tabBarInactive: "#5F6E88",
+  tabBarBorder: "#E1EBF1",
+  tabBarActive: "#0A4F8A",
+  tabBarInactive: "#4A6478",
 
-  navHeaderTitle: "#1C3284",
-  navHeaderSubtitle: "#5A6A84",
-  navLogoWrapBg: "transparent",
-  navLogoWrapBorder: "transparent",
-  navBusIcon: "#1C3284",
-  navLogoutPillBg: "rgba(28, 50, 132, 0.06)",
-  navLogoutPillBorder: "rgba(28, 50, 132, 0.12)",
-  navLogoutIcon: "#1C3284",
-  navLogoutText: "#1C3284",
-  navTabRingActiveBg: "rgba(255, 204, 0, 0.22)",
-  navTabRingActiveBorder: "rgba(255, 204, 0, 0.65)",
 
-  authScreenGradient: ["#1C3284", "#1C3284", "#F2F5FA"],
-  authCardBg: "#FFFFFF",
-  authCardBorder: "rgba(28, 50, 132, 0.12)",
-  authCardShadow: "rgba(28, 50, 132, 0.06)",
-  authInputBg: "#F8FAFD",
-  authInputBorder: "#C5CED8",
-  authInputBorderActive: "#1C3284",
-  authInputPlaceholder: "#8A97AD",
-  authInputText: "#1C3284",
-  authCtaGradient: ["#1C3284", "#152766"],
-  authCtaSolid: "#1C3284",
-  authCtaText: "#FFFFFF",
-  authIconMuted: "#8A97AD",
-  authForgotPassword: "#1C3284",
-  authFooter: "#8A97AD",
-  authBottomNote: "#6A7A94",
+  authInputBg: "rgba(255, 255, 255, 0.13)",
+  authInputBorder: "rgba(255, 255, 255, 0.42)",
+  authInputBorderActive: "#FFFFFF",
+  authInputPlaceholder: "rgba(255, 255, 255, 0.72)",
+  authInputText: "#FFFFFF",
+  authCtaSolid: "#FFFFFF",
+  authCtaText: "#083E6E",
+  authIconMuted: "#D6ECFB",
+  authForgotPassword: "#D6ECFB",
 
-  loadingGradient: ["#F2F5FA", "#F2F5FA", "#F2F5FA"],
-  loadingBg: "#F2F5FA",
-  loadingGlowBlue: "rgba(93, 184, 229, 0.12)",
-  loadingGlowPurple: "rgba(255, 204, 0, 0.08)",
-  loadingDot: "#1C3284",
 
-  feedbackError: "#C53030",
-  feedbackSuccess: "#2F855A",
-  feedbackWarningBg: "rgba(93, 184, 229, 0.14)",
-  feedbackWarningBorder: "rgba(93, 184, 229, 0.35)",
-  feedbackWarningIconCircle: "rgba(93, 184, 229, 0.22)",
-  feedbackWarningTitle: "#1C3284",
-  feedbackWarningBody: "#3A4A6B",
-  feedbackWarningGlyph: "#5DB8E5",
+  feedbackError: "#B3261E",
+  feedbackSuccess: "#157045",
+  feedbackWarningBg: "#FCEDE3",
+  feedbackWarningBorder: "#F3CFB5",
+  feedbackWarningTitle: "#B4480F",
+  feedbackWarningBody: "#0D2C47",
+  feedbackWarningGlyph: "#B4480F",
 
-  tripSelectorIdleText: "#3A4A6B",
-  tripActionOutlineText: "#1C3284",
+  tripSelectorIdleText: "#4A6478",
+  tripActionOutlineText: "#12395F",
 
-  scannerRootBg: "#E8EDF5",
-  scannerScreenContainerBg: "#E8EDF5",
-  scannerBadgeBg: "rgba(28, 50, 132, 0.1)",
-  scannerBadgeText: "#1C3284",
-  scannerCameraBg: "#152766",
-  scannerCameraBorder: "rgba(255, 204, 0, 0.75)",
-  scannerCameraShadow: "#152766",
-  scannerOverlay: "rgba(21, 39, 102, 0.14)",
-  scannerCorner: "#FFCC00",
-  scannerScanLine: "#FFCC00",
-  scannerHintText: "#FFFFFF",
-  scannerHintPillBg: "rgba(28, 50, 132, 0.9)",
+  scannerCameraBg: "#0C2A47",
+  scannerOverlay: "rgba(12, 42, 71, 0.14)",
+  scannerCorner: "#FFFFFF",
   scannerPanelBg: "#FFFFFF",
-  scannerPanelBorder: "rgba(28, 50, 132, 0.1)",
-  scannerMatchContainerBg: "rgba(28, 50, 132, 0.04)",
-  scannerMatchItemBg: "rgba(28, 50, 132, 0.06)",
-  scannerSelectionBg: "rgba(93, 184, 229, 0.14)",
-  scannerSelectionLabel: "#152766",
-  scannerSelectionMuted: "#6A7A94",
+  scannerPanelBorder: "rgba(18, 57, 95, 0.1)",
 
   modalSheetBg: "#FFFFFF",
-  modalSheetBorder: "rgba(28, 50, 132, 0.12)",
-  modalBackdrop: "rgba(21, 39, 102, 0.45)",
-  modalHandle: "rgba(255, 204, 0, 0.75)",
-  modalTitle: "#1C3284",
-  modalSubtitle: "#6A7A94",
-  modalStudentBannerBg: "#1C3284",
-  modalAvatarBg: "#152766",
+  modalSheetBorder: "rgba(18, 57, 95, 0.12)",
+  modalBackdrop: "rgba(12, 42, 71, 0.45)",
+  modalHandle: "#C4D4DF",
+  modalSubtitle: "#4A6478",
+  modalStudentBannerBg: "#12395F",
+  modalAvatarBg: "#0C2A47",
   modalName: "#FFFFFF",
   modalStatus: "rgba(255, 255, 255, 0.82)",
 
-  attendancePending: "#C53030",
-  attendanceOnboard: "#1C3284",
-  attendanceCompleted: "#2F855A",
+  attendancePending: "#B4480F",
+  attendanceOnboard: "#12395F",
+  attendanceCompleted: "#157045",
   attendanceLabel: "#FFFFFF",
 
-  statusBadgeBg: "rgba(93, 184, 229, 0.18)",
-  statusBadgeText: "#1C3284",
-  statusBadgeActiveBg: "rgba(255, 204, 0, 0.28)",
-  statusSuccessText: "#152766",
 
-  switchTrackOff: "#C5CED8",
-  switchTrackOn: "rgba(28, 50, 132, 0.35)",
-  switchThumb: "#FFFFFF",
 
-  appearanceControlBg: "rgba(28, 50, 132, 0.06)",
-  appearanceControlBorder: "rgba(28, 50, 132, 0.12)",
-  appearanceControlKnob: "#FFFFFF",
-  appearanceControlKnobBorder: "rgba(28, 50, 132, 0.1)",
-  appearanceControlIconActive: "#1C3284",
-  appearanceControlIconMuted: "#8A97AD",
+  appearanceControlIconActive: "#12395F",
 };
 
 export const darkSemanticColors: SemanticColors = {
   screenSolid: "#141820",
-  screenGradient: ["#141820", "#141820", "#141820"],
-  headerGradient: ["#1C2130", "#1C2130"],
 
-  textHero: "#ECEFF4",
   textTitle: "#ECEFF4",
   textSubtitle: "#A8B0C2",
   textBody: "#A8B0C2",
@@ -320,145 +232,103 @@ export const darkSemanticColors: SemanticColors = {
 
   borderDefault: "rgba(255, 255, 255, 0.09)",
   borderMuted: "rgba(255, 255, 255, 0.05)",
-  borderHighlight: "rgba(255, 204, 0, 0.4)",
-  shadowColor: "#000000",
 
-  surfaceGlass: "#1C2130",
-  surfaceGlassBorder: "rgba(255, 255, 255, 0.07)",
   surfaceCard: "#1C2130",
   surfaceCardBorder: "rgba(255, 255, 255, 0.07)",
   surfaceTrack: "#252B3A",
   surfaceDivider: "rgba(255, 255, 255, 0.05)",
   surfaceListItem: "#1C2130",
 
-  primary: "#2E4A9A",
-  primaryPressed: "#243D82",
-  primarySoftBg: "rgba(46, 74, 154, 0.22)",
-  primarySoftText: "#8EB4E8",
+  primary: "#2F6CA3",
+  primaryPressed: "#25588A",
+  primarySoftBg: "#16324B",
+  primarySoftText: "#9CCBF0",
   primaryIconContrast: "#FFFFFF",
 
-  accent: "#E6B800",
-  accentOn: "#141820",
-  accentSoftBg: "rgba(230, 184, 0, 0.12)",
   sky: "#6BBDE8",
   skySoftBg: "rgba(107, 189, 232, 0.12)",
-  navHeaderBg: "#1C2130",
+  headerBg: "#0F3558",
+  onHeader: "#FFFFFF",
+  onHeaderMuted: "#D6ECFB",
+  headerStatBg: "rgba(255, 255, 255, 0.12)",
+  waveBack: "#1F6AA0",
+  waveMid: "#2F86BF",
 
-  ctaGradient: ["#2E4A9A", "#243D82"],
+  authSky: "#E8F6FE",
+  authSkyTitle: "#083E6E",
+  authSkyText: "#2A5777",
+  authSea: "#083E6E",
+  authWaveBack: "#A9DCF6",
+  authWaveMid: "#4CAEE6",
+
+  statusPendingText: "#F3B48C",
+  statusPendingBg: "#3A2416",
+  statusOnboardText: "#9CCBF0",
+  statusOnboardBg: "#16324B",
+  statusCompletedText: "#8ADBB0",
+  statusCompletedBg: "#123524",
+  destructive: "#F08080",
+
 
   tabBarBg: "#1C2130",
   tabBarBorder: "rgba(255, 255, 255, 0.07)",
   tabBarActive: "#ECEFF4",
   tabBarInactive: "#8E98AD",
 
-  navHeaderTitle: "#ECEFF4",
-  navHeaderSubtitle: "#8A94A8",
-  navLogoWrapBg: "transparent",
-  navLogoWrapBorder: "transparent",
-  navBusIcon: "#6BBDE8",
-  navLogoutPillBg: "transparent",
-  navLogoutPillBorder: "transparent",
-  navLogoutIcon: "#C5CDD9",
-  navLogoutText: "#C5CDD9",
-  navTabRingActiveBg: "rgba(107, 189, 232, 0.14)",
-  navTabRingActiveBorder: "rgba(107, 189, 232, 0.35)",
 
-  authScreenGradient: ["#1C3284", "#1C3284", "#141820"],
-  authCardBg: "#1C2130",
-  authCardBorder: "rgba(255, 255, 255, 0.08)",
-  authCardShadow: "#000000",
-  authInputBg: "#252B3A",
-  authInputBorder: "#353D50",
-  authInputBorderActive: "#2E4A9A",
-  authInputPlaceholder: "#7A8499",
-  authInputText: "#ECEFF4",
-  authCtaGradient: ["#2E4A9A", "#243D82"],
-  authCtaSolid: "#2E4A9A",
-  authCtaText: "#FFFFFF",
-  authIconMuted: "#7A8499",
-  authForgotPassword: "#6BBDE8",
-  authFooter: "#7A8499",
-  authBottomNote: "#6A7488",
+  authInputBg: "rgba(255, 255, 255, 0.13)",
+  authInputBorder: "rgba(255, 255, 255, 0.42)",
+  authInputBorderActive: "#FFFFFF",
+  authInputPlaceholder: "rgba(255, 255, 255, 0.72)",
+  authInputText: "#FFFFFF",
+  authCtaSolid: "#FFFFFF",
+  authCtaText: "#083E6E",
+  authIconMuted: "#D6ECFB",
+  authForgotPassword: "#D6ECFB",
 
-  loadingGradient: ["#141820", "#141820", "#141820"],
-  loadingBg: "#141820",
-  loadingGlowBlue: "rgba(107, 189, 232, 0.1)",
-  loadingGlowPurple: "rgba(230, 184, 0, 0.06)",
-  loadingDot: "#6BBDE8",
 
   feedbackError: "#F08080",
   feedbackSuccess: "#5CB88A",
-  feedbackWarningBg: "rgba(107, 189, 232, 0.1)",
-  feedbackWarningBorder: "rgba(107, 189, 232, 0.22)",
-  feedbackWarningIconCircle: "rgba(107, 189, 232, 0.15)",
-  feedbackWarningTitle: "#6BBDE8",
-  feedbackWarningBody: "#A8B0C2",
-  feedbackWarningGlyph: "#6BBDE8",
+  feedbackWarningBg: "#3A2416",
+  feedbackWarningBorder: "#5A3A24",
+  feedbackWarningTitle: "#F3B48C",
+  feedbackWarningBody: "#ECEFF4",
+  feedbackWarningGlyph: "#F3B48C",
 
   tripSelectorIdleText: "#A8B0C2",
   tripActionOutlineText: "#8EB4E8",
 
-  scannerRootBg: "#141820",
-  scannerScreenContainerBg: "#141820",
-  scannerBadgeBg: "rgba(46, 74, 154, 0.22)",
-  scannerBadgeText: "#8EB4E8",
   scannerCameraBg: "#0E1118",
-  scannerCameraBorder: "rgba(230, 184, 0, 0.45)",
-  scannerCameraShadow: "#000000",
   scannerOverlay: "rgba(0, 0, 0, 0.28)",
-  scannerCorner: "#E6B800",
-  scannerScanLine: "#E6B800",
-  scannerHintText: "#ECEFF4",
-  scannerHintPillBg: "rgba(28, 33, 48, 0.92)",
+  scannerCorner: "#FFFFFF",
   scannerPanelBg: "#1C2130",
   scannerPanelBorder: "rgba(255, 255, 255, 0.07)",
-  scannerMatchContainerBg: "rgba(255, 255, 255, 0.03)",
-  scannerMatchItemBg: "rgba(255, 255, 255, 0.05)",
-  scannerSelectionBg: "rgba(107, 189, 232, 0.12)",
-  scannerSelectionLabel: "#ECEFF4",
-  scannerSelectionMuted: "#7A8499",
 
   modalSheetBg: "#1C2130",
   modalSheetBorder: "rgba(255, 255, 255, 0.08)",
   modalBackdrop: "rgba(0, 0, 0, 0.55)",
-  modalHandle: "rgba(230, 184, 0, 0.45)",
-  modalTitle: "#ECEFF4",
+  modalHandle: "#353D50",
   modalSubtitle: "#7A8499",
-  modalStudentBannerBg: "#243D82",
-  modalAvatarBg: "#2E4A9A",
+  modalStudentBannerBg: "#25588A",
+  modalAvatarBg: "#2F6CA3",
   modalName: "#FFFFFF",
   modalStatus: "rgba(255, 255, 255, 0.75)",
 
-  attendancePending: "#E05C5C",
-  attendanceOnboard: "#2E4A9A",
-  attendanceCompleted: "#5CB88A",
+  attendancePending: "#B4561F",
+  attendanceOnboard: "#2F6CA3",
+  attendanceCompleted: "#1A7F4F",
   attendanceLabel: "#FFFFFF",
 
-  statusBadgeBg: "rgba(107, 189, 232, 0.12)",
-  statusBadgeText: "#A8B0C2",
-  statusBadgeActiveBg: "rgba(92, 184, 138, 0.18)",
-  statusSuccessText: "#5CB88A",
 
-  switchTrackOff: "#353D50",
-  switchTrackOn: "rgba(46, 74, 154, 0.45)",
-  switchThumb: "#ECEFF4",
 
-  appearanceControlBg: "transparent",
-  appearanceControlBorder: "transparent",
-  appearanceControlKnob: "transparent",
-  appearanceControlKnobBorder: "transparent",
-  appearanceControlIconActive: "#E6B800",
-  appearanceControlIconMuted: "#7A8499",
+  appearanceControlIconActive: "#ECEFF4",
 };
 
 /** Legibilidad en sol directo (parabrisas). Solo aplica sobre tema claro. */
 export const highContrastSemanticColors: SemanticColors = {
   ...lightSemanticColors,
   screenSolid: "#FFFFFF",
-  screenGradient: ["#FFFFFF", "#FFFFFF", "#FFFFFF"],
-  headerGradient: ["#FFFFFF", "#FFFFFF"],
 
-  textHero: "#000000",
   textTitle: "#000000",
   textSubtitle: "#1A1A1A",
   textBody: "#1A1A1A",
@@ -466,7 +336,6 @@ export const highContrastSemanticColors: SemanticColors = {
 
   borderDefault: "rgba(0, 0, 0, 0.35)",
   borderMuted: "rgba(0, 0, 0, 0.22)",
-  borderHighlight: "#FFCC00",
 
   surfaceTrack: "#D8DEE8",
   surfaceCard: "#FFFFFF",
@@ -474,45 +343,37 @@ export const highContrastSemanticColors: SemanticColors = {
   surfaceDivider: "rgba(0, 0, 0, 0.18)",
   surfaceListItem: "#FFFFFF",
 
-  primarySoftBg: "#D4DCF0",
-  primarySoftText: "#1C3284",
+  primarySoftBg: "#CFE3F3",
+  primarySoftText: "#12395F",
 
   tabBarInactive: "#444444",
   tabBarBorder: "rgba(0, 0, 0, 0.25)",
 
-  navHeaderSubtitle: "#333333",
 
   tripSelectorIdleText: "#333333",
-  tripActionOutlineText: "#1C3284",
+  tripActionOutlineText: "#12395F",
 
-  scannerRootBg: "#FFFFFF",
-  scannerScreenContainerBg: "#FFFFFF",
-  scannerSelectionMuted: "#333333",
-  scannerSelectionLabel: "#1C3284",
-  scannerBadgeText: "#1C3284",
-  scannerHintText: "#FFFFFF",
   scannerOverlay: "rgba(0, 0, 0, 0.28)",
 
-  feedbackWarningBg: "rgba(255, 204, 0, 0.28)",
+  feedbackWarningBg: "#FCEDE3",
   feedbackWarningBorder: "rgba(0, 0, 0, 0.35)",
   feedbackWarningTitle: "#000000",
   feedbackWarningBody: "#1A1A1A",
-  feedbackWarningGlyph: "#1C3284",
+  feedbackWarningGlyph: "#8F390C",
 
   modalSubtitle: "#333333",
   modalBackdrop: "rgba(0, 0, 0, 0.5)",
-  authFooter: "#333333",
-  authBottomNote: "#333333",
-  authInputPlaceholder: "#444444",
-  authIconMuted: "#444444",
 
-  sky: "#1C3284",
+  sky: "#12395F",
 
-  statusBadgeText: "#1C3284",
-  statusBadgeBg: "rgba(93, 184, 229, 0.35)",
+  statusPendingText: "#8F390C",
+  statusOnboardText: "#0B4F93",
+  statusCompletedText: "#0F5A37",
+  destructive: "#8C1D18",
 
-  attendancePending: "#B91C1C",
-  attendanceOnboard: "#1C3284",
+
+  attendancePending: "#8F390C",
+  attendanceOnboard: "#12395F",
   attendanceCompleted: "#166534",
   attendanceLabel: "#FFFFFF",
 };

@@ -31,8 +31,8 @@
       "bundler": "metro",
       "favicon": "./assets/images/favicon.png",
       "output": "static",
-      "themeColor": "#1C3284",
-      "backgroundColor": "#1C3284",
+      "themeColor": "#0A4F8A",
+      "backgroundColor": "#0A4F8A",
       "display": "standalone",
       "orientation": "portrait",
       "lang": "es",
@@ -47,9 +47,9 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 280,
           "resizeMode": "contain",
-          "backgroundColor": "#1C3284",
+          "backgroundColor": "#0A4F8A",
           "dark": {
-            "backgroundColor": "#152766"
+            "backgroundColor": "#083E6E"
           }
         }
       ],
@@ -58,7 +58,7 @@
         "expo-notifications",
         {
           "icon": "./assets/images/notification-icon.png",
-          "color": "#1C3284"
+          "color": "#0A4F8A"
         }
       ],
       [

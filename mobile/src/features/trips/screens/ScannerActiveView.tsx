@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { Linking, Platform, Pressable, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCameraPermissions } from "expo-camera";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
@@ -23,6 +23,7 @@ import { useRosterItems, rosterStoreActions } from "@/src/features/trips/store/r
 import { requestRosterView } from "@/src/features/trips/utils/roster-navigation";
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
 import { AppScrollView } from "@/src/shared/ui/AppScrollView";
+import { WaveHeader } from "@/src/shared/ui/WaveHeader";
 import { useCompactScreen } from "@/src/shared/hooks/useCompactScreen";
 import { useScreenPerfMark } from "@/src/shared/hooks/useScreenPerfMark";
 
@@ -47,6 +48,7 @@ export function ScannerActiveView({ activeTrip }: ScannerActiveViewProps) {
   const isFocused = useIsFocused();
   const { colors, tokens } = useAppTheme();
   const { isCompact } = useCompactScreen();
+  const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const rosterItems = useRosterItems(activeTrip.id);
   const morningRiders = useMorningRiderSummary(
@@ -81,6 +83,7 @@ export function ScannerActiveView({ activeTrip }: ScannerActiveViewProps) {
   if (!permission) {
     return (
       <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>
+        <WaveHeader title="Escanear" />
         <View style={styles.statusContainer}>
           <ScannerStatusCard
             style={styles.statusCard}
@@ -98,6 +101,7 @@ export function ScannerActiveView({ activeTrip }: ScannerActiveViewProps) {
 
     return (
       <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>
+        <WaveHeader title="Escanear" />
         <View style={styles.statusContainer}>
           <ScannerStatusCard
             style={styles.statusCard}
@@ -114,7 +118,8 @@ export function ScannerActiveView({ activeTrip }: ScannerActiveViewProps) {
 
   return (
     <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>
-      <View style={styles.screenContainer}>
+      {!isScannerMode ? <WaveHeader title="Registro manual" /> : null}
+      <View style={[styles.screenContainer, isScannerMode ? { paddingTop: insets.top + tokens.spacing.md } : null]}>
         <View style={styles.topChrome}>
           <View style={styles.modeBar}>
             {MODE_OPTIONS.map((option) => {
@@ -131,7 +136,7 @@ export function ScannerActiveView({ activeTrip }: ScannerActiveViewProps) {
                   <MaterialCommunityIcons
                     name={option.icon}
                     size={tokens.fontSize.md}
-                    color={isActive ? colors.primary : colors.textMuted}
+                    color={isActive ? colors.onHeader : colors.textMuted}
                   />
                   <Text style={[styles.modeButtonLabel, isActive && styles.modeButtonLabelActive]}>
                     {option.label}
@@ -140,10 +145,6 @@ export function ScannerActiveView({ activeTrip }: ScannerActiveViewProps) {
               );
             })}
           </View>
-
-          {!isScannerMode ? (
-            <Text style={styles.modeHint}>Busca por nombre en el padrón oficial.</Text>
-          ) : null}
 
           {morningRiders.isVisible ? (
             <MorningRiderReminderBanner

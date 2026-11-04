@@ -51,7 +51,7 @@ export function ScannerCamera({
           position: "absolute",
           width: 22,
           height: 22,
-          borderColor: colors.accent,
+          borderColor: colors.scannerCorner,
           borderWidth: 2,
         },
         topLeft: {

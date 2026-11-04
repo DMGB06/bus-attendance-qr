@@ -77,7 +77,7 @@ function buildActiveRetornoSteps(context: DailyChecklistContext): DailyChecklist
         {
           id: "morning_priority",
           label: "Escanear quienes vinieron en la mañana",
-          hint: `${morningRiderPendingCount} pendiente(s) — banner amarillo`,
+          hint: `${morningRiderPendingCount} pendiente(s) — aviso de la mañana`,
         },
         "current",
       ),
@@ -140,7 +140,7 @@ function buildIdleChecklist(setupPeriod: "mañana" | "tarde"): DailyChecklistSte
   return [
     withStatus({ id: "start", label: "Iniciar viaje de tarde" }, "current"),
     withStatus(
-      { id: "morning_priority", label: "Atender banner amarillo si aparece" },
+      { id: "morning_priority", label: "Atender aviso de la mañana si aparece" },
       "pending",
     ),
     withStatus({ id: "scan_boarding", label: "Escanear subidas al bus" }, "pending"),

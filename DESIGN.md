@@ -3,7 +3,7 @@
 Decisiones aprobadas por el dueno del proyecto el 2026-11-04.
 Prototipo de referencia (privado): https://claude.ai/artifact/EGWDydVfJW7BzwqK9mxgEn
 
-Estado: aprobado en prototipo web. Falta implementarlo en la app y probarlo en un celular real.
+Estado: implementado en la rama `feat/rediseno-cerrobus`. Falta probarlo en un celular real y con la base real.
 
 ## Tipo de diseno
 
@@ -78,6 +78,12 @@ Respeta `RosterScreen.tsx`, `RosterStudentRow.tsx` y `roster-filter.utils.ts`:
 - Mapa e historial completos del apoderado.
 - Modo oscuro y alto contraste.
 
-## Cambios de permisos a aplicar
+## Permisos
 
-- La asistenta controla la lista de llegada, asi que debe poder usar "Dejar todos": activar `canBulkDropoff` para su rol. Hoy lo tiene en `false`. Sigue sin poder iniciar ni cerrar viajes.
+- La asistenta controla la lista de llegada, asi que puede usar "Dejar todos" (`canBulkDropoff`). Sigue sin poder iniciar ni cerrar viajes.
+
+## Implementacion
+
+- Olas: siluetas PNG de `scripts/generate-wave-assets.mjs`, pintadas con `tintColor` en `WaveBand`. Evitan agregar `react-native-svg`, que obliga a recompilar el dev client.
+- Cabecera unica: `WaveHeader`. Cada pantalla la pinta; las pestanas usan `headerShown: false`.
+- Historial del apoderado: pestana propia con los ultimos 7 dias.

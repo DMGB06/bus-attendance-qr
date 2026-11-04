@@ -1,21 +1,16 @@
-import { showLogoutError } from '@/src/shared/utils/confirmAlert';
-import { Fragment, useCallback, useMemo } from "react";
-import { Tabs, useRouter } from "expo-router";
+import { Fragment, useMemo } from "react";
+import { Tabs } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-// 1. IMPORTAMOS PLATFORM DESDE REACT-NATIVE
 import { Platform } from "react-native";
 
-import { AUTH_ROUTES } from "@/src/core/routes";
 import { useAppCapabilities } from "@/src/features/auth/hooks/useAppCapabilities";
-import { logout } from "@/src/features/auth/services/auth.service";
 import { TripLocationPublisherSync } from "@/src/features/trips/components/TripLocationPublisherSync";
 import { OpsTripHydrationSync } from "@/src/features/trips/components/OpsTripHydrationSync";
 import { useActiveTripRoster } from "@/src/features/trips/hooks/useActiveTripRoster";
 import { useAttendanceQueueSync } from "@/src/features/trips/hooks/useAttendanceQueueSync";
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
 import { useTabBarHeight } from "@/src/core/theme/useScrollBottomPadding";
-import { AppTabHeaderBar } from "@/src/shared/ui/AppTabHeaderBar";
 
 function ActiveTripRosterSync() {
   useActiveTripRoster();
@@ -24,25 +19,10 @@ function ActiveTripRosterSync() {
 }
 
 export default function TabsLayout() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const tabBarHeight = useTabBarHeight();
   const { colors, tokens } = useAppTheme();
   const { capabilities, loading: capabilitiesLoading } = useAppCapabilities();
-
-  const handleLogout = useCallback(async () => {
-    try {
-      await logout();
-      router.replace(AUTH_ROUTES.login);
-    } catch {
-      showLogoutError();
-    }
-  }, [router]);
-
-  const renderHeader = useCallback(
-    () => <AppTabHeaderBar onLogout={handleLogout} />,
-    [handleLogout],
-  );
 
   const tabLabelStyle = useMemo(
     () => ({
@@ -57,13 +37,10 @@ export default function TabsLayout() {
       sceneStyle: {
         backgroundColor: colors.screenSolid,
       },
-      headerShadowVisible: false,
-      header: renderHeader,
+      headerShown: false,
       tabBarHideOnKeyboard: true,
       tabBarActiveTintColor: colors.tabBarActive,
       tabBarInactiveTintColor: colors.tabBarInactive,
-      
-      // 1. Dejamos el alto de la barra con un espacio extra en web, sin paddingBottom agresivo
       tabBarStyle: {
         position: "absolute" as const,
         backgroundColor: colors.tabBarBg,
@@ -76,14 +53,12 @@ export default function TabsLayout() {
         shadowOpacity: 0,
       },
       tabBarLabelStyle: tabLabelStyle,
-      
-      // 2. EMPUJAMOS LOS ITEMS (ICONO + TEXTO) HACIA ARRIBA DESDE SU PROPIO ESTILO
       tabBarItemStyle: {
         paddingVertical: tokens.spacing.xs,
-        marginBottom: Platform.OS === 'web' ? 12 : 0, // Esto eleva los iconos y nombres en la Web
+        marginBottom: Platform.OS === "web" ? 12 : 0,
       },
     }),
-    [colors, insets.bottom, renderHeader, tabBarHeight, tabLabelStyle, tokens],
+    [colors, insets.bottom, tabBarHeight, tabLabelStyle, tokens],
   );
 
   const showScannerTab = capabilitiesLoading || capabilities.canScan;
@@ -100,12 +75,8 @@ export default function TabsLayout() {
           options={{
             title: capabilities.isAssistant ? "Viaje activo" : "Iniciar Viaje",
             tabBarLabel: "Viaje",
-            tabBarIcon: ({ color, focused }) => (
-              <MaterialCommunityIcons
-                name="bus-clock"
-                size={24}
-                color={focused ? colors.tabBarActive : color}
-              />
+            tabBarIcon: ({ color }) => (
+              <MaterialCommunityIcons name="bus-clock" size={24} color={color} />
             ),
           }}
         />
@@ -120,7 +91,7 @@ export default function TabsLayout() {
               <MaterialCommunityIcons
                 name={focused ? "qrcode-scan" : "qrcode"}
                 size={24}
-                color={focused ? colors.tabBarActive : color}
+                color={color}
               />
             ),
           }}
@@ -136,33 +107,28 @@ export default function TabsLayout() {
               <MaterialCommunityIcons
                 name={focused ? "format-list-bulleted" : "format-list-bulleted-square"}
                 size={24}
-                color={focused ? colors.tabBarActive : color}
+                color={color}
               />
             ),
           }}
         />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          lazy: true,
-          href: null,
-          title: "Perfil",
-        }}
-      />
         <Tabs.Screen
-          name="close-trip"
+          name="profile"
           options={{
-            href: null,
-            title: "Cerrar viaje",
+            lazy: true,
+            title: "Perfil",
+            tabBarLabel: "Perfil",
+            tabBarIcon: ({ color, focused }) => (
+              <MaterialCommunityIcons
+                name={focused ? "account-circle" : "account-circle-outline"}
+                size={24}
+                color={color}
+              />
+            ),
           }}
         />
-        <Tabs.Screen
-          name="activity"
-          options={{
-            href: null,
-            title: "Historial",
-          }}
-        />
+        <Tabs.Screen name="close-trip" options={{ href: null, title: "Cerrar viaje" }} />
+        <Tabs.Screen name="activity" options={{ href: null, title: "Historial" }} />
       </Tabs>
     </Fragment>
   );

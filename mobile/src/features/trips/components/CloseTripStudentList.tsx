@@ -23,7 +23,7 @@ export function CloseTripStudentList({
     () =>
       tone === "danger"
         ? {
-            cardBg: "rgba(197, 48, 48, 0.08)",
+            cardBg: colors.statusPendingBg,
             cardBorder: colors.attendancePending,
             title: colors.attendancePending,
             icon: colors.attendancePending,

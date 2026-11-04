@@ -14,6 +14,7 @@ import { NotificationPreferencesPanel } from "@/src/features/notifications/compo
 import { HighContrastToggle } from "@/src/shared/ui/HighContrastToggle";
 import { ThemeAppearanceControl } from "@/src/shared/ui/ThemeAppearanceControl";
 import { AppScrollView } from "@/src/shared/ui/AppScrollView";
+import { WaveHeader } from "@/src/shared/ui/WaveHeader";
 
 function ProfileField({ label, value }: { label: string; value: string }) {
   const { colors, tokens } = useAppTheme();
@@ -73,7 +74,6 @@ export default function ParentProfileScreen() {
         },
         content: {
           paddingHorizontal: tokens.spacing.lg,
-          paddingTop: tokens.spacing.md,
           gap: tokens.spacing.lg,
         },
         loadingContainer: {
@@ -106,7 +106,7 @@ export default function ParentProfileScreen() {
         card: {
           padding: tokens.spacing.lg,
           backgroundColor: colors.surfaceCard,
-          borderRadius: tokens.radius.xl,
+          borderRadius: tokens.radius.lg,
           borderWidth: 1,
           borderColor: colors.surfaceCardBorder,
           gap: tokens.spacing.sm,
@@ -116,18 +116,14 @@ export default function ParentProfileScreen() {
           color: colors.textTitle,
           marginBottom: tokens.spacing.xs,
         },
-        cardHint: {
-          ...tokens.typography.caption,
-          color: colors.textMuted,
-          marginBottom: tokens.spacing.sm,
-        },
       }),
     [colors, tokens],
   );
 
   if (profileState.loading && !profileState.profile) {
     return (
-      <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>
+      <SafeAreaView edges={["left", "right"]} style={styles.safeArea}>
+        <WaveHeader title="Perfil" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator animating size={36} color={colors.primary} />
         </View>
@@ -138,7 +134,8 @@ export default function ParentProfileScreen() {
   const phoneLabel = profileState.phone || profileState.profile?.phone || "—";
 
   return (
-    <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>
+    <SafeAreaView edges={["left", "right"]} style={styles.safeArea}>
+        <WaveHeader title="Perfil" />
       <AppScrollView
         contentContainerStyle={styles.content}
         extraBottomInset={tokens.spacing.lg}
@@ -171,21 +168,17 @@ export default function ParentProfileScreen() {
 
         <Surface style={styles.card} elevation={0}>
           <Text style={styles.cardTitle}>Notificaciones push</Text>
-          <Text style={styles.cardHint}>
-            Recibe alertas cuando tu hijo sube o baja del bus escolar.
-          </Text>
           <NotificationPreferencesPanel />
         </Surface>
 
         <Surface style={styles.card} elevation={0}>
           <Text style={styles.cardTitle}>Preferencias</Text>
-          <Text style={styles.cardHint}>Ajustes de visualización de la app.</Text>
           <ThemeAppearanceControl variant="panel" />
           <Divider />
           <HighContrastToggle />
         </Surface>
 
-        <AppButton mode="outlined" icon="logout" onPress={() => void handleLogout()}>
+        <AppButton variant="secondary" icon="logout" onPress={() => void handleLogout()}>
           Cerrar sesión
         </AppButton>
       </AppScrollView>

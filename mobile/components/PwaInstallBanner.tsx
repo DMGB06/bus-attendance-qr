@@ -137,14 +137,14 @@ export default function PwaInstallBanner() {
 
 const styles = StyleSheet.create({
   bannerContainer: {
-    backgroundColor: '#1C3284',
+    backgroundColor: '#0A4F8A',
     paddingVertical: 12,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderBottomWidth: 1,
-    borderBottomColor: '#152766',
+    borderBottomColor: '#083E6E',
     width: '100%',
   },
   textContainer: {
@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   installButtonText: {
-    color: '#1C3284',
+    color: '#0A4F8A',
     fontWeight: 'bold',
     fontSize: 13,
   },

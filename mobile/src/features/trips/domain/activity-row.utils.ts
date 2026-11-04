@@ -28,8 +28,8 @@ export function getActivityEventColors(eventType: AttendanceEventType, colors: S
     case "bajo":
       return {
         stripe: colors.attendanceCompleted,
-        tagBg: "rgba(47, 133, 90, 0.12)",
-        tagText: colors.attendanceCompleted,
+        tagBg: colors.statusCompletedBg,
+        tagText: colors.statusCompletedText,
       };
     case "ausente":
       return {

@@ -112,7 +112,7 @@ export function getTripSegmentSubtitle(trip: Pick<Trip, "direction" | "turn_type
 }
 
 export function getRosterScreenSubtitle(trip: Pick<Trip, "direction" | "turn_type">, studentCount: number): string {
-  return `${formatTripTitle(trip)} · ${getTripSegmentSubtitle(trip)} · ${studentCount} alumnos`;
+  return `${formatTripTitle(trip)} · ${studentCount} alumnos`;
 }
 
 export function getCloseTripScreenSubtitle(direction: TripDirection): string {

@@ -5,12 +5,9 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
 import { formatLastUpdatedAt, mapChildStatusToPresentation } from "@/src/features/parent/domain/student-status.mapper";
-import { ChildStatusIcon } from "@/src/features/parent/components/ChildStatusBadge";
 import { ChildTimelinePreview } from "@/src/features/parent/components/ChildTimelinePreview";
 import type { ParentChildSummary, ParentStatusTone } from "@/src/features/parent/types";
-import type { NivelEducativo } from "@/src/features/trips/types";
 import { formatTurnTypeLabel } from "@/src/features/trips/domain/trip-labels";
-import { getInitials } from "@/src/shared/utils/initials";
 
 type ChildStatusCardProps = {
   item: ParentChildSummary;
@@ -18,51 +15,19 @@ type ChildStatusCardProps = {
   onOpenChild: (studentId: string) => void;
 };
 
-function formatNivelLabel(nivel: NivelEducativo | null | undefined): string | null {
-  if (nivel === "primaria") {
-    return "Primaria";
-  }
-  if (nivel === "secundaria") {
-    return "Secundaria";
-  }
-  return null;
-}
-
 function statusStripTheme(
   tone: ParentStatusTone,
   colors: ReturnType<typeof useAppTheme>["colors"],
 ) {
   switch (tone) {
     case "completed":
-      return {
-        backgroundColor: "rgba(22, 101, 52, 0.07)",
-        accentColor: colors.attendanceCompleted,
-        labelColor: colors.textTitle,
-      };
+      return { backgroundColor: colors.statusCompletedBg, labelColor: colors.statusCompletedText };
     case "onboard":
-      return {
-        backgroundColor: colors.primarySoftBg,
-        accentColor: colors.primary,
-        labelColor: colors.textTitle,
-      };
+      return { backgroundColor: colors.statusOnboardBg, labelColor: colors.statusOnboardText };
     case "absent":
-      return {
-        backgroundColor: colors.feedbackWarningBg,
-        accentColor: colors.feedbackError,
-        labelColor: colors.textTitle,
-      };
-    case "pending":
-      return {
-        backgroundColor: "rgba(28, 50, 132, 0.06)",
-        accentColor: colors.primary,
-        labelColor: colors.primarySoftText,
-      };
+      return { backgroundColor: colors.statusPendingBg, labelColor: colors.statusPendingText };
     default:
-      return {
-        backgroundColor: colors.surfaceTrack,
-        accentColor: colors.textMuted,
-        labelColor: colors.textTitle,
-      };
+      return { backgroundColor: colors.surfaceTrack, labelColor: colors.textTitle };
   }
 }
 
@@ -85,9 +50,7 @@ export const ChildStatusCard = memo(function ChildStatusCard({
   const lastUpdated = formatLastUpdatedAt(
     latestTimelineEvent?.scanned_at ?? item.todayStatus?.last_event_at,
   );
-  const nivelLabel = formatNivelLabel(item.student.nivel_educativo);
   const stripTheme = statusStripTheme(presentation.tone, colors);
-  const initials = getInitials(item.student.nombre_alumno) || "?";
 
   const segmentLabel = latestTimelineEvent?.turn_type
     ? formatTurnTypeLabel(latestTimelineEvent.turn_type)
@@ -104,7 +67,7 @@ export const ChildStatusCard = memo(function ChildStatusCard({
       StyleSheet.create({
         card: {
           backgroundColor: colors.surfaceCard,
-          borderRadius: tokens.radius.xl,
+          borderRadius: tokens.radius.lg,
           borderWidth: 1,
           borderColor: colors.surfaceCardBorder,
           overflow: "hidden",
@@ -116,21 +79,6 @@ export const ChildStatusCard = memo(function ChildStatusCard({
           paddingHorizontal: tokens.spacing.lg,
           paddingTop: tokens.spacing.lg,
           paddingBottom: tokens.spacing.md,
-        },
-        avatar: {
-          width: 52,
-          height: 52,
-          borderRadius: tokens.radius.lg,
-          backgroundColor: colors.primarySoftBg,
-          alignItems: "center",
-          justifyContent: "center",
-          borderWidth: 1,
-          borderColor: "rgba(28, 50, 132, 0.1)",
-        },
-        avatarText: {
-          ...tokens.typography.headline,
-          color: colors.primarySoftText,
-          letterSpacing: 0.5,
         },
         identityBody: {
           flex: 1,
@@ -146,25 +94,6 @@ export const ChildStatusCard = memo(function ChildStatusCard({
           color: colors.textBody,
           lineHeight: 18,
         },
-        chipRow: {
-          flexDirection: "row",
-          flexWrap: "wrap",
-          gap: tokens.spacing.xs,
-          marginTop: 2,
-        },
-        metaChip: {
-          borderRadius: tokens.radius.full,
-          paddingHorizontal: tokens.spacing.sm,
-          paddingVertical: 3,
-          backgroundColor: colors.surfaceTrack,
-          borderWidth: 1,
-          borderColor: colors.surfaceCardBorder,
-        },
-        metaChipText: {
-          ...tokens.typography.caption,
-          color: colors.textMuted,
-          fontWeight: "500",
-        },
         chevron: {
           marginLeft: tokens.spacing.xs,
         },
@@ -177,22 +106,6 @@ export const ChildStatusCard = memo(function ChildStatusCard({
           borderTopWidth: 1,
           borderTopColor: colors.surfaceDivider,
         },
-        statusAccent: {
-          width: 4,
-          alignSelf: "stretch",
-          borderRadius: tokens.radius.full,
-          marginVertical: 2,
-        },
-        statusIconWrap: {
-          width: 40,
-          height: 40,
-          borderRadius: tokens.radius.full,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: colors.surfaceCard,
-          borderWidth: 1,
-          borderColor: colors.surfaceCardBorder,
-        },
         statusTextCol: {
           flex: 1,
           minWidth: 0,
@@ -200,12 +113,11 @@ export const ChildStatusCard = memo(function ChildStatusCard({
           paddingTop: 2,
         },
         statusLabel: {
-          ...tokens.typography.headline,
+          ...tokens.typography.title2,
         },
         statusSubtitle: {
           ...tokens.typography.body,
           color: colors.textBody,
-          lineHeight: 20,
         },
         metaRow: {
           flexDirection: "row",
@@ -249,10 +161,6 @@ export const ChildStatusCard = memo(function ChildStatusCard({
       accessibilityLabel={`${item.student.nombre_alumno}: ${presentation.label}. Ver detalle`}
     >
       <View style={styles.identitySection}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initials}</Text>
-        </View>
-
         <View style={styles.identityBody}>
           <Text style={styles.name} numberOfLines={2}>
             {item.student.nombre_alumno}
@@ -264,13 +172,6 @@ export const ChildStatusCard = memo(function ChildStatusCard({
             </Text>
           ) : null}
 
-          {nivelLabel ? (
-            <View style={styles.chipRow}>
-              <View style={styles.metaChip}>
-                <Text style={styles.metaChipText}>{nivelLabel}</Text>
-              </View>
-            </View>
-          ) : null}
         </View>
 
         <MaterialCommunityIcons
@@ -287,12 +188,6 @@ export const ChildStatusCard = memo(function ChildStatusCard({
           { backgroundColor: stripTheme.backgroundColor },
         ]}
       >
-        <View style={[styles.statusAccent, { backgroundColor: stripTheme.accentColor }]} />
-
-        <View style={styles.statusIconWrap}>
-          <ChildStatusIcon icon={presentation.icon} tone={presentation.tone} />
-        </View>
-
         <View style={styles.statusTextCol}>
           <Text style={[styles.statusLabel, { color: stripTheme.labelColor }]}>
             {presentation.label}

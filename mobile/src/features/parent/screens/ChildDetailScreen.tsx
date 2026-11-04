@@ -14,7 +14,7 @@ import { StudentCard } from "@/src/features/trips/components/StudentCard";
 import { formatTurnTypeLabel } from "@/src/features/trips/domain/trip-labels";
 import type { NivelEducativo } from "@/src/features/trips/types";
 import type { ParentStatusTone } from "@/src/features/parent/types";
-import { AppParentStackHeader } from "@/src/shared/ui/AppParentStackHeader";
+import { WaveHeader } from "@/src/shared/ui/WaveHeader";
 import { AppScrollView } from "@/src/shared/ui/AppScrollView";
 import { useScrollBottomPadding } from "@/src/core/theme/useScrollBottomPadding";
 
@@ -35,18 +35,18 @@ function statusPanelColors(
   switch (tone) {
     case "completed":
       return {
-        backgroundColor: "rgba(22, 101, 52, 0.08)",
-        borderColor: "rgba(22, 101, 52, 0.2)",
+        backgroundColor: colors.statusCompletedBg,
+        borderColor: colors.statusCompletedBg,
       };
     case "onboard":
       return {
-        backgroundColor: colors.primarySoftBg,
-        borderColor: "rgba(28, 50, 132, 0.16)",
+        backgroundColor: colors.statusOnboardBg,
+        borderColor: colors.statusOnboardBg,
       };
     case "absent":
       return {
-        backgroundColor: colors.feedbackWarningBg,
-        borderColor: "rgba(197, 48, 48, 0.18)",
+        backgroundColor: colors.statusPendingBg,
+        borderColor: colors.statusPendingBg,
       };
     default:
       return {
@@ -82,12 +82,11 @@ export default function ChildDetailScreen() {
         },
         content: {
           paddingHorizontal: tokens.spacing.lg,
-          paddingTop: tokens.spacing.lg,
           gap: tokens.spacing.lg,
         },
         heroCard: {
           backgroundColor: colors.surfaceCard,
-          borderRadius: tokens.radius.xl,
+          borderRadius: tokens.radius.lg,
           borderWidth: 1,
           borderColor: colors.surfaceCardBorder,
           overflow: "hidden",
@@ -176,10 +175,6 @@ export default function ChildDetailScreen() {
           ...tokens.typography.headline,
           color: colors.textTitle,
         },
-        sectionHint: {
-          ...tokens.typography.caption,
-          color: colors.textMuted,
-        },
         section: {
           gap: tokens.spacing.sm,
         },
@@ -195,7 +190,7 @@ export default function ChildDetailScreen() {
   if (loading) {
     return (
       <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>
-        <AppParentStackHeader onBack={() => router.back()} />
+        <WaveHeader title="Detalle" onBack={() => router.back()} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator animating size={36} color={colors.primary} />
         </View>
@@ -205,8 +200,8 @@ export default function ChildDetailScreen() {
 
   if (!child) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <AppParentStackHeader onBack={() => router.back()} title="Detalle" />
+      <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>
+        <WaveHeader title="Detalle" onBack={() => router.back()} />
         <View style={styles.content}>
           <Text style={styles.error}>{error ?? "No se encontró el alumno."}</Text>
         </View>
@@ -234,7 +229,11 @@ export default function ChildDetailScreen() {
 
   return (
     <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>
-      <AppParentStackHeader onBack={() => router.back()} />
+      <WaveHeader
+        title={child.student.nombre_alumno}
+        subtitle={child.student.colegio}
+        onBack={() => router.back()}
+      />
 
       <AppScrollView
         contentContainerStyle={[styles.content, { paddingBottom: scrollBottom }]}
@@ -304,9 +303,6 @@ export default function ChildDetailScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Historial de hoy</Text>
-          <Text style={styles.sectionHint}>
-            Todos los registros del día: recojo mañana, tarde y retorno.
-          </Text>
           <ChildTimelineList events={timeline} />
         </View>
 
