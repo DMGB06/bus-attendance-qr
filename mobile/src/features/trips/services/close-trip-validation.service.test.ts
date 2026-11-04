@@ -1,5 +1,5 @@
 import { loadCloseTripValidation } from "@/src/features/trips/services/close-trip-validation.service";
-import { getTripRoster } from "@/src/features/trips/services/trip-roster.service";
+import { getTripAttendanceOnly, getTripRoster } from "@/src/features/trips/services/trip-roster.service";
 import { loadCachedRosterSnapshot } from "@/src/features/trips/storage/roster-cache.storage";
 import { getRosterSnapshot } from "@/src/features/trips/store/rosterStore";
 import type { Trip } from "@/src/features/trips/types";
@@ -13,6 +13,7 @@ jest.mock("@/src/features/trips/services/trip-day-context.service", () => ({
 }));
 jest.mock("@/src/features/trips/services/trip-roster.service", () => ({
   getTripRoster: jest.fn(),
+  getTripAttendanceOnly: jest.fn(),
 }));
 jest.mock("@/src/features/trips/storage/roster-cache.storage", () => ({
   loadCachedRosterSnapshot: jest.fn(),
@@ -27,10 +28,12 @@ const rosterItem = { student: { id: "s1", nombre_alumno: "Ana" }, status: "pendi
 const snapshot = getRosterSnapshot as jest.Mock;
 const cached = loadCachedRosterSnapshot as jest.Mock;
 const server = getTripRoster as jest.Mock;
+const attendance = getTripAttendanceOnly as jest.Mock;
 
 describe("loadCloseTripValidation", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    attendance.mockResolvedValue([]);
     snapshot.mockReturnValue({ tripId: null, items: [], isShowingCache: false });
     cached.mockResolvedValue(null);
   });
@@ -65,6 +68,24 @@ describe("loadCloseTripValidation", () => {
     const result = await loadCloseTripValidation(trip);
 
     expect(result.connectivityWarning).toBeNull();
+  });
+
+  it("avisa si la lista en memoria vino del servidor pero la red ya no responde", async () => {
+    snapshot.mockReturnValue({ tripId: "t1", items: [rosterItem], isShowingCache: false });
+    attendance.mockRejectedValue(new Error("sin red"));
+
+    const result = await loadCloseTripValidation(trip);
+
+    expect(result.connectivityWarning).toBe("aviso");
+  });
+
+  it("avisa si quien llama pasa la lista en memoria y la red ya no responde", async () => {
+    snapshot.mockReturnValue({ tripId: "t1", items: [rosterItem], isShowingCache: false });
+    attendance.mockRejectedValue(new Error("sin red"));
+
+    const result = await loadCloseTripValidation(trip, { rosterItems: [rosterItem] as never });
+
+    expect(result.connectivityWarning).toBe("aviso");
   });
 
   it("no avisa si la consulta al servidor responde", async () => {

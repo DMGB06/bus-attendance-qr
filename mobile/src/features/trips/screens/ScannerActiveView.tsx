@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { Linking, Pressable, View } from "react-native";
+import { Linking, Platform, Pressable, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useCameraPermissions } from "expo-camera";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -8,6 +8,7 @@ import { useRouter } from "expo-router";
 import { Text } from "react-native-paper";
 
 import { OPS_ROUTES } from "@/src/core/routes";
+import { getCameraPermissionPrompt } from "@/src/features/trips/domain/camera-permission-prompt";
 import { MorningRiderReminderBanner } from "@/src/features/trips/components/MorningRiderReminderBanner";
 import { StudentConfirmModal } from "@/src/features/trips/components/StudentConfirmModal";
 import { ScannerCamera } from "@/src/features/trips/components/scanner/ScannerCamera";
@@ -93,6 +94,8 @@ export function ScannerActiveView({ activeTrip }: ScannerActiveViewProps) {
   }
 
   if (!permission.granted) {
+    const prompt = getCameraPermissionPrompt(permission, Platform.OS === "web");
+
     return (
       <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>
         <View style={styles.statusContainer}>
@@ -100,13 +103,9 @@ export function ScannerActiveView({ activeTrip }: ScannerActiveViewProps) {
             style={styles.statusCard}
             icon="camera-off-outline"
             title="Permiso de cámara requerido"
-            body={
-              permission.canAskAgain
-                ? "Necesitas permitir el acceso a la cámara para usar el escáner."
-                : "El acceso a la cámara está bloqueado. Actívalo en los ajustes del teléfono."
-            }
-            actionLabel={permission.canAskAgain ? "Permitir cámara" : "Abrir ajustes"}
-            onAction={permission.canAskAgain ? requestPermission : () => void Linking.openSettings()}
+            body={prompt.body}
+            actionLabel={prompt.actionLabel}
+            onAction={prompt.action === "request" ? requestPermission : () => void Linking.openSettings()}
           />
         </View>
       </SafeAreaView>

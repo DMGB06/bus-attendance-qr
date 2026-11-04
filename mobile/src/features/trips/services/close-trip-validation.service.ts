@@ -12,6 +12,7 @@ import {
 import { getMorningAttendanceHints } from "@/src/features/trips/services/trip-day-context.service";
 import { perfAsync, perfStart } from "@/src/shared/utils/perfMark";
 import {
+  getTripAttendanceOnly,
   getTripRoster,
   type TripRosterItem,
 } from "@/src/features/trips/services/trip-roster.service";
@@ -22,6 +23,7 @@ import { withTimeout } from "@/src/shared/utils/withTimeout";
 
 const ROSTER_LOAD_TIMEOUT_MS = 8_000;
 const MORNING_HINTS_TIMEOUT_MS = 6_000;
+const SERVER_CHECK_TIMEOUT_MS = 3_000;
 
 export type LoadCloseTripValidationOptions = {
   /** Roster ya hidratado en memoria (p. ej. desde `useRosterItems`). */
@@ -50,6 +52,15 @@ function mapPrioritarios(
   );
 }
 
+/** La lista en memoria pudo llegar del servidor antes de que se cortara la red. */
+function canReachServer(tripId: string): Promise<boolean> {
+  return withTimeout(
+    getTripAttendanceOnly(tripId).then(() => true),
+    SERVER_CHECK_TIMEOUT_MS,
+    false,
+  );
+}
+
 async function resolveRosterItemsForClose(
   tripId: string,
   prefetchedItems?: TripRosterItem[],
@@ -58,12 +69,14 @@ async function resolveRosterItemsForClose(
   const isLiveTrip = liveSnapshot.tripId === tripId;
   const liveIsStale = isLiveTrip && liveSnapshot.isShowingCache;
 
-  if (prefetchedItems?.length) {
-    return { items: prefetchedItems, isStale: liveIsStale };
-  }
+  const memoryItems = prefetchedItems?.length
+    ? prefetchedItems
+    : isLiveTrip && liveSnapshot.items.length > 0
+      ? liveSnapshot.items
+      : null;
 
-  if (isLiveTrip && liveSnapshot.items.length > 0) {
-    return { items: liveSnapshot.items, isStale: liveIsStale };
+  if (memoryItems) {
+    return { items: memoryItems, isStale: liveIsStale || !(await canReachServer(tripId)) };
   }
 
   const cachedSnapshot = await loadCachedRosterSnapshot(tripId);

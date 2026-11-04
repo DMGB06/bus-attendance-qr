@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "expo-router";
 
+import { useNetworkStatus } from "@/src/core/connectivity/useNetworkStatus";
 import { OPS_ROUTES } from "@/src/core/routes";
 
 import {
@@ -42,6 +43,9 @@ export function useCloseTrip() {
   const { activeTrip, releaseActiveTripAfterClose, setActiveTrip } = useTripStore();
   const rosterItems = useRosterItems(activeTrip?.id);
   const { isShowingCache } = useRosterMeta(activeTrip?.id);
+  const { isConnected } = useNetworkStatus();
+  const wasConnectedRef = useRef(isConnected);
+  const validationRequestRef = useRef(0);
   const wasShowingCacheRef = useRef(isShowingCache);
   const hadRosterItemsRef = useRef(false);
   const closeInFlightRef = useRef(false);
@@ -52,6 +56,9 @@ export function useCloseTrip() {
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const reloadValidation = useCallback(async (options?: { silent?: boolean }) => {
+    // Sin senal una consulta tarda mas: no debe pisar a otra que empezo despues.
+    const requestId = ++validationRequestRef.current;
+
     if (!activeTrip) {
       setValidation(EMPTY_VALIDATION);
       setValidationError(null);
@@ -73,14 +80,21 @@ export function useCloseTrip() {
       const nextValidation = await loadCloseTripValidation(activeTrip, {
         rosterItems: prefetchedRoster,
       });
-      setValidation(nextValidation);
+      if (requestId === validationRequestRef.current) {
+        setValidation(nextValidation);
+      }
     } catch (error: unknown) {
+      if (requestId !== validationRequestRef.current) {
+        return;
+      }
       setValidation(EMPTY_VALIDATION);
       setValidationError(
         getErrorMessage(error, "No se pudo verificar el estado de los alumnos."),
       );
     } finally {
-      setIsLoadingValidation(false);
+      if (requestId === validationRequestRef.current) {
+        setIsLoadingValidation(false);
+      }
     }
   }, [activeTrip]);
 
@@ -107,6 +121,13 @@ export function useCloseTrip() {
     }
     wasShowingCacheRef.current = isShowingCache;
   }, [isShowingCache, reloadValidation]);
+
+  useEffect(() => {
+    if (wasConnectedRef.current !== isConnected) {
+      wasConnectedRef.current = isConnected;
+      void reloadValidation({ silent: true });
+    }
+  }, [isConnected, reloadValidation]);
 
   const finishCloseLocally = useCallback(
     async (tripId: string, direction: TripDirection) => {
