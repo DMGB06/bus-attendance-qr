@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { Platform } from "react-native";
 
+import { fetchWithTimeout } from "@/src/core/config/fetch-with-timeout";
 import { supabaseAuthStorage } from "@/src/core/config/supabase-auth-storage";
 import type { Database } from "@/src/types/database";
 
@@ -22,6 +23,7 @@ const supabaseAnonKey = hasSupabaseConfig ? rawSupabaseAnonKey! : "public-anon-k
 const isBrowserWeb = typeof window !== "undefined" && Platform.OS === "web";
 
 const sharedAuthOptions = {
+  global: { fetch: fetchWithTimeout },
   auth: {
     storage: supabaseAuthStorage,
     autoRefreshToken: true,

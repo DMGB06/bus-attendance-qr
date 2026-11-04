@@ -176,6 +176,14 @@ describe("attendance-registration.service", () => {
       expect(await queuedStudents()).toEqual(["stu-1"]);
     });
 
+    it("encola si la peticion se corto por timeout", async () => {
+      register.mockRejectedValue(new Error("AbortError: Aborted"));
+
+      await expect(syncAttendanceToServer("trip-1", "stu-1", "subio")).resolves.toEqual({
+        status: "queued",
+      });
+    });
+
     it("no encola un error permanente al reintentar la bajada", async () => {
       await enqueue("stu-1", "subio");
       registerDropoff.mockRejectedValue(new Error("Viaje no activo."));

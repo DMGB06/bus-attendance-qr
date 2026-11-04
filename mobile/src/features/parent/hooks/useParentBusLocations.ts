@@ -12,6 +12,7 @@ import { getUser } from "@/src/features/auth/services/auth.service";
 import { useAppForeground } from "@/src/shared/hooks/useAppForeground";
 import { PARENT_LOCATION_POLL_INTERVAL_MS } from "@/src/features/trips/domain/location.constants";
 import type { ParentBusLocation } from "@/src/features/parent/types/bus-location";
+import type { Trip } from "@/src/features/trips/types";
 
 type ParentBusLocationsState = {
   locations: ParentBusLocation[];
@@ -98,36 +99,33 @@ export function useParentBusLocations(): ParentBusLocationsState {
 
   const shouldPoll = shouldPollParentBusLocations(realtimeStatus, isForeground);
   const tripIdsKey = snapshot.activeTripIds.join(",");
+  const hasTripsToFollow = snapshot.activeTripIds.length > 0;
 
+  // Sin viaje activo no hay bus que seguir: los hijos ya se sincronizan en ParentChildrenSync.
   useEffect(() => {
-    if (!shouldPoll) {
+    if (!shouldPoll || !hasTripsToFollow) {
       return;
     }
 
     const intervalId = setInterval(() => {
-      if (snapshot.activeTripIds.length) {
-        void refreshTripGps();
-        return;
-      }
-
-      void ensureChildrenLoaded({ silent: true, force: true });
+      void refreshTripGps();
     }, PARENT_LOCATION_POLL_INTERVAL_MS);
 
     return () => {
       clearInterval(intervalId);
     };
-  }, [shouldPoll, isForeground, snapshot.activeTripIds.length, refreshTripGps, ensureChildrenLoaded]);
+  }, [shouldPoll, hasTripsToFollow, refreshTripGps]);
 
   useEffect(() => {
-    if (!snapshot.activeTripIds.length) {
+    if (!tripIdsKey) {
       setRealtimeStatus(null);
       return;
     }
 
     const channel = supabase.channel(`parent-bus-locations-${tripIdsKey}`);
 
-    for (const tripId of snapshot.activeTripIds) {
-      channel.on(
+    for (const tripId of tripIdsKey.split(",")) {
+      channel.on<Trip>(
         "postgres_changes",
         {
           event: "UPDATE",
@@ -135,8 +133,9 @@ export function useParentBusLocations(): ParentBusLocationsState {
           table: "bus_trips",
           filter: `id=eq.${tripId}`,
         },
-        () => {
-          void refreshTripGps();
+        // El aviso ya trae la fila: no hace falta otra consulta por cada punto GPS.
+        ({ new: trip }) => {
+          parentChildrenStore.syncActiveTrips([tripId], trip.status === "active" ? [trip] : []);
         },
       );
     }
@@ -151,7 +150,7 @@ export function useParentBusLocations(): ParentBusLocationsState {
       setRealtimeStatus(null);
       void supabase.removeChannel(channel);
     };
-  }, [tripIdsKey, snapshot.activeTripIds, refreshTripGps]);
+  }, [tripIdsKey]);
 
   return {
     locations: snapshot.locations,

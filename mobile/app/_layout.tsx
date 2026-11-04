@@ -20,20 +20,19 @@ import { AppLoadingScreen } from '@/src/shared/ui/AppLoadingScreen';
 import { BootSplashOverlay } from '@/src/shared/ui/BootSplashOverlay';
 import { showLogoutError } from '@/src/shared/utils/confirmAlert';
 import { perfMarkBootReady } from '@/src/shared/utils/perfMark';
+import { withTimeout } from '@/src/shared/utils/withTimeout';
 import { PushRegistrationSync } from '@/src/features/notifications/components/PushRegistrationSync';
 
 void SplashScreen.preventAutoHideAsync();
 
 const bootStartedAt = performance.now();
+const BOOT_HYDRATE_TIMEOUT_MS = 6_000;
 
 export default function RootLayout() {
   useEffect(() => {
     if (Platform.OS === 'web' && 'serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js')
-          .then(reg => console.log('Service Worker registrado con éxito:', reg))
-          .catch(err => console.log('Error al registrar el Service Worker:', err));
-      });
+      // Este efecto corre despues de 'load' en muchas cargas: escucharlo perderia el registro.
+      navigator.serviceWorker.register('/service-worker.js').catch(() => undefined);
     }
   }, []);
   const [fontsLoaded, fontsError] = useFonts({
@@ -89,7 +88,8 @@ export default function RootLayout() {
           tripStoreActions.clearActiveTrip();
         } else {
           skipNextSessionHydrateRef.current = true;
-          await tripStoreActions.hydrateActiveTrip().catch(() => null);
+          // Con senal debil se entra igual; la hidratacion sigue y actualiza la pantalla.
+          await withTimeout(tripStoreActions.hydrateActiveTrip(), BOOT_HYDRATE_TIMEOUT_MS, null);
         }
 
         setIsBootLoading(false);

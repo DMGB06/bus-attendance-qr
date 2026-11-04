@@ -88,14 +88,14 @@ export function useParentChildrenSync() {
   }, [shouldPoll, studentIds.length, isForeground]);
 
   useEffect(() => {
-    if (!studentIds.length) {
+    if (!studentIdsKey) {
       setRealtimeStatus(null);
       return;
     }
 
     const channel = supabase.channel(`parent-children-${studentIdsKey}`);
 
-    for (const studentId of studentIds) {
+    for (const studentId of studentIdsKey.split(",")) {
       channel.on(
         "postgres_changes",
         {
@@ -140,7 +140,7 @@ export function useParentChildrenSync() {
       setRealtimeStatus(null);
       void supabase.removeChannel(channel);
     };
-  }, [studentIdsKey, scheduleSilentRefresh, studentIds]);
+  }, [studentIdsKey, scheduleSilentRefresh]);
 }
 
 export function ParentChildrenSync() {

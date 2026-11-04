@@ -122,6 +122,7 @@ function isNetworkError(error: unknown): boolean {
     msg.includes("fetch") ||
     msg.includes("failed to fetch") ||
     msg.includes("timeout") ||
+    msg.includes("abort") ||
     msg.includes("internet")
   );
 }

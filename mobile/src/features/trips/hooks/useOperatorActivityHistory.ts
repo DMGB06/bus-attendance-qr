@@ -34,6 +34,8 @@ type OperatorActivityHistoryState = {
   refresh: () => Promise<void>;
 };
 
+const REALTIME_RELOAD_DEBOUNCE_MS = 800;
+
 export function useOperatorActivityHistory(): OperatorActivityHistoryState {
   const todayIso = getTodayDateIso();
   const { activeTrip } = useTripStore();
@@ -97,6 +99,16 @@ export function useOperatorActivityHistory(): OperatorActivityHistoryState {
       return;
     }
 
+    let reloadTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleReload = () => {
+      if (reloadTimer) {
+        clearTimeout(reloadTimer);
+      }
+      reloadTimer = setTimeout(() => {
+        void loadWeek({ silent: true });
+      }, REALTIME_RELOAD_DEBOUNCE_MS);
+    };
+
     const channel = supabase
       .channel(`operator-activity-${activeTripId}`)
       .on(
@@ -107,9 +119,7 @@ export function useOperatorActivityHistory(): OperatorActivityHistoryState {
           table: "bus_attendance_records",
           filter: `trip_id=eq.${activeTripId}`,
         },
-        () => {
-          void loadWeek({ silent: true });
-        },
+        scheduleReload,
       )
       .on(
         "postgres_changes",
@@ -119,13 +129,14 @@ export function useOperatorActivityHistory(): OperatorActivityHistoryState {
           table: "bus_attendance_records",
           filter: `trip_id=eq.${activeTripId}`,
         },
-        () => {
-          void loadWeek({ silent: true });
-        },
+        scheduleReload,
       )
       .subscribe();
 
     return () => {
+      if (reloadTimer) {
+        clearTimeout(reloadTimer);
+      }
       void supabase.removeChannel(channel);
     };
   }, [activeTripId, loadWeek]);

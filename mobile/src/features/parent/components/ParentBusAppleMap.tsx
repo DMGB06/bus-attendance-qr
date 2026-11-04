@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { StyleSheet, View } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import { Text } from "react-native-paper";
@@ -18,6 +18,7 @@ type ParentBusAppleMapProps = {
 export function ParentBusAppleMap({ locations, selectedTripId }: ParentBusAppleMapProps) {
   const { colors, tokens } = useAppTheme();
 
+  const mapRef = useRef<MapView>(null);
   const selectedLocation =
     locations.find((location) => location.tripId === selectedTripId) ?? locations[0] ?? null;
 
@@ -79,13 +80,24 @@ export function ParentBusAppleMap({ locations, selectedTripId }: ParentBusAppleM
       }
     : DEFAULT_MAP_REGION;
 
+  const focusedTripId = selectedLocation?.tripId;
+  const regionRef = useRef(region);
+  regionRef.current = region;
+
+  // Centra al elegir otro bus; los puntos GPS no deben mover el mapa que el padre esta viendo.
+  useEffect(() => {
+    if (focusedTripId) {
+      mapRef.current?.animateToRegion(regionRef.current);
+    }
+  }, [focusedTripId]);
+
   return (
     <View style={styles.container}>
       <View style={styles.mapClip} collapsable={false}>
         <MapView
           style={styles.map}
+          ref={mapRef}
           initialRegion={region}
-          region={region}
           mapPadding={{
             top: tokens.spacing.sm,
             right: tokens.spacing.sm,

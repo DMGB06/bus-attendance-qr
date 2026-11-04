@@ -11,6 +11,9 @@ import {
 import { publishDriverLocation } from "@/src/features/trips/services/trip-location.service";
 import { useTripStore } from "@/src/features/trips/store/tripStore";
 import { toSafeLogMessage } from "@/src/shared/utils/safe-log";
+import { withTimeout } from "@/src/shared/utils/withTimeout";
+
+const GPS_FIX_TIMEOUT_MS = 15_000;
 
 type UseTripLocationPublisherOptions = {
   /** Nombre de la pestaña activa bajo `(ops)/(tabs)`, p. ej. `scanner`. */
@@ -52,6 +55,7 @@ export function useTripLocationPublisher(options?: UseTripLocationPublisherOptio
     }
 
     let cancelled = false;
+    let hasPermission = false;
 
     async function publishOnce() {
       if (cancelled || publishingRef.current || !tripId) {
@@ -61,15 +65,15 @@ export function useTripLocationPublisher(options?: UseTripLocationPublisherOptio
       publishingRef.current = true;
 
       try {
-        const granted = await ensureForegroundLocationPermission();
+        hasPermission = hasPermission || (await ensureForegroundLocationPermission());
 
-        if (!granted || cancelled) {
+        if (!hasPermission || cancelled) {
           return;
         }
 
-        const position = await getBalancedCurrentPosition();
+        const position = await withTimeout(getBalancedCurrentPosition(), GPS_FIX_TIMEOUT_MS, null);
 
-        if (cancelled) {
+        if (!position || cancelled) {
           return;
         }
 
