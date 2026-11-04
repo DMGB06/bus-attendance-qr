@@ -39,3 +39,13 @@ export function confirmAlert({
     );
   });
 }
+
+export function showLogoutError(): void {
+  const title = "No se pudo cerrar sesión";
+  const message = "Revisa tu conexión a internet e intenta de nuevo.";
+  if (Platform.OS === "web") {
+    window.alert(`${title}\n\n${message}`);
+    return;
+  }
+  Alert.alert(title, message);
+}

@@ -1,32 +1,16 @@
 import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
 import { mapTimelineEventLabel } from "@/src/features/parent/domain/student-status.mapper";
 import type { ChildTimelineEvent } from "@/src/features/parent/types";
+import { formatEventTime } from "@/src/features/parent/domain/format-event-time";
 
 type ChildTimelinePreviewProps = {
   events: ChildTimelineEvent[];
   compact?: boolean;
 };
-
-function formatEventTime(iso: string | null): string {
-  if (!iso) {
-    return "—";
-  }
-
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) {
-    return "—";
-  }
-
-  return date.toLocaleTimeString("es-PE", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 export function ChildTimelinePreview({ events, compact = false }: ChildTimelinePreviewProps) {
   const { colors, tokens } = useAppTheme();
@@ -92,15 +76,3 @@ export function ChildTimelinePreview({ events, compact = false }: ChildTimelineP
   );
 }
 
-export function ChildTimelineSectionHeader() {
-  const { colors, tokens } = useAppTheme();
-
-  return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: tokens.spacing.xs }}>
-      <MaterialCommunityIcons name="history" size={16} color={colors.textMuted} />
-      <Text style={{ ...tokens.typography.caption, color: colors.textMuted, fontWeight: "600" }}>
-        Historial de hoy
-      </Text>
-    </View>
-  );
-}

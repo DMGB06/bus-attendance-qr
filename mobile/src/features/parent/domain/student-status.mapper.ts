@@ -27,8 +27,18 @@ function toneForStatus(status: StudentTripStatusValue): ParentStatusTone {
 export function mapStudentTripStatusToPresentation(
   status: StudentTripStatusValue | null | undefined,
   direction: TripDirection | null | undefined,
+  options?: { tripEnded?: boolean },
 ): ParentStatusPresentation {
   const resolvedDirection = direction ?? "recojo";
+
+  if (options?.tripEnded && (status === "onboard" || status === "returning")) {
+    return {
+      label: "Viaje finalizado",
+      subtitle: "El bus cerró el viaje sin registrar la bajada",
+      tone: "pending",
+      icon: "clock-outline",
+    };
+  }
 
   if (!status || status === "pending") {
     return {
@@ -187,4 +197,16 @@ export function formatLastUpdatedAt(iso: string | null | undefined): string | nu
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+export function mapChildStatusToPresentation(input: {
+  latestEvent: ChildTimelineEvent | null;
+  status: StudentTripStatusValue | null | undefined;
+  direction: TripDirection | null | undefined;
+  hasActiveTrip: boolean;
+}): ParentStatusPresentation {
+  const tripEnded = !input.hasActiveTrip && (input.status === "onboard" || input.status === "returning");
+  return input.latestEvent && !tripEnded
+    ? mapLatestTimelineEventToPresentation(input.latestEvent)
+    : mapStudentTripStatusToPresentation(input.status, input.direction, { tripEnded });
 }

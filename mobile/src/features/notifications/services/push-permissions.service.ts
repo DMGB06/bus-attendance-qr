@@ -8,7 +8,8 @@ export function isExpoGo(): boolean {
 }
 
 export function isPushAvailable(): boolean {
-  return Device.isDevice && !isExpoGo();
+  // En web isDevice tambien es true, pero sin clave VAPID el token siempre falla.
+  return Platform.OS !== "web" && Device.isDevice && !isExpoGo();
 }
 
 export type PushSetupStatus =
@@ -20,8 +21,8 @@ export function getPushSetupStatus(): PushSetupStatus {
   if (Platform.OS === "web") {
     return {
       available: false,
-      reason: "Las push no funcionan en el navegador (localhost).",
-      hint: "Instala el APK de desarrollo en un celular Android e inicia sesión como apoderado.",
+      reason: "Las notificaciones no llegan al navegador.",
+      hint: "Para recibirlas, usa la app instalada en un celular Android.",
     };
   }
 
@@ -44,8 +45,8 @@ export function getPushSetupStatus(): PushSetupStatus {
   if (!getExpoProjectId()) {
     return {
       available: false,
-      reason: "Falta el projectId de EAS en app.json.",
-      hint: "Ejecuta eas init en mobile/ y vuelve a compilar el APK.",
+      reason: "Las notificaciones no están disponibles en esta versión de la app.",
+      hint: "Avisa al coordinador del bus para que lo revise.",
     };
   }
 
@@ -158,4 +159,47 @@ export async function getExpoPushToken(): Promise<string | null> {
 
 export function getPushPlatformLabel(): string {
   return Platform.OS;
+}
+
+/** Revisa el permiso sin mostrar el dialogo del sistema. */
+export async function hasPushPermission(): Promise<boolean> {
+  const Notifications = await loadNotificationsModule();
+  if (!Notifications) {
+    return false;
+  }
+
+  const current = await Notifications.getPermissionsAsync();
+  return (
+    current.granted || current.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL
+  );
+}
+
+let lastHandledNotificationId: string | null = null;
+
+/** Avisa al tocar una notificacion, tambien la que abrio la app estando cerrada. */
+export async function subscribeToNotificationTaps(
+  onTap: (data: unknown) => void,
+): Promise<() => void> {
+  const Notifications = await loadNotificationsModule();
+  if (!Notifications) {
+    return () => undefined;
+  }
+
+  const handle = (response: {
+    notification: { request: { identifier: string; content: { data: unknown } } };
+  }) => {
+    const { identifier, content } = response.notification.request;
+    if (identifier !== lastHandledNotificationId) {
+      lastHandledNotificationId = identifier;
+      onTap(content.data);
+    }
+  };
+
+  const subscription = Notifications.addNotificationResponseReceivedListener(handle);
+  const opening = await Notifications.getLastNotificationResponseAsync();
+  if (opening) {
+    handle(opening);
+  }
+
+  return () => subscription.remove();
 }

@@ -47,12 +47,13 @@ export function useChildDetail(studentId: string | undefined): ChildDetailState 
     }
 
     try {
-      const nextTimeline = await getChildTimelineToday(studentId);
       const matchedChild = parentChildrenStore.getChildById(studentId);
 
       if (!matchedChild) {
         throw new Error("No tienes acceso a este alumno.");
       }
+
+      const nextTimeline = await getChildTimelineToday(studentId);
 
       if (mountedRef.current) {
         setChild(matchedChild);

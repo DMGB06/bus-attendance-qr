@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "expo-router";
 
+import { useNetworkStatus } from "@/src/core/connectivity/useNetworkStatus";
 import { OPS_ROUTES } from "@/src/core/routes";
 
 import {
+  hasMissingPrioritarios,
   hasPendingDropoffIssues,
   type CloseTripValidationResult,
 } from "@/src/features/trips/domain/close-trip-validation";
@@ -13,15 +15,20 @@ import {
   flushPendingAttendanceForClose,
 } from "@/src/features/trips/services/close-trip.service";
 import { getTripClosedSuccessMessage } from "@/src/features/trips/domain/trip-labels";
-import { loadCloseTripValidation } from "@/src/features/trips/services/close-trip-validation.service";
+import {
+  getCloseTripFailureMessage,
+  loadCloseTripValidation,
+} from "@/src/features/trips/services/close-trip-validation.service";
 import { closeTrip, getActiveTripForCurrentUser, isTripAlreadyClosedError } from "@/src/features/trips/services/trips.service";
 import {
   getRosterSnapshot,
   rosterStoreActions,
   useRosterItems,
+  useRosterMeta,
 } from "@/src/features/trips/store/rosterStore";
 import { tripStoreActions, useTripStore } from "@/src/features/trips/store/tripStore";
 import {
+  confirmCloseWithMissingPrioritarios,
   confirmCloseWithPendingStudents,
   confirmCloseWithPendingSync,
 } from "@/src/features/trips/utils/rosterConfirmations";
@@ -38,7 +45,13 @@ export function useCloseTrip() {
   const router = useRouter();
   const { activeTrip, releaseActiveTripAfterClose, setActiveTrip } = useTripStore();
   const rosterItems = useRosterItems(activeTrip?.id);
+  const { isShowingCache } = useRosterMeta(activeTrip?.id);
+  const { isConnected } = useNetworkStatus();
+  const wasConnectedRef = useRef(isConnected);
+  const validationRequestRef = useRef(0);
+  const wasShowingCacheRef = useRef(isShowingCache);
   const hadRosterItemsRef = useRef(false);
+  const closeInFlightRef = useRef(false);
   const [isClosing, setIsClosing] = useState(false);
   const [isLoadingValidation, setIsLoadingValidation] = useState(false);
   const [validation, setValidation] = useState<CloseTripValidationResult>(EMPTY_VALIDATION);
@@ -46,9 +59,13 @@ export function useCloseTrip() {
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const reloadValidation = useCallback(async (options?: { silent?: boolean }) => {
+    // Sin senal una consulta tarda mas: no debe pisar a otra que empezo despues.
+    const requestId = ++validationRequestRef.current;
+
     if (!activeTrip) {
       setValidation(EMPTY_VALIDATION);
       setValidationError(null);
+      setIsLoadingValidation(false);
       return;
     }
 
@@ -67,14 +84,21 @@ export function useCloseTrip() {
       const nextValidation = await loadCloseTripValidation(activeTrip, {
         rosterItems: prefetchedRoster,
       });
-      setValidation(nextValidation);
+      if (requestId === validationRequestRef.current) {
+        setValidation(nextValidation);
+      }
     } catch (error: unknown) {
+      if (requestId !== validationRequestRef.current) {
+        return;
+      }
       setValidation(EMPTY_VALIDATION);
       setValidationError(
         getErrorMessage(error, "No se pudo verificar el estado de los alumnos."),
       );
     } finally {
-      setIsLoadingValidation(false);
+      if (requestId === validationRequestRef.current) {
+        setIsLoadingValidation(false);
+      }
     }
   }, [activeTrip]);
 
@@ -94,6 +118,21 @@ export function useCloseTrip() {
     }
   }, [activeTrip, rosterItems.length, reloadValidation]);
 
+  // Llegaron datos del servidor: el aviso de datos guardados ya no aplica.
+  useEffect(() => {
+    if (wasShowingCacheRef.current && !isShowingCache) {
+      void reloadValidation({ silent: true });
+    }
+    wasShowingCacheRef.current = isShowingCache;
+  }, [isShowingCache, reloadValidation]);
+
+  useEffect(() => {
+    if (wasConnectedRef.current !== isConnected) {
+      wasConnectedRef.current = isConnected;
+      void reloadValidation({ silent: true });
+    }
+  }, [isConnected, reloadValidation]);
+
   const finishCloseLocally = useCallback(
     async (tripId: string, direction: TripDirection) => {
       rosterStoreActions.clearRosterStore();
@@ -112,7 +151,12 @@ export function useCloseTrip() {
       return;
     }
 
+    if (closeInFlightRef.current) {
+      return;
+    }
+
     const tripId = activeTrip.id;
+    closeInFlightRef.current = true;
     setErrorMessage(null);
     setIsClosing(true);
 
@@ -132,6 +176,16 @@ export function useCloseTrip() {
           latestValidation.pendingDropoff,
           latestValidation.pendingDropoff.length,
           activeTrip.direction,
+        );
+
+        if (!shouldClose) {
+          return;
+        }
+      }
+
+      if (hasMissingPrioritarios(latestValidation)) {
+        const shouldClose = await confirmCloseWithMissingPrioritarios(
+          latestValidation.missingPrioritarios.map((student) => student.nombre_alumno),
         );
 
         if (!shouldClose) {
@@ -175,8 +229,9 @@ export function useCloseTrip() {
 
       await finishCloseLocally(freshTrip.id, freshTrip.direction);
     } catch (error: unknown) {
-      setErrorMessage(getErrorMessage(error, "No se pudo cerrar el viaje."));
+      setErrorMessage(await getCloseTripFailureMessage(tripId, error));
     } finally {
+      closeInFlightRef.current = false;
       setIsClosing(false);
     }
   }, [

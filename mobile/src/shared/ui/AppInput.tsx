@@ -1,5 +1,5 @@
 import { forwardRef, useMemo } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, type TextInput as NativeTextInput } from 'react-native';
 import { TextInput, type TextInputProps } from 'react-native-paper';
 
 import { useAppTheme } from '@/src/core/theme/ThemeProvider';
@@ -10,7 +10,7 @@ type AppInputProps = TextInputProps & {
   variant?: AppInputVariant;
 };
 
-const BaseAppInput = forwardRef<typeof TextInput, AppInputProps>(function BaseAppInput(
+const BaseAppInput = forwardRef<NativeTextInput, AppInputProps>(function BaseAppInput(
   { variant = 'default', style, theme, ...props },
   ref,
 ) {

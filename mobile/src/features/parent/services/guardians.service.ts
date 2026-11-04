@@ -1,6 +1,4 @@
 import { supabase } from "@/src/core/config/supabase";
-import { getStudentById } from "@/src/features/trips/services/students.service";
-import { guardianDniMatchesPadron } from "@/src/features/parent/domain/guardian-enrollment.rules";
 import type {
   BusStudentGuardianLink,
   ParentStudentLink,
@@ -76,38 +74,18 @@ async function getLinksFromStudentGuardians(userId: string): Promise<ParentStude
 
 /**
  * Hijos del apoderado logueado.
- * Prioriza catálogo municipal (`bus_guardians` + `bus_student_guardians`);
- * fallback a `student_guardians` si no hay fila en catálogo.
+ * Une catálogo municipal y `student_guardians`, igual que `is_guardian_of_student` en la BD.
  */
 export async function getGuardianLinksForUser(userId: string): Promise<ParentStudentLink[]> {
-  const fromCatalog = await getLinksFromBusGuardians(userId);
+  const [fromCatalog, fromStudentGuardians] = await Promise.all([
+    getLinksFromBusGuardians(userId),
+    getLinksFromStudentGuardians(userId),
+  ]);
 
-  if (fromCatalog.length) {
-    return fromCatalog;
-  }
-
-  return getLinksFromStudentGuardians(userId);
+  const catalogStudentIds = new Set(fromCatalog.map((link) => link.student_id));
+  return [
+    ...fromCatalog,
+    ...fromStudentGuardians.filter((link) => !catalogStudentIds.has(link.student_id)),
+  ];
 }
 
-/**
- * Valida DNI apoderado contra padrón antes de vincular (coordinador / SQL manual).
- */
-export async function validateGuardianEnrollment(
-  studentId: string,
-  guardianDni: string,
-): Promise<{ valid: boolean; reason?: string }> {
-  const student = await getStudentById(studentId);
-
-  if (!student) {
-    return { valid: false, reason: "Alumno no encontrado en el padrón." };
-  }
-
-  if (!guardianDniMatchesPadron(guardianDni, student.dni_apoderado)) {
-    return {
-      valid: false,
-      reason: "El DNI no coincide con el apoderado registrado en el padrón escolar.",
-    };
-  }
-
-  return { valid: true };
-}

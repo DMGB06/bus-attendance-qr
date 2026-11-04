@@ -11,18 +11,8 @@ export function hasBoardingInHistory(history: AttendanceRecord[]): boolean {
   return history.some((record) => isBoardingEvent(record.event_type));
 }
 
-export function hasDropoffInHistory(history: AttendanceRecord[]): boolean {
-  return history.some((record) => record.event_type === "bajo");
-}
-
-export function hasEventInHistory(
-  history: AttendanceRecord[],
-  eventType: AttendanceEventType,
-): boolean {
-  return history.some((record) => record.event_type === eventType);
-}
-
 export function canRegisterBoarding(item: TripRosterItem | undefined): boolean {
+  // Alumno fuera de la lista local (aun cargando o sin red): decide el servidor al registrar.
   if (!item) {
     return true;
   }

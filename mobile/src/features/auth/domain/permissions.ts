@@ -57,9 +57,15 @@ export function getCapabilitiesForRole(appRole: AppRole | null | undefined): App
     case AppRole.PADRE:
       return NO_OPS_CAPABILITIES;
     default:
-      // Sin rol asignado (V1): operador con permisos de chofer.
-      return CHOFER_CAPABILITIES;
+      // Sin rol no hay permisos: el servidor tampoco deja operar a esa cuenta.
+      return NO_OPS_CAPABILITIES;
   }
+}
+
+export function getEffectiveRole(
+  profile: { app_role: AppRole | null; is_active: boolean } | null | undefined,
+): AppRole | null {
+  return profile?.is_active === false ? null : (profile?.app_role ?? null);
 }
 
 export function isParentRole(appRole: AppRole | null | undefined): boolean {

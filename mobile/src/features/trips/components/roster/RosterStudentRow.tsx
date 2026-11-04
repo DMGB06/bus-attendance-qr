@@ -220,6 +220,7 @@ export const RosterStudentRow = memo(function RosterStudentRow({
           onPress={() => onMarkExit?.(item.student.id)}
           style={styles.dropoffButton}
           accessibilityRole="button"
+          accessibilityLabel={`${getDropoffActionLabel(tripDirection)}: ${item.student.nombre_alumno}`}
         >
           <Text style={styles.dropoffButtonText}>{getDropoffActionLabel(tripDirection)}</Text>
         </Pressable>
@@ -236,6 +237,7 @@ export const RosterStudentRow = memo(function RosterStudentRow({
             onPress={() => onMarkAbsent?.(item.student.id)}
             style={styles.absentButton}
             accessibilityRole="button"
+            accessibilityLabel={`Marcar ausente a ${item.student.nombre_alumno}`}
           >
             <Text style={styles.absentText}>Marcar ausente</Text>
           </Pressable>
@@ -258,6 +260,7 @@ export const RosterStudentRow = memo(function RosterStudentRow({
                 onPress={() => onUndo?.(item.student.id)}
                 style={styles.correctionButton}
                 accessibilityRole="button"
+                accessibilityLabel={`Deshacer registro de ${item.student.nombre_alumno}`}
               >
                 <Text style={styles.correctionText}>Deshacer</Text>
               </Pressable>
@@ -267,6 +270,7 @@ export const RosterStudentRow = memo(function RosterStudentRow({
                 onPress={() => onVoid?.(item.student.id)}
                 style={styles.correctionButton}
                 accessibilityRole="button"
+                accessibilityLabel={`Anular registro de ${item.student.nombre_alumno}`}
               >
                 <Text style={styles.voidText}>Anular registro</Text>
               </Pressable>
@@ -296,7 +300,7 @@ export const RosterStudentRow = memo(function RosterStudentRow({
             A bordo{scannedAt ? ` · ${scannedAt}` : ""}
           </Text>
         ) : scannedAt ? (
-          <Text style={styles.meta}>Escaneado {scannedAt}</Text>
+          <Text style={styles.meta}>Registrado {scannedAt}</Text>
         ) : null}
       </View>
 

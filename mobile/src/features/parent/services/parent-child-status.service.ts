@@ -4,7 +4,7 @@ import {
   pickPreferredStudentTripStatusForParent,
 } from "@/src/features/parent/domain/parent-linked-students";
 import { getTodayDateIso } from "@/src/features/parent/utils/date";
-import { APP_TIME_ZONE } from "@/src/shared/utils/local-date";
+import { getLocalDayStartIso } from "@/src/shared/utils/local-date";
 import { filterValidUuids } from "@/src/shared/utils/uuid";
 import type { StudentTripStatus } from "@/src/features/parent/types";
 import type { Trip } from "@/src/features/trips/types";
@@ -42,11 +42,6 @@ function isTripRelevantForToday(trip: TripSlice, today: string): boolean {
   return trip.trip_date === today || trip.status === "active";
 }
 
-function getLocalDayStartIso(today: string): string {
-  const offset = APP_TIME_ZONE === "America/Lima" ? "-05:00" : "Z";
-  return `${today}T00:00:00${offset}`;
-}
-
 async function fetchAttendanceSlices(studentIds: string[], today: string): Promise<AttendanceSlice[]> {
   const validIds = filterValidUuids(studentIds);
   if (!validIds.length) {
@@ -64,7 +59,8 @@ async function fetchAttendanceSlices(studentIds: string[], today: string): Promi
     throw new Error("No se pudo consultar la asistencia del día.");
   }
 
-  return data ?? [];
+  // El filtro gte descarta filas con scanned_at nulo.
+  return (data ?? []) as AttendanceSlice[];
 }
 
 async function fetchTripsByIds(tripIds: string[]): Promise<TripSlice[]> {

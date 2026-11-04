@@ -4,8 +4,11 @@ import {
   loadCachedProfile,
   saveCachedProfile,
 } from "@/src/features/profile/storage/profile-cache.storage";
+import { withDeadline } from "@/src/shared/utils/withTimeout";
 import type { User } from "@supabase/supabase-js";
 import type { AppProfile, UpdateAppProfile } from "../types";
+
+const OWN_PROFILE_TIMEOUT_MS = 4_000;
 
 async function persistProfileCache(profile: AppProfile): Promise<void> {
   if (profile.email) {
@@ -70,7 +73,15 @@ export async function getProfileById(
     return null;
   }
 
-  return getOwnProfile();
+  try {
+    return await withDeadline(getOwnProfile(), OWN_PROFILE_TIMEOUT_MS);
+  } catch (error: unknown) {
+    const cached = resolvedUser.email ? await loadCachedProfile(resolvedUser.email) : null;
+    if (cached?.id === id) {
+      return cached;
+    }
+    throw error;
+  }
 }
 
 export async function updateProfile(id: string, payload: UpdateAppProfile): Promise<AppProfile> {

@@ -14,7 +14,7 @@ import { useTripStore } from "@/src/features/trips/store/tripStore";
  */
 export function useAttendanceQueueSync(): void {
   const { isConnected } = useNetworkStatus();
-  const { activeTrip } = useTripStore();
+  const { activeTrip, hydrateActiveTrip } = useTripStore();
   const tripId = activeTrip?.id;
   const wasOfflineRef = useRef(false);
 
@@ -40,8 +40,10 @@ export function useAttendanceQueueSync(): void {
     if (wasOfflineRef.current) {
       wasOfflineRef.current = false;
       void rosterStoreActions.syncPendingWrites(tripId);
+      // El viaje pudo cerrarse desde otro dispositivo mientras no habia senal.
+      void hydrateActiveTrip();
     }
-  }, [isConnected, tripId]);
+  }, [hydrateActiveTrip, isConnected, tripId]);
 
   useEffect(() => {
     if (!tripId || !isConnected) {

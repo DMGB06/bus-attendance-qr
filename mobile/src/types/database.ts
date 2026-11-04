@@ -23,11 +23,16 @@ import type {
   NotificationLogEntry,
 } from "@/src/features/notifications/types";
 
-type TableDef<Row, Insert = Partial<Row>, Update = Partial<Row>> = {
+type TableDef<
+  Row,
+  Insert = Partial<Row>,
+  Update = Partial<Row>,
+  Relationships extends unknown[] = [],
+> = {
   Row: Row;
   Insert: Insert;
   Update: Update;
-  Relationships: [];
+  Relationships: Relationships;
 };
 
 export type Database = {
@@ -190,7 +195,16 @@ export type Database = {
         {
           relationship?: string;
           is_primary?: boolean;
-        }
+        },
+        [
+          {
+            foreignKeyName: "bus_student_guardians_guardian_id_fkey";
+            columns: ["guardian_id"];
+            isOneToOne: false;
+            referencedRelation: "bus_guardians";
+            referencedColumns: ["id"];
+          },
+        ]
       >;
       student_trip_status: TableDef<
         StudentTripStatus,
@@ -259,6 +273,31 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      start_trip: {
+        Args: { p_turn_type: TurnType };
+        Returns: Trip;
+      };
+      close_trip: {
+        Args: { p_trip_id: string };
+        Returns: Trip;
+      };
+      register_attendance: {
+        Args: {
+          p_trip_id: string;
+          p_student_id: string;
+          p_event_type: AttendanceEventType;
+          p_scan_role?: "chofer" | "asistenta" | null;
+        };
+        Returns: AttendanceRecord;
+      };
+      publish_driver_location: {
+        Args: { p_trip_id: string; p_lat: number; p_lng: number };
+        Returns: undefined;
+      };
+      get_my_guardian_students: {
+        Args: Record<PropertyKey, never>;
+        Returns: Student[];
+      };
       get_own_profile: {
         Args: Record<PropertyKey, never>;
         Returns: AppProfile;

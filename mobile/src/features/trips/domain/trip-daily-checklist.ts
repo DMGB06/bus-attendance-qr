@@ -16,7 +16,6 @@ export type DailyChecklistContext = {
   pendingCount: number;
   completedCount: number;
   morningRiderPendingCount: number;
-  /** Sin rol asignado (V1): operador con permisos de chofer. */
   setupPeriod?: "mañana" | "tarde";
   /** Si false, oculta pasos de cierre (asistenta). */
   canCloseTrip?: boolean;
@@ -108,7 +107,7 @@ function buildActiveRetornoSteps(context: DailyChecklistContext): DailyChecklist
         label: "Registrar bajada en casa",
         hint: onboardCount > 0 ? `${onboardCount} a bordo` : undefined,
       },
-      !hasMorningPending && pendingCount === 0 && onboardCount > 0 ? "current" : onboardCount > 0 ? "current" : completedCount > 0 ? "done" : "pending",
+      onboardCount > 0 ? "current" : completedCount > 0 ? "done" : "pending",
     ),
     withStatus(
       { id: "close", label: "Cerrar viaje" },

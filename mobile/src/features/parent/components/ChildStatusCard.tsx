@@ -4,16 +4,13 @@ import { Text } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
-import {
-  formatLastUpdatedAt,
-  mapLatestTimelineEventToPresentation,
-  mapStudentTripStatusToPresentation,
-} from "@/src/features/parent/domain/student-status.mapper";
+import { formatLastUpdatedAt, mapChildStatusToPresentation } from "@/src/features/parent/domain/student-status.mapper";
 import { ChildStatusIcon } from "@/src/features/parent/components/ChildStatusBadge";
 import { ChildTimelinePreview } from "@/src/features/parent/components/ChildTimelinePreview";
 import type { ParentChildSummary, ParentStatusTone } from "@/src/features/parent/types";
 import type { NivelEducativo } from "@/src/features/trips/types";
 import { formatTurnTypeLabel } from "@/src/features/trips/domain/trip-labels";
+import { getInitials } from "@/src/shared/utils/initials";
 
 type ChildStatusCardProps = {
   item: ParentChildSummary;
@@ -29,17 +26,6 @@ function formatNivelLabel(nivel: NivelEducativo | null | undefined): string | nu
     return "Secundaria";
   }
   return null;
-}
-
-function studentInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) {
-    return "?";
-  }
-  if (parts.length === 1) {
-    return parts[0].slice(0, 2).toUpperCase();
-  }
-  return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
 }
 
 function statusStripTheme(
@@ -90,18 +76,18 @@ export const ChildStatusCard = memo(function ChildStatusCard({
   }, [onOpenChild, studentId]);
   const { colors, tokens } = useAppTheme();
   const latestTimelineEvent = item.todayTimeline.at(-1) ?? null;
-  const presentation = latestTimelineEvent
-    ? mapLatestTimelineEventToPresentation(latestTimelineEvent)
-    : mapStudentTripStatusToPresentation(
-        item.todayStatus?.status ?? null,
-        item.todayStatus?.direction ?? item.activeTrip?.direction ?? null,
-      );
+  const presentation = mapChildStatusToPresentation({
+    latestEvent: latestTimelineEvent,
+    status: item.todayStatus?.status ?? null,
+    direction: item.todayStatus?.direction ?? item.activeTrip?.direction ?? null,
+    hasActiveTrip: item.activeTrip?.status === "active",
+  });
   const lastUpdated = formatLastUpdatedAt(
     latestTimelineEvent?.scanned_at ?? item.todayStatus?.last_event_at,
   );
   const nivelLabel = formatNivelLabel(item.student.nivel_educativo);
   const stripTheme = statusStripTheme(presentation.tone, colors);
-  const initials = studentInitials(item.student.nombre_alumno);
+  const initials = getInitials(item.student.nombre_alumno) || "?";
 
   const segmentLabel = latestTimelineEvent?.turn_type
     ? formatTurnTypeLabel(latestTimelineEvent.turn_type)
@@ -260,7 +246,7 @@ export const ChildStatusCard = memo(function ChildStatusCard({
       onPress={handlePress}
       style={({ pressed }) => [styles.card, pressed ? { opacity: 0.94 } : null]}
       accessibilityRole="button"
-      accessibilityLabel={`Ver estado de ${item.student.nombre_alumno}`}
+      accessibilityLabel={`${item.student.nombre_alumno}: ${presentation.label}. Ver detalle`}
     >
       <View style={styles.identitySection}>
         <View style={styles.avatar}>

@@ -60,6 +60,15 @@ export function NotificationPreferencesPanel() {
     [colors, tokens],
   );
 
+  if (!pushSetup.available) {
+    return (
+      <View style={styles.warningBox}>
+        <Text style={styles.warningTitle}>{pushSetup.reason}</Text>
+        <Text style={styles.warningHint}>{pushSetup.hint}</Text>
+      </View>
+    );
+  }
+
   if (loading) {
     return (
       <View style={styles.loading}>
@@ -70,25 +79,19 @@ export function NotificationPreferencesPanel() {
 
   return (
     <View style={styles.container}>
-      {!pushSetup.available ? (
-        <View style={styles.warningBox}>
-          <Text style={styles.warningTitle}>{pushSetup.reason}</Text>
-          <Text style={styles.warningHint}>{pushSetup.hint}</Text>
-        </View>
-      ) : (
-        <Text style={styles.hint}>
-          Elige qué eventos del bus quieres recibir como notificación push.
-        </Text>
-      )}
+      <Text style={styles.hint}>
+        Elige qué eventos del bus quieres recibir como notificación push.
+      </Text>
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ?<Text style={styles.error}>{error}</Text> : null}
 
       {items.map((item) => (
         <View key={item.eventKey} style={styles.row}>
           <Text style={styles.label}>{item.label}</Text>
           <Switch
             value={item.isEnabled}
-            disabled={savingKey === item.eventKey}
+            accessibilityLabel={item.label}
+            disabled={savingKey !== null}
             onValueChange={(value) => {
               void togglePreference(item.eventKey, value);
             }}

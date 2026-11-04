@@ -24,6 +24,10 @@ export type ActivityStudentListSection = ActivitySectionBase & {
 
 export type ActivityListSection = ActivityEventListSection | ActivityStudentListSection;
 
+function activeEvents(events: OperatorActivityRow[]): OperatorActivityRow[] {
+  return events.filter((event) => !event.voidedAt);
+}
+
 export function buildActivityListSections(
   days: ActivityDayGroup[],
   options?: { includeDayInTitle?: boolean; groupByStudent?: boolean },
@@ -50,8 +54,8 @@ export function buildActivityListSections(
           mode: "student",
           key,
           title,
-          eventCount: trip.events.length,
-          studentCount: studentGroups.length,
+          eventCount: activeEvents(trip.events).length,
+          studentCount: new Set(activeEvents(trip.events).map((event) => event.studentId)).size,
           data: studentGroups,
         });
         continue;
@@ -61,7 +65,7 @@ export function buildActivityListSections(
         mode: "event",
         key,
         title,
-        eventCount: trip.events.length,
+        eventCount: activeEvents(trip.events).length,
         data: trip.events,
       });
     }
@@ -81,14 +85,15 @@ export function getActivityListSummary(days: ActivityDayGroup[]): {
 
   for (const day of days) {
     for (const trip of day.trips) {
-      if (trip.events.length === 0) {
+      const events = activeEvents(trip.events);
+      if (events.length === 0) {
         continue;
       }
 
       tripCount += 1;
-      eventCount += trip.events.length;
+      eventCount += events.length;
 
-      for (const event of trip.events) {
+      for (const event of events) {
         studentIds.add(event.studentId);
       }
     }
@@ -107,8 +112,3 @@ export function isStudentActivitySection(
   return section.mode === "student";
 }
 
-export function isEventActivitySection(
-  section: ActivityListSection,
-): section is ActivityEventListSection {
-  return section.mode === "event";
-}

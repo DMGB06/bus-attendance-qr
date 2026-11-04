@@ -10,7 +10,7 @@ import {
 import { PaperProvider, type MD3Theme } from 'react-native-paper';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
-import { Platform, type TextStyle } from 'react-native';
+import { Appearance, Platform, type TextStyle } from 'react-native';
 
 import { buildPaperTheme } from '@/src/core/theme/buildPaperTheme';
 import {
@@ -69,7 +69,9 @@ type AppThemeProviderProps = {
 };
 
 export function AppThemeProvider({ children }: AppThemeProviderProps) {
-  const [scheme, setSchemeState] = useState<ColorSchemeId>('light');
+  const [scheme, setSchemeState] = useState<ColorSchemeId>(() =>
+    Appearance.getColorScheme() === 'dark' ? 'dark' : 'light',
+  );
   const [highContrastEnabled, setHighContrastState] = useState(false);
   const [isThemeReady, setIsThemeReady] = useState(false);
 
@@ -101,12 +103,10 @@ export function AppThemeProvider({ children }: AppThemeProviderProps) {
   }, []);
 
   const toggleScheme = useCallback(() => {
-    setSchemeState((prev) => {
-      const next: ColorSchemeId = prev === 'light' ? 'dark' : 'light';
-      void persistColorScheme(next);
-      return next;
-    });
-  }, []);
+    const next: ColorSchemeId = scheme === 'light' ? 'dark' : 'light';
+    setSchemeState(next);
+    void persistColorScheme(next);
+  }, [scheme]);
 
   const setHighContrastEnabled = useCallback((enabled: boolean) => {
     setHighContrastState(enabled);

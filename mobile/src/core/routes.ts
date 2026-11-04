@@ -10,7 +10,7 @@ export const OPS_ROUTES = {
 export const PARENT_ROUTES = {
   home: "/(parent)/(tabs)/home",
   map: "/(parent)/(tabs)/map",
-  profile: "/(parent)/(tabs)/profile",
+  profile: "/(parent)/(tabs)/perfil",
   child: (studentId: string) => `/(parent)/child/${studentId}` as const,
 } as const;
 

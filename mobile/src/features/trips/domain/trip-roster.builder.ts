@@ -25,14 +25,16 @@ export function groupAttendanceByStudent(
   return map;
 }
 
+function sortedActiveRecords(history: AttendanceRecord[]): AttendanceRecord[] {
+  return [...history].filter(isActiveAttendanceRecord).sort((left, right) => {
+    const leftTime = left.scanned_at ? new Date(left.scanned_at).getTime() : 0;
+    const rightTime = right.scanned_at ? new Date(right.scanned_at).getTime() : 0;
+    return leftTime - rightTime;
+  });
+}
+
 export function deriveRosterStatus(history: AttendanceRecord[]): TripRosterStatus {
-  const sorted = [...history]
-    .filter(isActiveAttendanceRecord)
-    .sort((left, right) => {
-      const leftTime = left.scanned_at ? new Date(left.scanned_at).getTime() : 0;
-      const rightTime = right.scanned_at ? new Date(right.scanned_at).getTime() : 0;
-      return leftTime - rightTime;
-    });
+  const sorted = sortedActiveRecords(history);
 
   if (sorted.length === 0) {
     return "pending";
@@ -66,7 +68,7 @@ export function buildTripRosterItems(
 
   return students.map((student) => {
     const history = attendanceByStudent.get(student.id) ?? [];
-    const attendance = history.length > 0 ? history[history.length - 1] : null;
+    const attendance = sortedActiveRecords(history).at(-1) ?? history.at(-1) ?? null;
     const status = deriveRosterStatus(history);
     const isPendingSync = isRecordPendingSync(attendance, tripQueue);
     const queueEntry = attendance ? findQueueEntryForRecord(attendance, tripQueue) : undefined;

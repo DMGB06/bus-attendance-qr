@@ -6,26 +6,11 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
 import { mapTimelineEventLabel } from "@/src/features/parent/domain/student-status.mapper";
 import type { ChildTimelineEvent } from "@/src/features/parent/types";
+import { formatEventTime } from "@/src/features/parent/domain/format-event-time";
 
 type ChildTimelineListProps = {
   events: ChildTimelineEvent[];
 };
-
-function formatEventTime(iso: string | null): string {
-  if (!iso) {
-    return "—";
-  }
-
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) {
-    return "—";
-  }
-
-  return date.toLocaleTimeString("es-PE", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 export function ChildTimelineList({ events }: ChildTimelineListProps) {
   const { colors, tokens } = useAppTheme();

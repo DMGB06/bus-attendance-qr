@@ -87,6 +87,10 @@ const refreshInFlightByTrip = new Map<string, Promise<void>>();
 const debouncedRealtimeRefreshByTrip = new Map<string, ReturnType<typeof setTimeout>>();
 /** Viaje con bajada masiva en curso en este dispositivo (chofer). */
 let bulkDropoffInFlightTripId: string | null = null;
+// Sube al limpiar el store: una respuesta anterior ya no se aplica.
+let storeEpoch = 0;
+const syncInFlightByTrip = new Map<string, Promise<void>>();
+let optimisticCacheWrites: Promise<unknown> = Promise.resolve();
 
 function cancelDebouncedRealtimeRefresh(tripId: string): void {
   const timer = debouncedRealtimeRefreshByTrip.get(tripId);
@@ -154,7 +158,6 @@ function computeItemStats(items: TripRosterItem[]): RosterItemStats {
 }
 
 function emitChange() {
-  metaSnapshotCache = null;
   for (const listener of listeners) {
     listener();
   }
@@ -215,6 +218,7 @@ async function hydrateTripRoster(tripId: string, options?: { force?: boolean }):
 
 async function hydrateTripRosterInternal(tripId: string, force: boolean): Promise<void> {
   const endHydrate = perfStart("hydrateTripRoster", { tripId });
+  const epoch = storeEpoch;
   const alreadyLoaded = state.tripId === tripId && state.items.length > 0;
 
   if (alreadyLoaded && !force) {
@@ -243,6 +247,10 @@ async function hydrateTripRosterInternal(tripId: string, force: boolean): Promis
     loadCachedStudents(),
   ]);
   endCacheLoad();
+  if (epoch !== storeEpoch) {
+    endHydrate();
+    return;
+  }
   if (cached?.items.length) {
     setState({
       items: cached.items,
@@ -287,7 +295,7 @@ async function refreshTripRoster(
     return;
   }
 
-  if (silent && !force && state.tripId === tripId && state.items.length > 0) {
+  if (silent && !force && !immediate && state.tripId === tripId && state.items.length > 0) {
     const lastRefreshAt = lastRefreshAtByTrip.get(tripId) ?? 0;
     if (Date.now() - lastRefreshAt < REFRESH_COOLDOWN_MS) {
       return;
@@ -296,7 +304,8 @@ async function refreshTripRoster(
 
   const inFlight = refreshInFlightByTrip.get(tripId);
   if (inFlight) {
-    return inFlight;
+    // Lo forzado debe ver datos posteriores a la recarga que ya estaba en curso.
+    return force || immediate ? inFlight.then(() => refreshTripRoster(tripId, options)) : inFlight;
   }
 
   const run = refreshTripRosterInternal(tripId, {
@@ -324,12 +333,16 @@ async function refreshTripRosterInternal(
   }
 
   const endRefresh = perfStart("refreshTripRoster", { tripId, silent, force });
+  const epoch = storeEpoch;
 
   try {
     const result = await refreshRosterFromNetwork(tripId, {
       skipQueueFlush: options.skipQueueFlush,
       forceFullSync: force || !silent,
     });
+    if (epoch !== storeEpoch) {
+      return;
+    }
     setState({
       tripId,
       items: result.items,
@@ -342,16 +355,19 @@ async function refreshTripRosterInternal(
   } catch (error: unknown) {
     const message =
       error instanceof Error ? error.message : "No se pudo cargar la lista de asistencia.";
-    if (!state.items.length) {
+    if (epoch === storeEpoch && !state.items.length) {
       setState({ errorMessage: message });
     }
   } finally {
     endRefresh();
-    setState({ isHydrating: false, isRefreshing: false });
+    if (epoch === storeEpoch) {
+      setState({ isHydrating: false, isRefreshing: false });
+    }
   }
 }
 
 function clearRosterStore() {
+  storeEpoch += 1;
   lastRefreshAtByTrip.clear();
   hydrateInFlightByTrip.clear();
   refreshInFlightByTrip.clear();
@@ -396,14 +412,25 @@ async function registerStudentAttendance(
   const optimisticItems = patchRosterItemsForEvent(previousItems, tripId, studentId, eventType);
   setState({ items: optimisticItems, errorMessage: null });
   void saveCachedRosterSnapshot(tripId, optimisticItems);
-  void applyOptimisticRegistration(tripId, studentId, eventType, previousItems).catch(() => {
-    /* cache persistence is best-effort */
-  });
+  // Cada escritura lee y reescribe la cache: en paralelo se pisarian entre si.
+  optimisticCacheWrites = optimisticCacheWrites
+    .then(() => applyOptimisticRegistration(tripId, studentId, eventType, previousItems))
+    .catch(() => {
+      /* cache persistence is best-effort */
+    });
 
   try {
     const result = await syncAttendanceToServer(tripId, studentId, eventType);
 
     if (result.status === "queued") {
+      setState({
+        items: getSnapshot().items.map((item) =>
+          item.student.id === studentId ? { ...item, pendingScannedBy: result.scannedBy } : item,
+        ),
+      });
+      optimisticCacheWrites = optimisticCacheWrites
+        .then(() => saveCachedRosterSnapshot(tripId, getSnapshot().items))
+        .catch(() => undefined);
       await updatePendingSyncCount(tripId);
       void syncPendingWrites(tripId);
       return { synced: false, queued: true, duplicate: false };
@@ -418,18 +445,10 @@ async function registerStudentAttendance(
     void refreshTripRoster(tripId, { silent: true });
 
     if (result.status === "duplicate") {
-      await updatePendingSyncCount(tripId);
-      setState({
-        items: getSnapshot().items.map((item) =>
-          item.student.id === studentId ? { ...item, isPendingSync: false } : item,
-        ),
-      });
-      void refreshTripRoster(tripId, { silent: true });
-
       const afterItem = getSnapshot().items.find((item) => item.student.id === studentId);
       if (eventType === "bajo" && afterItem?.status === "onboard") {
         throw new Error(
-          "No se pudo registrar en colegio otra vez. El servidor aún bloquea la bajada — ejecuta la migración 022 en Supabase.",
+          "No se pudo registrar la bajada otra vez. Avisa al coordinador.",
         );
       }
 
@@ -438,7 +457,13 @@ async function registerStudentAttendance(
 
     return { synced: true, queued: false, duplicate: false };
   } catch (error: unknown) {
-    void refreshTripRoster(tripId, { silent: true });
+    const previousItem = previousItems.find((item) => item.student.id === studentId);
+    setState({
+      items: getSnapshot().items.map((item) =>
+        item.student.id === studentId && previousItem ? previousItem : item,
+      ),
+    });
+    void refreshTripRoster(tripId, { silent: true, immediate: true });
     throw error;
   }
 }
@@ -500,7 +525,20 @@ async function bulkRegisterDropoff(
   }
 }
 
-async function syncPendingWrites(tripId: string): Promise<void> {
+function syncPendingWrites(tripId: string): Promise<void> {
+  const inFlight = syncInFlightByTrip.get(tripId);
+  if (inFlight) {
+    return inFlight;
+  }
+
+  const run = syncPendingWritesInternal(tripId).finally(() => {
+    syncInFlightByTrip.delete(tripId);
+  });
+  syncInFlightByTrip.set(tripId, run);
+  return run;
+}
+
+async function syncPendingWritesInternal(tripId: string): Promise<void> {
   await flushAttendanceQueue(tripId);
   await pruneStaleQueueEntriesForTrip(tripId);
   await refreshTripRoster(tripId, { silent: true });
@@ -557,7 +595,7 @@ export function useRosterItemStats(tripId: string | undefined): RosterItemStats 
   return useSyncExternalStore(subscribe, getStatsSnapshot, getStatsSnapshot);
 }
 
-function getRosterMetaSnapshot(tripId: string | undefined): RosterMetaSnapshot {
+export function getRosterMetaSnapshot(tripId: string | undefined): RosterMetaSnapshot {
   if (!tripId) {
     return EMPTY_META;
   }
@@ -590,10 +628,6 @@ function getRosterMetaSnapshot(tripId: string | undefined): RosterMetaSnapshot {
   };
   metaSnapshotCache = { tripId, meta };
   return meta;
-}
-
-export function useRosterStore(): RosterStoreState {
-  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
 /** Solo re-renderiza cuando cambia la lista de alumnos del viaje activo. */

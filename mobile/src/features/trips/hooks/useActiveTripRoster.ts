@@ -17,6 +17,7 @@ export function useActiveTripRoster(): void {
   const { capabilities } = useAppCapabilities();
   const isForeground = useAppForeground();
   const tripId = activeTrip?.id;
+  const hasActiveTrip = Boolean(tripId);
   const previousTripIdRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
@@ -33,7 +34,7 @@ export function useActiveTripRoster(): void {
   }, [tripId]);
 
   useEffect(() => {
-    if (!capabilities.isAssistant || activeTrip || !isForeground) {
+    if (!capabilities.isAssistant || hasActiveTrip || !isForeground) {
       return;
     }
 
@@ -44,10 +45,10 @@ export function useActiveTripRoster(): void {
     return () => {
       clearInterval(intervalId);
     };
-  }, [capabilities.isAssistant, activeTrip, hydrateActiveTrip, isForeground]);
+  }, [capabilities.isAssistant, hasActiveTrip, hydrateActiveTrip, isForeground]);
 
   useEffect(() => {
-    if (!capabilities.isAssistant || activeTrip) {
+    if (!capabilities.isAssistant || hasActiveTrip) {
       return;
     }
 
@@ -94,15 +95,15 @@ export function useActiveTripRoster(): void {
         void supabase.removeChannel(channel);
       }
     };
-  }, [capabilities.isAssistant, activeTrip, hydrateActiveTrip, operationalContext?.busId]);
+  }, [capabilities.isAssistant, hasActiveTrip, hydrateActiveTrip, operationalContext?.busId]);
 
   useEffect(() => {
-    if (!capabilities.isAssistant || !activeTrip || !isForeground) {
+    if (!capabilities.isAssistant || !tripId || !isForeground) {
       return;
     }
 
     void hydrateActiveTrip();
-  }, [capabilities.isAssistant, activeTrip, hydrateActiveTrip, isForeground]);
+  }, [capabilities.isAssistant, tripId, hydrateActiveTrip, isForeground]);
 
   useEffect(() => {
     if (!tripId) {
@@ -122,6 +123,7 @@ export function useActiveTripRoster(): void {
         () => {
           void rosterStoreActions.refreshTripRoster(tripId, {
             silent: true,
+            force: true,
             skipQueueFlush: true,
           });
         },
@@ -137,6 +139,7 @@ export function useActiveTripRoster(): void {
         () => {
           void rosterStoreActions.refreshTripRoster(tripId, {
             silent: true,
+            force: true,
             skipQueueFlush: true,
           });
         },

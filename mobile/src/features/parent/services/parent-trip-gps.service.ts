@@ -12,7 +12,7 @@ export async function fetchActiveTripGpsByIds(tripIds: string[]): Promise<Trip[]
   const { data, error } = await supabase
     .from("bus_trips")
     .select(
-      "id, bus_id, trip_date, direction, turn_type, status, started_at, closed_at, last_lat, last_lng, last_location_at",
+      "id, bus_id, trip_date, direction, turn_type, status, started_at, ended_at, last_lat, last_lng, last_location_at",
     )
     .in("id", validIds)
     .eq("status", "active");

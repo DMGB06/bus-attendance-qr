@@ -160,3 +160,13 @@ describe("pickPreferredStudentTripStatusForParent", () => {
     expect(best.status).toBe("dropped_off");
   });
 });
+
+describe("pickPreferredStudentTripStatusForParent con zonas horarias", () => {
+  it("compara instantes, no el texto de la fecha", () => {
+    const utc = { student_id: "s1", trip_id: "t1", status: "onboard", last_event_at: "2026-06-14T12:00:00+00:00", updated_at: "2026-06-14T12:00:00+00:00" } as StudentTripStatus;
+    const lima = { student_id: "s1", trip_id: "t1", status: "onboard", last_event_at: "2026-06-14T08:00:00-05:00", updated_at: "2026-06-14T08:00:00-05:00" } as StudentTripStatus;
+    const trips = new Map([["t1", { id: "t1", status: "active", direction: "recojo", turn_type: "mañana", started_at: null }]]);
+
+    expect(pickPreferredStudentTripStatusForParent(utc, lima, trips as never)).toBe(lima);
+  });
+});

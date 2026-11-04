@@ -48,8 +48,8 @@ Agrega en `mobile/.env` (local, no commitear):
 
 ```env
 SUPABASE_SERVICE_ROLE_KEY=...secret key del proyecto...
-PUSH_VERIFY_GUARDIAN_ID=6403f4d2-3271-4ecd-a8cb-2e1979f4415f
-PUSH_VERIFY_STUDENT_ID=0179cb41-80c5-410c-abcb-3b80b9c70d76
+PUSH_VERIFY_GUARDIAN_ID=<uuid-del-apoderado>
+PUSH_VERIFY_STUDENT_ID=<uuid-del-alumno>
 ```
 
 Genera **`testS/PUSH-VERIFY-LAST-RUN.md`** con ✅/❌ por: tablas, Edge Function, vínculo padre, token y `notification_log`.

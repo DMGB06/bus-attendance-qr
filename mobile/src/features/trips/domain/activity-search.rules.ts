@@ -1,4 +1,4 @@
-import type { ActivityDayGroup, OperatorActivityRow } from "@/src/features/trips/types/activity.types";
+import type { ActivityDayGroup } from "@/src/features/trips/types/activity.types";
 
 export function normalizeActivitySearchText(value: string): string {
   return value
@@ -20,18 +20,6 @@ export function studentNameMatchesSearch(studentName: string, query: string): bo
 
   const haystack = normalizeActivitySearchText(studentName);
   return tokens.every((token) => haystack.includes(token));
-}
-
-export function filterActivityRowsByStudentName(
-  rows: OperatorActivityRow[],
-  query: string,
-): OperatorActivityRow[] {
-  const tokens = getActivitySearchTokens(query);
-  if (!tokens.length) {
-    return rows;
-  }
-
-  return rows.filter((row) => studentNameMatchesSearch(row.studentName, query));
 }
 
 export function filterGroupedDaysByStudentName(

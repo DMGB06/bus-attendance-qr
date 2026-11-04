@@ -54,3 +54,8 @@ app-example
 /ios
 /android
 .vercel
+
+# Salidas generadas por testS/run-all.mjs y verify-push.mjs
+testS/jest-output.json
+testS/LAST-RUN.md
+testS/PUSH-VERIFY-LAST-RUN.md

@@ -11,13 +11,6 @@ export function isPrioritaryStudent(
   return isMorningRider(item.student.id, morningRiderIds) && item.status === "pending";
 }
 
-export function countPrioritaryStudents(
-  items: TripRosterItem[],
-  morningRiderIds: Set<string>,
-): number {
-  return items.filter((item) => isPrioritaryStudent(item, morningRiderIds)).length;
-}
-
 export function getPrioritaryStudents(
   items: TripRosterItem[],
   morningRiderIds: Set<string>,

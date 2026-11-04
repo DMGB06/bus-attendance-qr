@@ -118,6 +118,8 @@ export function AppParentHeaderBar({ onLogout }: AppParentHeaderBarProps) {
             onPress={() => router.push(PARENT_ROUTES.profile)}
             style={styles.iconButton}
             activeOpacity={0.75}
+            accessibilityRole="button"
+            hitSlop={6}
             accessibilityLabel="Abrir perfil"
           >
             <MaterialCommunityIcons name="account-circle-outline" size={22} color={colors.navLogoutIcon} />
@@ -126,6 +128,8 @@ export function AppParentHeaderBar({ onLogout }: AppParentHeaderBarProps) {
             onPress={onLogout}
             style={styles.iconButton}
             activeOpacity={0.75}
+            accessibilityRole="button"
+            hitSlop={6}
             accessibilityLabel="Cerrar sesión"
           >
             <MaterialCommunityIcons name="logout" size={20} color={colors.navLogoutIcon} />

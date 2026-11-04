@@ -57,12 +57,13 @@ export default function TripScreen() {
     acknowledgeCloseSuccess,
   } = useTripStore();
   const { capabilities, loading: capabilitiesLoading } = useAppCapabilities();
-  const [period, setPeriod] = useState<TripPeriod>('mañana');
+  const [period, setPeriod] = useState<TripPeriod>(() => getDefaultTripPeriod([]));
   const [afternoonTurn, setAfternoonTurn] = useState<AfternoonTurnType>('tarde_primaria');
   const [isStartingTrip, setIsStartingTrip] = useState(false);
   const [optimisticTrip, setOptimisticTrip] = useState<Trip | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const appliedIdleDefaultsKeyRef = useRef('');
+  const startInFlightRef = useRef(false);
   const visibleTrip = activeTrip ?? optimisticTrip;
   const dashboard = useTripDashboard(visibleTrip);
   const rosterItems = useRosterItems(visibleTrip?.id);
@@ -148,10 +149,10 @@ export default function TripScreen() {
     if (!closeSuccessMessage) {
       return;
     }
-    void Promise.all([hydrateActiveTrip(), refreshCompletedTurns()]);
+    void refreshCompletedTurns();
     const timer = setTimeout(() => acknowledgeCloseSuccess(), 6000);
     return () => clearTimeout(timer);
-  }, [acknowledgeCloseSuccess, closeSuccessMessage, hydrateActiveTrip, refreshCompletedTurns]);
+  }, [acknowledgeCloseSuccess, closeSuccessMessage, refreshCompletedTurns]);
 
   useEffect(() => {
     if (visibleTrip || isHydrating || capabilitiesLoading || hasHydratedOnce) {
@@ -181,17 +182,10 @@ export default function TripScreen() {
     setAfternoonTurn(getDefaultAfternoonTurn(completedTurns));
   }, [visibleTrip, completedTurns, isStartingTrip, optimisticTrip]);
 
-  function formatStartTripError(error: unknown): string {
-    const message = getErrorMessage(error, 'No se pudo iniciar el viaje.');
-    if (message.includes('P0001') || /Ya registraste|Ya completaste/i.test(message)) {
-      return 'No se pudo iniciar: Supabase aún tiene reglas estrictas de un tramo por día. Ejecuta el script start_trip flexible (coordinación).';
-    }
-    return message;
-  }
-
   async function handleStartTrip() {
-    if (visibleTrip || !capabilities.canStartTrip) return;
+    if (visibleTrip || !capabilities.canStartTrip || startInFlightRef.current) return;
 
+    startInFlightRef.current = true;
     setIsStartingTrip(true);
     setErrorMessage(null);
     setOptimisticTrip(null);
@@ -203,8 +197,9 @@ export default function TripScreen() {
       void rosterStoreActions.hydrateTripRoster(trip.id);
     } catch (error: unknown) {
       setOptimisticTrip(null);
-      setErrorMessage(formatStartTripError(error));
+      setErrorMessage(getErrorMessage(error, 'No se pudo iniciar el viaje.'));
     } finally {
+      startInFlightRef.current = false;
       setIsStartingTrip(false);
     }
   }
@@ -235,7 +230,7 @@ export default function TripScreen() {
 
   if (capabilities.isAssistant && !activeTrip) {
     if (operationalContext === undefined) {
-      return null;
+      return <ActivityIndicator style={{ flex: 1 }} color={colors.primary} />;
     }
 
     if (!operationalContext) {
@@ -244,7 +239,7 @@ export default function TripScreen() {
           busLabel={null}
           isRefreshing={false}
           title="Sin bus asignado"
-          body="No tienes una unidad asignada para hoy. Pide al coordinador que te registre en BUS-01."
+          body="No tienes una unidad asignada para hoy. Pide al coordinador que te asigne una."
           footer={historyFooter}
         />
       );
@@ -428,6 +423,8 @@ export default function TripScreen() {
                     period === 'mañana' && styles.selectorButtonActive,
                   ]}
                   onPress={() => setPeriod('mañana')}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: period === 'mañana' }}
                 >
                   <MaterialCommunityIcons
                     name="weather-sunny"
@@ -447,6 +444,8 @@ export default function TripScreen() {
                 <Pressable
                   style={[styles.selectorButton, period === 'tarde' && styles.selectorButtonActive]}
                   onPress={() => setPeriod('tarde')}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: period === 'tarde' }}
                 >
                   <MaterialCommunityIcons
                     name="weather-sunset"
@@ -482,6 +481,7 @@ export default function TripScreen() {
                             isActive && styles.afternoonOptionActive,
                           ]}
                           onPress={() => setAfternoonTurn(option.id)}
+                          accessibilityRole="button"
                         >
                           <MaterialCommunityIcons
                             name={isActive ? 'radiobox-marked' : 'radiobox-blank'}

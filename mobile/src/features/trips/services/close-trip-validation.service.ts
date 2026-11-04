@@ -10,8 +10,10 @@ import {
   resolvePendingDropoffStudents,
 } from "@/src/features/trips/services/close-trip.service";
 import { getMorningAttendanceHints } from "@/src/features/trips/services/trip-day-context.service";
+import { getErrorMessage } from "@/src/shared/utils/errors";
 import { perfAsync, perfStart } from "@/src/shared/utils/perfMark";
 import {
+  getTripAttendanceOnly,
   getTripRoster,
   type TripRosterItem,
 } from "@/src/features/trips/services/trip-roster.service";
@@ -22,6 +24,7 @@ import { withTimeout } from "@/src/shared/utils/withTimeout";
 
 const ROSTER_LOAD_TIMEOUT_MS = 8_000;
 const MORNING_HINTS_TIMEOUT_MS = 6_000;
+const SERVER_CHECK_TIMEOUT_MS = 3_000;
 
 export type LoadCloseTripValidationOptions = {
   /** Roster ya hidratado en memoria (p. ej. desde `useRosterItems`). */
@@ -50,30 +53,51 @@ function mapPrioritarios(
   );
 }
 
+/** La lista en memoria pudo llegar del servidor antes de que se cortara la red. */
+function canReachServer(tripId: string): Promise<boolean> {
+  return withTimeout(
+    getTripAttendanceOnly(tripId).then(() => true),
+    SERVER_CHECK_TIMEOUT_MS,
+    false,
+  );
+}
+
+/** Sin servidor, el error interno (bus, perfil, viaje) no le dice nada util al chofer. */
+export async function getCloseTripFailureMessage(tripId: string, error: unknown): Promise<string> {
+  return (await canReachServer(tripId))
+    ? getErrorMessage(error, "No se pudo cerrar el viaje.")
+    : "No se pudo conectar con el servidor, así que el viaje sigue abierto. Lo registrado queda guardado en el teléfono. Intenta cerrarlo cuando vuelva la señal.";
+}
+
 async function resolveRosterItemsForClose(
   tripId: string,
   prefetchedItems?: TripRosterItem[],
-): Promise<{ items: TripRosterItem[]; networkTimedOut: boolean }> {
-  if (prefetchedItems?.length) {
-    return { items: prefetchedItems, networkTimedOut: false };
-  }
-
+): Promise<{ items: TripRosterItem[]; isStale: boolean }> {
   const liveSnapshot = getRosterSnapshot();
-  if (liveSnapshot.tripId === tripId && liveSnapshot.items.length > 0) {
-    return { items: liveSnapshot.items, networkTimedOut: false };
+  const isLiveTrip = liveSnapshot.tripId === tripId;
+  const liveIsStale = isLiveTrip && liveSnapshot.isShowingCache;
+
+  const memoryItems = prefetchedItems?.length
+    ? prefetchedItems
+    : isLiveTrip && liveSnapshot.items.length > 0
+      ? liveSnapshot.items
+      : null;
+
+  if (memoryItems) {
+    return { items: memoryItems, isStale: liveIsStale || !(await canReachServer(tripId)) };
   }
 
   const cachedSnapshot = await loadCachedRosterSnapshot(tripId);
   if (cachedSnapshot?.items.length) {
-    return { items: cachedSnapshot.items, networkTimedOut: false };
+    return { items: cachedSnapshot.items, isStale: true };
   }
 
   const serverItems = await withTimeout(getTripRoster(tripId), ROSTER_LOAD_TIMEOUT_MS, null);
   if (serverItems) {
-    return { items: serverItems, networkTimedOut: false };
+    return { items: serverItems, isStale: false };
   }
 
-  return { items: cachedSnapshot?.items ?? [], networkTimedOut: true };
+  return { items: [], isStale: true };
 }
 
 export async function loadCloseTripValidation(
@@ -112,7 +136,7 @@ export async function loadCloseTripValidation(
       }
 
       const connectivityWarning =
-        pendingResolution.networkTimedOut || rosterResolution.networkTimedOut
+        pendingResolution.networkTimedOut || rosterResolution.isStale
           ? CLOSE_TRIP_CONNECTIVITY_WARNING
           : null;
 

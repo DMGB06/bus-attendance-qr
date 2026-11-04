@@ -181,6 +181,8 @@ export default function ParentMapScreen() {
                 <Pressable
                   key={location.tripId}
                   onPress={() => setSelectedTripId(location.tripId)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
                   style={[styles.chip, selected ? styles.chipSelected : null]}
                 >
                   <Text style={[styles.chipText, selected ? styles.chipTextSelected : null]}>

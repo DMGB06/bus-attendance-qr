@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { login, requestPasswordReset } from '@/src/features/auth/services/auth.service';
+import { login } from '@/src/features/auth/services/auth.service';
 import { hasSupabaseConfig } from '@/src/core/config/supabase';
 import { LoginForm } from '@/src/features/auth/components/LoginForm';
 import { getErrorMessage } from '@/src/shared/utils/errors';
@@ -27,26 +27,12 @@ function getFriendlyLoginError(error: unknown) {
   return 'No se pudo iniciar sesión. Intenta nuevamente.';
 }
 
-function getFriendlyResetError(error: unknown) {
-  const normalizedMessage = getErrorMessage(error, '').toLowerCase();
-
-  if (!normalizedMessage) {
-    return 'No se pudo enviar el enlace de recuperación.';
-  }
-
-  if (normalizedMessage.includes('email not confirmed')) {
-    return 'Tu usuario aún no está confirmado.';
-  }
-
-  return 'No se pudo enviar el enlace de recuperación.';
-}
-
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   const handleLogin = useCallback(async () => {
     const rawInput = email.trim();
@@ -74,34 +60,6 @@ export default function LoginScreen() {
     }
   }, [email, password]);
 
-  const handleForgotPassword = useCallback(async () => {
-    const rawInput = email.trim();
-
-    if (!rawInput) {
-      setErrorMessage('Ingresa tu usuario para recuperar tu contraseña.');
-      return;
-    }
-
-    if (!hasSupabaseConfig) {
-      setErrorMessage('Falta configurar la conexión con Supabase.');
-      return;
-    }
-
-    // También autocompletamos el dominio para la recuperación de contraseña
-    const finalEmail = rawInput.includes('@') ? rawInput : `${rawInput}${DEFAULT_DOMAIN}`;
-
-    setIsResettingPassword(true);
-    setErrorMessage(null);
-    try {
-      await requestPasswordReset(finalEmail);
-      setErrorMessage('Revisa tu correo para restablecer la contraseña.');
-    } catch (error: unknown) {
-      setErrorMessage(getFriendlyResetError(error));
-    } finally {
-      setIsResettingPassword(false);
-    }
-  }, [email]);
-
   const handleChangeEmail = useCallback((text: string) => {
     setEmail(text);
     setErrorMessage(null);
@@ -116,9 +74,11 @@ export default function LoginScreen() {
     void handleLogin();
   }, [handleLogin]);
 
+  // Los correos de operadores son internos y no hay pantalla para definir una clave nueva.
   const handleForgotPasswordPress = useCallback(() => {
-    void handleForgotPassword();
-  }, [handleForgotPassword]);
+    setErrorMessage(null);
+    setInfoMessage('Para restablecer tu contraseña, contacta al coordinador o a la municipalidad.');
+  }, []);
 
   return (
     <>
@@ -128,7 +88,7 @@ export default function LoginScreen() {
         password={password}
         errorMessage={errorMessage}
         isSubmitting={isSubmitting}
-        isResettingPassword={isResettingPassword}
+        infoMessage={infoMessage}
         hasSupabaseConfig={hasSupabaseConfig}
         onChangeEmail={handleChangeEmail}
         onChangePassword={handleChangePassword}

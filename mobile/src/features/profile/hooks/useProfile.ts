@@ -1,7 +1,7 @@
+import { getSession } from "@/src/features/auth/services/auth.service";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert } from "react-native";
 
-import { supabase } from "@/src/core/config/supabase";
 import { getErrorMessage } from "@/src/shared/utils/errors";
 import {
   getProfile,
@@ -10,6 +10,7 @@ import {
 } from "@/src/features/profile/services/profile.service";
 import { getMemoryCachedProfile } from "@/src/features/profile/storage/profile-cache.storage";
 import type { AppProfile, UpdateAppProfile } from "@/src/features/profile/types";
+import { getInitials } from "@/src/shared/utils/initials";
 
 function applyProfileToState(
   loadedProfile: AppProfile | null,
@@ -50,9 +51,7 @@ export function useProfile() {
   const [appRole, setAppRole] = useState("");
 
   const loadProfile = useCallback(async (forceRefresh = false) => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    const session = await getSession();
     const user = session?.user;
     if (!user) {
       throw new Error("Usuario no autenticado");
@@ -92,9 +91,7 @@ export function useProfile() {
 
     void (async () => {
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        const session = await getSession();
         const userEmail = session?.user?.email ?? "";
         const memoryProfile = userEmail ? getMemoryCachedProfile(userEmail) : null;
 
@@ -163,14 +160,7 @@ export function useProfile() {
   const initials = useMemo(() => {
     const fromName = profile?.full_name?.trim();
     if (fromName) {
-      const parts = fromName.split(/\s+/).filter(Boolean);
-      const letters = parts
-        .map((part) => part[0])
-        .slice(0, 2)
-        .join("");
-      if (letters) {
-        return letters.toUpperCase();
-      }
+      return getInitials(fromName);
     }
 
     const source = profile?.email ?? email;

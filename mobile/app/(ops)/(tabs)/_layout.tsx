@@ -1,3 +1,4 @@
+import { showLogoutError } from '@/src/shared/utils/confirmAlert';
 import { Fragment, useCallback, useMemo } from "react";
 import { Tabs, useRouter } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -13,6 +14,7 @@ import { OpsTripHydrationSync } from "@/src/features/trips/components/OpsTripHyd
 import { useActiveTripRoster } from "@/src/features/trips/hooks/useActiveTripRoster";
 import { useAttendanceQueueSync } from "@/src/features/trips/hooks/useAttendanceQueueSync";
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
+import { useTabBarHeight } from "@/src/core/theme/useScrollBottomPadding";
 import { AppTabHeaderBar } from "@/src/shared/ui/AppTabHeaderBar";
 
 function ActiveTripRosterSync() {
@@ -24,12 +26,17 @@ function ActiveTripRosterSync() {
 export default function TabsLayout() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useTabBarHeight();
   const { colors, tokens } = useAppTheme();
   const { capabilities, loading: capabilitiesLoading } = useAppCapabilities();
 
   const handleLogout = useCallback(async () => {
-    await logout();
-    router.replace(AUTH_ROUTES.login);
+    try {
+      await logout();
+      router.replace(AUTH_ROUTES.login);
+    } catch {
+      showLogoutError();
+    }
   }, [router]);
 
   const renderHeader = useCallback(
@@ -62,9 +69,7 @@ export default function TabsLayout() {
         backgroundColor: colors.tabBarBg,
         borderTopWidth: 1,
         borderTopColor: colors.tabBarBorder,
-        height: Platform.OS === 'web' 
-          ? tokens.layout.tabBarBaseHeight + 20 // 20px extra de altura en Web
-          : tokens.layout.tabBarBaseHeight + insets.bottom,
+        height: tabBarHeight,
         paddingTop: tokens.spacing.xs,
         paddingBottom: insets.bottom,
         elevation: 0,
@@ -78,7 +83,7 @@ export default function TabsLayout() {
         marginBottom: Platform.OS === 'web' ? 12 : 0, // Esto eleva los iconos y nombres en la Web
       },
     }),
-    [colors, insets.bottom, renderHeader, tabLabelStyle, tokens],
+    [colors, insets.bottom, renderHeader, tabBarHeight, tabLabelStyle, tokens],
   );
 
   const showScannerTab = capabilitiesLoading || capabilities.canScan;

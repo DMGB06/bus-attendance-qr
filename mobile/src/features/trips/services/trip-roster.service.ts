@@ -1,11 +1,6 @@
 import { supabase, supabasePublic } from "@/src/core/config/supabase";
 import { STUDENT_PADRON_SELECT } from "@/src/features/trips/domain/padron-query.constants";
 import { perfAsync } from "@/src/shared/utils/perfMark";
-import {
-  markManualAttendance,
-  registerDropoffAttendance,
-} from "@/src/features/trips/services/attendance.service";
-import { getScanContextForCurrentUser } from "@/src/features/trips/services/crew.service";
 import { buildTripRosterItems } from "@/src/features/trips/domain/trip-roster.builder";
 import { buildRosterItemsFromSources } from "@/src/features/trips/services/trip-roster-merge.service";
 import { saveCachedStudents, saveCachedTripAttendance } from "@/src/features/trips/storage/roster-cache.storage";
@@ -71,19 +66,11 @@ export async function getTripAttendanceOnly(tripId: string): Promise<AttendanceR
 
 export async function getTripRoster(tripId: string): Promise<TripRosterItem[]> {
   const { students, attendanceRecords } = await getTripRosterRaw(tripId);
-  await saveCachedStudents(students);
+  if (students.length > 0) {
+    await saveCachedStudents(students);
+  }
   await saveCachedTripAttendance(tripId, attendanceRecords);
   return buildRosterItemsFromSources(tripId, students, attendanceRecords);
-}
-
-export async function markStudentManually(tripId: string, studentId: string): Promise<void> {
-  const scan = await getScanContextForCurrentUser();
-  await markManualAttendance(tripId, studentId, scan);
-}
-
-export async function markStudentExit(tripId: string, studentId: string): Promise<void> {
-  const scan = await getScanContextForCurrentUser();
-  await registerDropoffAttendance(tripId, studentId, scan);
 }
 
 export { buildTripRosterItems };

@@ -1,3 +1,4 @@
+import { APP_TIME_ZONE } from "@/src/shared/utils/local-date";
 import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import { Surface, Text } from "react-native-paper";
@@ -108,7 +109,7 @@ export function TripHeader({ trip }: TripHeaderProps) {
   );
 
   const startedAtLabel = trip.started_at
-    ? new Date(trip.started_at).toLocaleString()
+    ? new Date(trip.started_at).toLocaleString("es-PE", { timeZone: APP_TIME_ZONE })
     : "Sin hora de inicio";
 
   const isActive = trip.status === "active";

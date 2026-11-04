@@ -1,6 +1,7 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js";
 import { Platform } from "react-native";
 
+import { fetchWithTimeout } from "@/src/core/config/fetch-with-timeout";
 import { supabaseAuthStorage } from "@/src/core/config/supabase-auth-storage";
 import type { Database } from "@/src/types/database";
 
@@ -22,6 +23,7 @@ const supabaseAnonKey = hasSupabaseConfig ? rawSupabaseAnonKey! : "public-anon-k
 const isBrowserWeb = typeof window !== "undefined" && Platform.OS === "web";
 
 const sharedAuthOptions = {
+  global: { fetch: fetchWithTimeout },
   auth: {
     storage: supabaseAuthStorage,
     autoRefreshToken: true,
@@ -31,19 +33,18 @@ const sharedAuthOptions = {
     ...(isBrowserWeb
       ? {
           // Evita "Lock broken by steal" con dos clientes / Strict Mode en web.
-          lock: async (_name: string, _acquireTimeout: number, fn: () => Promise<unknown>) =>
-            fn(),
+          lock: <R>(_name: string, _acquireTimeout: number, fn: () => Promise<R>) => fn(),
         }
       : {}),
   },
 } as const;
 
 /** Operaciones BusControl: viajes, asistencia, app_profiles, etc. */
-export const supabase: SupabaseClient<Database, "buscontrol"> = createClient<Database, "buscontrol">(
+export const supabase = createClient<Database, "buscontrol">(
   supabaseUrl,
   supabaseAnonKey,
   { db: { schema: "buscontrol" }, ...sharedAuthOptions },
 );
 
 /** Padrón municipal — mismo auth que `supabase`, schema `public` (sin segundo GoTrueClient). */
-export const supabasePublic = supabase.schema("public") as SupabaseClient<Database, "public">;
+export const supabasePublic = supabase.schema("public");

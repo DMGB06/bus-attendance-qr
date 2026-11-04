@@ -33,6 +33,8 @@ let state: ParentChildrenStoreState = {
 
 let inFlight: Promise<ParentChildSummary[]> | null = null;
 let inFlightUserId: string | null = null;
+// Sube al cerrar sesion: las respuestas anteriores ya no se aplican.
+let sessionEpoch = 0;
 const listeners = new Set<Listener>();
 
 function subscribe(listener: Listener): () => void {
@@ -86,8 +88,12 @@ async function fetchChildren(
     setState({ refreshing: true, error: null });
   }
 
+  const epoch = sessionEpoch;
   const request = getParentChildrenWithStatus(userId)
     .then((children) => {
+      if (epoch !== sessionEpoch) {
+        return [];
+      }
       setState({
         children,
         userId,
@@ -99,6 +105,9 @@ async function fetchChildren(
       return children;
     })
     .catch((error: unknown) => {
+      if (epoch !== sessionEpoch) {
+        throw error;
+      }
       const message = error instanceof Error ? error.message : "Error al cargar hijos.";
       setState({
         error: message,
@@ -123,8 +132,9 @@ function getChildById(studentId: string): ParentChildSummary | null {
   return state.children.find((child) => child.student.id === studentId) ?? null;
 }
 
-function patchActiveTrips(trips: Trip[]) {
-  if (!trips.length || !state.children.length) {
+/** Aplica una consulta de viajes activos: lo consultado que no volvio ya termino. */
+function syncActiveTrips(queriedTripIds: string[], trips: Trip[]) {
+  if (!state.children.length) {
     return;
   }
 
@@ -132,29 +142,23 @@ function patchActiveTrips(trips: Trip[]) {
   let changed = false;
 
   const children = state.children.map((child) => {
-    const tripId = child.activeTrip?.id;
-    if (!tripId) {
-      return child;
-    }
-
-    const nextTrip = tripMap.get(tripId);
-    if (!nextTrip) {
+    const current = child.activeTrip;
+    if (!current || !queriedTripIds.includes(current.id)) {
       return child;
     }
 
     changed = true;
-    return {
-      ...child,
-      activeTrip: nextTrip,
-    };
+    const nextTrip = tripMap.get(current.id);
+    return { ...child, activeTrip: nextTrip ? { ...current, ...nextTrip } : null };
   });
 
   if (changed) {
-    setState({ children, lastFetchedAt: Date.now() });
+    setState({ children });
   }
 }
 
 function clearParentChildrenStore() {
+  sessionEpoch += 1;
   state = {
     children: [],
     loading: false,
@@ -175,7 +179,7 @@ export function useParentChildrenStore(): ParentChildrenStoreState {
 export const parentChildrenStore = {
   fetchChildren,
   getChildById,
-  patchActiveTrips,
+  syncActiveTrips,
   clearParentChildrenStore,
   getSnapshot,
   isFresh,

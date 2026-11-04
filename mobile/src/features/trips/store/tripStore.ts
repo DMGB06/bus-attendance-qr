@@ -2,7 +2,12 @@ import { useSyncExternalStore } from "react";
 
 import type { OperationalBusContext } from "@/src/features/trips/services/crew.service";
 import { resolveOperatorTripSnapshot } from "@/src/features/trips/services/trips.service";
+import {
+  loadActiveTripSnapshot,
+  saveActiveTripSnapshot,
+} from "@/src/features/trips/storage/active-trip-cache.storage";
 import type { Trip } from "@/src/features/trips/types";
+import { withDeadline } from "@/src/shared/utils/withTimeout";
 
 interface TripState {
   activeTrip: Trip | null;
@@ -31,7 +36,11 @@ let state: TripState = {
   hasHydratedOnce: false,
 };
 
+const HYDRATE_TIMEOUT_MS = 5_000;
+
 let hydrateInFlight: Promise<Trip | null> | null = null;
+// Sube con cada cambio local del viaje: una hidratacion anterior ya no puede aplicarse.
+let tripEpoch = 0;
 const listeners = new Set<Listener>();
 
 function subscribe(listener: Listener): () => void {
@@ -66,45 +75,80 @@ async function hydrateActiveTrip() {
     setState({ isHydrating: true });
   }
 
-  hydrateInFlight = (async () => {
-    try {
-      const { context, activeTrip } = await resolveOperatorTripSnapshot().catch(() => ({
-        context: null,
-        activeTrip: null,
-      }));
+  const epoch = tripEpoch;
+  const current: Promise<Trip | null> = (async () => {
+    const snapshot = await withDeadline(resolveOperatorTripSnapshot(), HYDRATE_TIMEOUT_MS).then(
+      (fresh) => {
+        if (epoch === tripEpoch) {
+          void saveActiveTripSnapshot(fresh);
+        }
+        return fresh;
+      },
+      // Sin red no se sabe si termino el viaje: se conserva lo ultimo conocido.
+      async () => {
+        const { activeTrip, operationalContext } = getSnapshot();
+        if (activeTrip || operationalContext) {
+          return { activeTrip, context: operationalContext ?? null };
+        }
+        return (await loadActiveTripSnapshot()) ?? { activeTrip: null, context: null };
+      },
+    );
 
-      setState({
-        activeTrip,
-        operationalContext: context,
-        hasHydratedOnce: true,
-      });
-
-      return activeTrip;
-    } finally {
-      setState({ isHydrating: false });
-      hydrateInFlight = null;
+    if (epoch !== tripEpoch) {
+      return getSnapshot().activeTrip;
     }
-  })();
 
-  return hydrateInFlight;
+    setState({
+      activeTrip: snapshot.activeTrip,
+      operationalContext: snapshot.context,
+      hasHydratedOnce: true,
+    });
+
+    return snapshot.activeTrip;
+  })().finally(() => {
+    if (hydrateInFlight === current) {
+      hydrateInFlight = null;
+      setState({ isHydrating: false });
+    }
+  });
+
+  hydrateInFlight = current;
+  return current;
+}
+
+function persistCurrentTrip() {
+  const { activeTrip, operationalContext } = getSnapshot();
+  void saveActiveTripSnapshot({ activeTrip, context: operationalContext ?? null });
 }
 
 function setActiveTrip(trip: Trip) {
-  setState({ activeTrip: trip });
+  tripEpoch += 1;
+  hydrateInFlight = null;
+  setState({ activeTrip: trip, isHydrating: false });
+  persistCurrentTrip();
 }
 
-function clearActiveTrip() {
+function forgetActiveTripInMemory() {
+  tripEpoch += 1;
+  hydrateInFlight = null;
   setState({
     activeTrip: null,
     operationalContext: undefined,
     hasHydratedOnce: false,
+    isHydrating: false,
   });
-  hydrateInFlight = null;
+}
+
+function clearActiveTrip() {
+  forgetActiveTripInMemory();
+  void saveActiveTripSnapshot({ activeTrip: null, context: null });
 }
 
 function releaseActiveTripAfterClose() {
-  setState({ activeTrip: null });
+  tripEpoch += 1;
   hydrateInFlight = null;
+  setState({ activeTrip: null, isHydrating: false });
+  persistCurrentTrip();
 }
 
 function setCloseSuccessMessage(message: string | null) {
@@ -132,6 +176,8 @@ export const tripStoreActions = {
   getActiveTripId: () => getSnapshot().activeTrip?.id ?? null,
   getOperationalContext: () => getSnapshot().operationalContext,
   hasHydratedOnce: () => getSnapshot().hasHydratedOnce,
+  setActiveTrip,
+  forgetActiveTripInMemory,
   clearActiveTrip,
   releaseActiveTripAfterClose,
   hydrateActiveTrip,

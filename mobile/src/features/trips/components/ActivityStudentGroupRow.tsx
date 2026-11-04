@@ -12,8 +12,8 @@ import { buildStudentActivitySummary } from "@/src/features/trips/domain/activit
 import {
   formatActivityEventTime,
   getActivityEventColors,
-  getStudentInitials,
 } from "@/src/features/trips/domain/activity-row.utils";
+import { getInitials } from "@/src/shared/utils/initials";
 import type { ActivityStudentGroup } from "@/src/features/trips/types/activity.types";
 
 export const ACTIVITY_STUDENT_ROW_HEIGHT = 60;
@@ -35,7 +35,7 @@ export function ActivityStudentGroupRow({
   const summary = buildStudentActivitySummary(group);
   const isVoided = Boolean(latestEvent?.voidedAt);
   const eventColors = getActivityEventColors(latestEvent?.eventType ?? "subio", colors);
-  const initials = getStudentInitials(group.studentName);
+  const initials = getInitials(group.studentName);
   const tagLabel = isVoided
     ? "Anulado"
     : mapActivityEventTagLabel(

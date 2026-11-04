@@ -1,11 +1,7 @@
 import { supabase } from "@/src/core/config/supabase";
-import {
-  getPushEventLabel,
-  resolvePushEventKey,
-} from "@/src/features/notifications/domain/notification-templates";
-import type { GuardianNotificationPreference, PushEventKey } from "@/src/features/notifications/types";
+import { getPushEventLabel } from "@/src/features/notifications/domain/notification-templates";
+import type { PushEventKey } from "@/src/features/notifications/types";
 import { PUSH_EVENT_KEYS } from "@/src/features/notifications/types";
-import type { AttendanceEventType, TripDirection } from "@/src/features/trips/types";
 
 export type NotificationPreferenceItem = {
   eventKey: PushEventKey;
@@ -61,17 +57,3 @@ export async function setNotificationPreferenceEnabled(
   }
 }
 
-export function isPushEnabledForEvent(
-  preferences: GuardianNotificationPreference[] | null | undefined,
-  eventKey: PushEventKey,
-): boolean {
-  const match = preferences?.find((item) => item.event_key === eventKey);
-  return match?.is_enabled ?? true;
-}
-
-export function resolvePreferenceEventKey(
-  eventType: AttendanceEventType,
-  direction: TripDirection,
-): PushEventKey | null {
-  return resolvePushEventKey(eventType, direction);
-}

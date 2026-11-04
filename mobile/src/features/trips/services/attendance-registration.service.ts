@@ -1,3 +1,5 @@
+import NetInfo from "@react-native-community/netinfo";
+
 import {
   isLocalPendingRecord,
   isQueueEntrySyncedOnServer,
@@ -5,8 +7,11 @@ import {
 import { shouldFlushAttendanceQueueBeforeRefresh } from "@/src/features/trips/domain/attendance-queue-flush.rules";
 import { registerAttendance, registerDropoffAttendance, voidAttendanceRecord } from "@/src/features/trips/services/attendance.service";
 import { getUser } from "@/src/features/auth/services/auth.service";
-import type { ScanContext } from "@/src/features/trips/services/crew.service";
-import { getScanContextForCurrentUser } from "@/src/features/trips/services/crew.service";
+import {
+  getScanContextForCurrentUser,
+  type ScanContext,
+} from "@/src/features/trips/services/crew.service";
+import { withDeadline, withTimeout } from "@/src/shared/utils/withTimeout";
 import { perfAsync, perfStart } from "@/src/shared/utils/perfMark";
 import {
   canRegisterBoarding,
@@ -46,9 +51,12 @@ import {
 
 export { mergeAttendanceRecords } from "@/src/features/trips/services/trip-roster-merge.service";
 
+const SCAN_CONTEXT_TIMEOUT_MS = 2_500;
+const ROSTER_REFRESH_TIMEOUT_MS = 12_000;
+
 export type AttendanceRegistrationResult =
   | { status: "synced" }
-  | { status: "queued" }
+  | { status: "queued"; scannedBy: string }
   | { status: "duplicate" };
 
 function isDuplicateError(message: string): boolean {
@@ -56,7 +64,7 @@ function isDuplicateError(message: string): boolean {
 }
 
 function isMissingBoardingError(message: string): boolean {
-  return message.includes("Primero debes registrar la asistencia de entrada");
+  return message.includes("Primero debes registrar");
 }
 
 function isBoardingEventType(eventType: AttendanceEventType): boolean {
@@ -89,14 +97,30 @@ async function hasLocalBoardingRecord(tripId: string, studentId: string): Promis
   return hasBoarding && !hasDropoff;
 }
 
-async function flushBoardingWritesForStudent(tripId: string, studentId: string): Promise<void> {
-  const scan = await getScanContextForCurrentUser();
+function isOwnEntry(entry: QueuedAttendanceWrite, userId: string): boolean {
+  return !entry.scannedBy || entry.scannedBy === userId;
+}
+
+/** El rol es informativo: nunca debe retrasar el registro de una asistencia. */
+function resolveScanContext(userId: string): Promise<ScanContext> {
+  return withTimeout(getScanContextForCurrentUser(), SCAN_CONTEXT_TIMEOUT_MS, {
+    scannedBy: userId,
+    scanRole: null,
+  });
+}
+
+async function flushBoardingWritesForStudent(
+  tripId: string,
+  studentId: string,
+  scan: ScanContext,
+): Promise<void> {
   const queue = await loadAttendanceQueue();
   const boardingEntries = queue.filter(
     (entry) =>
       entry.tripId === tripId &&
       entry.studentId === studentId &&
-      isBoardingEventType(entry.eventType),
+      isBoardingEventType(entry.eventType) &&
+      isOwnEntry(entry, scan.scannedBy),
   );
 
   for (const entry of boardingEntries) {
@@ -124,6 +148,7 @@ function isNetworkError(error: unknown): boolean {
     msg.includes("fetch") ||
     msg.includes("failed to fetch") ||
     msg.includes("timeout") ||
+    msg.includes("abort") ||
     msg.includes("internet")
   );
 }
@@ -203,12 +228,24 @@ export async function syncAttendanceToServer(
   studentId: string,
   eventType: AttendanceEventType,
 ): Promise<AttendanceRegistrationResult> {
-  const alreadyQueued = await hasQueuedWrite(tripId, studentId, eventType);
-  if (alreadyQueued) {
-    return { status: "queued" };
+  const user = await getUser();
+  if (!user) {
+    throw new Error("Debes iniciar sesión para registrar asistencia.");
   }
 
-  const scan = await getScanContextForCurrentUser();
+  const alreadyQueued = await hasQueuedWrite(tripId, studentId, eventType, user.id);
+  if (alreadyQueued) {
+    return { status: "queued", scannedBy: user.id };
+  }
+
+  // Sin senal se guarda ya: esperar al servidor arriesga perderlo si se cierra la app.
+  const { isConnected } = await NetInfo.fetch();
+  if (isConnected === false) {
+    await enqueueAttendanceWrite({ tripId, studentId, eventType, scannedBy: user.id });
+    return { status: "queued", scannedBy: user.id };
+  }
+
+  const scan = await resolveScanContext(user.id);
 
   try {
     if (eventType === "bajo") {
@@ -228,7 +265,7 @@ export async function syncAttendanceToServer(
       const hasBoarding = await hasLocalBoardingRecord(tripId, studentId);
       if (hasBoarding) {
         try {
-          await flushBoardingWritesForStudent(tripId, studentId);
+          await flushBoardingWritesForStudent(tripId, studentId, scan);
           await registerDropoffAttendance(tripId, studentId, scan);
           return { status: "synced" };
         } catch (retryError: unknown) {
@@ -236,13 +273,16 @@ export async function syncAttendanceToServer(
           if (isDuplicateError(retryMessage)) {
             return { status: "duplicate" };
           }
+          if (!isNetworkError(retryError)) {
+            throw retryError;
+          }
           await enqueueAttendanceWrite({
             tripId,
             studentId,
             eventType,
             scannedBy: scan.scannedBy,
           });
-          return { status: "queued" };
+          return { status: "queued", scannedBy: scan.scannedBy };
         }
       }
     }
@@ -257,40 +297,39 @@ export async function syncAttendanceToServer(
       eventType,
       scannedBy: scan.scannedBy,
     });
-    return { status: "queued" };
+    return { status: "queued", scannedBy: scan.scannedBy };
   }
 }
 
-async function resolveScanForQueueFlush(
-  entry: QueuedAttendanceWrite,
-): Promise<ScanContext> {
-  try {
-    return await getScanContextForCurrentUser();
-  } catch {
-    const user = await getUser();
-    if (!user) {
-      throw new Error("Debes iniciar sesión para sincronizar.");
-    }
+let flushChain: Promise<unknown> = Promise.resolve();
 
-    return {
-      scannedBy: entry.scannedBy ?? user.id,
-      scanRole: "chofer",
-    };
-  }
+/** En fila: si corren a la vez, cada una lee la misma cola y sube lo mismo. */
+export function flushAttendanceQueue(tripId?: string): Promise<number> {
+  const run = flushChain.then(() => runAttendanceFlush(tripId));
+  flushChain = run.catch(() => undefined);
+  return run;
 }
 
-export async function flushAttendanceQueue(tripId?: string): Promise<number> {
+async function runAttendanceFlush(tripId?: string): Promise<number> {
   const queue = await loadAttendanceQueue();
-  const pending = sortQueueForFlush(
-    tripId ? queue.filter((entry) => entry.tripId === tripId) : queue,
-  );
+  const tripQueue = tripId ? queue.filter((entry) => entry.tripId === tripId) : queue;
+  if (tripQueue.length === 0) {
+    return 0;
+  }
+
+  const user = await getUser();
+  if (!user) {
+    return 0;
+  }
+
+  const scan = await resolveScanContext(user.id);
+  // El servidor firma con el usuario actual: lo de otra cuenta espera a que esa cuenta vuelva.
+  const pending = sortQueueForFlush(tripQueue.filter((entry) => isOwnEntry(entry, user.id)));
 
   let flushed = 0;
 
   for (const entry of pending) {
     try {
-      const scan = await resolveScanForQueueFlush(entry);
-
       if (entry.eventType === "bajo") {
         await registerDropoffAttendance(entry.tripId, entry.studentId, scan);
       } else {
@@ -308,8 +347,7 @@ export async function flushAttendanceQueue(tripId?: string): Promise<number> {
       if (isNetworkError(error)) {
         break;
       }
-      // Error de servidor/permisos: conservar en cola y reintentar luego.
-      break;
+      // Error de servidor/permisos: conservar esta entrada y seguir con las demas.
     }
   }
 
@@ -328,8 +366,8 @@ export async function pruneStaleQueueEntriesForTrip(tripId: string): Promise<num
   try {
     serverRecords = await getTripAttendanceOnly(tripId);
   } catch {
-    const cached = await loadCachedTripAttendance(tripId);
-    serverRecords = cached?.records ?? [];
+    // La cache incluye registros optimistas locales: no prueba que el servidor los tenga.
+    return 0;
   }
 
   let pruned = 0;
@@ -356,6 +394,10 @@ async function refreshRosterFull(tripId: string): Promise<{
   cacheSavedAt: string | null;
 }> {
   const { students, attendanceRecords } = await getTripRosterRaw(tripId);
+  // El padron nunca queda vacio de verdad: se trata como fallo para conservar lo guardado.
+  if (students.length === 0) {
+    throw new Error("El padron llego vacio.");
+  }
   await saveCachedStudents(students);
   await saveCachedTripAttendance(tripId, attendanceRecords);
 
@@ -426,7 +468,7 @@ export async function refreshRosterFromNetwork(
             mode: "attendance-only",
           });
           try {
-            return await refreshRosterAttendanceOnly(tripId);
+            return await withDeadline(refreshRosterAttendanceOnly(tripId), ROSTER_REFRESH_TIMEOUT_MS);
           } finally {
             endMode();
           }
@@ -434,7 +476,7 @@ export async function refreshRosterFromNetwork(
 
         const endMode = perfStart("refreshRosterFromNetwork.mode", { tripId, mode: "full" });
         try {
-          return await refreshRosterFull(tripId);
+          return await withDeadline(refreshRosterFull(tripId), ROSTER_REFRESH_TIMEOUT_MS);
         } finally {
           endMode();
         }
@@ -586,21 +628,6 @@ export async function syncBulkDropoffToServer(
   }
 
   return { syncedCount, queuedCount, failedCount };
-}
-
-export async function bulkRegisterDropoff(
-  tripId: string,
-  items: TripRosterItem[],
-  studentIds?: string[],
-): Promise<{ eligible: string[]; syncedCount: number; queuedCount: number }> {
-  const { eligible } = collectBulkDropoffTargets(items, studentIds);
-
-  if (eligible.length === 0) {
-    throw new Error("No hay alumnos a bordo para registrar la bajada.");
-  }
-
-  const { syncedCount, queuedCount } = await syncBulkDropoffToServer(tripId, eligible);
-  return { eligible, syncedCount, queuedCount };
 }
 
 export async function undoPendingRegistration(

@@ -4,6 +4,7 @@ import {
   Platform,
   Pressable,
   RefreshControl,
+  ScrollView,
   SectionList,
   StyleSheet,
   View,
@@ -56,15 +57,13 @@ export default function TripActivityScreen() {
     refresh,
   } = useOperatorActivityHistory();
 
-  const groupByStudent = true;
-
   const sections = useMemo(
     () =>
       buildActivityListSections(visibleDays, {
         includeDayInTitle: isSearchActive,
-        groupByStudent,
+        groupByStudent: true,
       }),
-    [groupByStudent, isSearchActive, visibleDays],
+    [isSearchActive, visibleDays],
   );
 
   const summary = useMemo(() => getActivityListSummary(visibleDays), [visibleDays]);
@@ -72,7 +71,7 @@ export default function TripActivityScreen() {
 
   useEffect(() => {
     collapseAll();
-  }, [collapseAll, groupByStudent, selectedDate]);
+  }, [collapseAll, selectedDate]);
 
   const handleRefresh = useCallback(() => {
     void refresh();
@@ -204,6 +203,7 @@ export default function TripActivityScreen() {
           borderWidth: 1,
           borderColor: colors.surfaceCardBorder,
           overflow: "hidden",
+          flexShrink: 1,
           backgroundColor: colors.surfaceListItem,
         },
         listCardExpanded: {
@@ -327,7 +327,18 @@ export default function TripActivityScreen() {
         </View>
 
         {sections.length === 0 ? (
-          <Text style={styles.empty}>{emptyMessage}</Text>
+          <ScrollView
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                tintColor={colors.primary}
+                colors={[colors.primary]}
+              />
+            }
+          >
+            <Text style={styles.empty}>{emptyMessage}</Text>
+          </ScrollView>
         ) : (
           <View style={[styles.listCard, listFillsScreen && styles.listCardExpanded]}>
             <View style={styles.listHeader}>
@@ -336,7 +347,7 @@ export default function TripActivityScreen() {
               </Text>
               <Text style={styles.listHeaderCount}>{listHeaderCountLabel}</Text>
             </View>
-            <SectionList
+            <SectionList<ActivityListItem, ActivityListSection>
               sections={sections}
               keyExtractor={keyExtractor}
               renderItem={renderItem}
@@ -348,7 +359,7 @@ export default function TripActivityScreen() {
               removeClippedSubviews={Platform.OS === "android"}
               updateCellsBatchingPeriod={50}
               showsVerticalScrollIndicator={listFillsScreen}
-              style={listFillsScreen ? { flex: 1 } : undefined}
+              style={listFillsScreen ? { flex: 1 } : { flexShrink: 1 }}
               contentContainerStyle={
                 listFillsScreen
                   ? { paddingBottom: tokens.spacing.md }

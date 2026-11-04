@@ -1,8 +1,8 @@
 import { supabase, supabasePublic } from "@/src/core/config/supabase";
 import { STUDENT_PADRON_SELECT } from "@/src/features/trips/domain/padron-query.constants";
-import { escapeIlikePattern, sanitizeIlikeSearchTerm } from "@/src/shared/utils/ilike";
+import { sanitizeIlikeSearchTerm } from "@/src/shared/utils/ilike";
 import { perfAsync } from "@/src/shared/utils/perfMark";
-import { filterValidUuids, isUuid } from "@/src/shared/utils/uuid";
+import { isUuid } from "@/src/shared/utils/uuid";
 import {
   findStudentInCache,
   findStudentInStudentList,
@@ -23,8 +23,9 @@ export async function findStudentByCode(code: string): Promise<Student | null> {
 
   const { data, error } = await supabasePublic
     .from("social_bus_escolar")
-    .select("*")
+    .select(STUDENT_PADRON_SELECT)
     .eq("codigo", normalizedCode)
+    .not("activo", "is", false)
     .maybeSingle();
 
   if (error) {
@@ -43,8 +44,9 @@ export async function findStudentByCode(code: string): Promise<Student | null> {
   if (upperCode !== normalizedCode) {
     const { data: upperData, error: upperError } = await supabasePublic
       .from("social_bus_escolar")
-      .select("*")
+      .select(STUDENT_PADRON_SELECT)
       .eq("codigo", upperCode)
+      .not("activo", "is", false)
       .maybeSingle();
 
     if (upperError) {
@@ -89,6 +91,10 @@ const guardianCatalogCache = new Map<
   Pick<Student, "nombre_apoderado" | "telefono_apoderado" | "dni_apoderado"> | null
 >();
 
+export function clearGuardianCatalogCache(): void {
+  guardianCatalogCache.clear();
+}
+
 /** Catálogo CerroBus (bus_guardians) cuando SIGEM no trae apoderado en el padrón. */
 async function getGuardianFromCatalog(
   studentId: string,
@@ -109,9 +115,9 @@ async function getGuardianFromCatalog(
   }
 
   const rows = data as CatalogGuardianRow[];
-  const link =
-    rows.find((row) => row.bus_guardians?.is_active !== false && row.bus_guardians) ?? rows[0];
-  const guardian = link.bus_guardians;
+  const guardian =
+    rows.find((row) => row.bus_guardians?.is_active !== false && row.bus_guardians)?.bus_guardians ??
+    null;
 
   if (!guardian) {
     guardianCatalogCache.set(studentId, null);
@@ -146,16 +152,21 @@ export async function refreshStudentGuardianFromPadron(student: Student): Promis
     return student;
   }
 
-  const fromCatalog = await getGuardianFromCatalog(student.id);
-  if (fromCatalog) {
-    return mergeGuardianFields(student, fromCatalog);
+  // Es un dato adicional: sin red el alumno ya encontrado sigue siendo valido.
+  try {
+    const fromCatalog = await getGuardianFromCatalog(student.id);
+    if (fromCatalog) {
+      return mergeGuardianFields(student, fromCatalog);
+    }
+
+    const fresh = student.codigo?.trim()
+      ? await findStudentByCode(student.codigo)
+      : await getStudentById(student.id);
+
+    return fresh ? mergeGuardianFields(student, fresh) : student;
+  } catch {
+    return student;
   }
-
-  const fresh = student.codigo?.trim()
-    ? await findStudentByCode(student.codigo)
-    : await getStudentById(student.id);
-
-  return fresh ? mergeGuardianFields(student, fresh) : student;
 }
 
 /** Busca por código BU00xx o por UUID (QR legacy). Prioriza lista local si el roster está hidratado. */
@@ -222,12 +233,11 @@ export async function searchStudentsByName(
     return cachedResults;
   }
 
-  const escapedName = escapeIlikePattern(normalizedName);
   const { data, error } = await supabasePublic
     .from("social_bus_escolar")
     .select(STUDENT_PADRON_SELECT)
     .eq("activo", true)
-    .ilike("nombre_alumno", `%${escapedName}%`)
+    .ilike("nombre_alumno", `%${normalizedName}%`)
     .order("nombre_alumno", { ascending: true })
     .limit(limit);
 
@@ -246,8 +256,9 @@ export async function getStudentById(id: string): Promise<Student | null> {
 
   const { data, error } = await supabasePublic
     .from("social_bus_escolar")
-    .select("*")
+    .select(STUDENT_PADRON_SELECT)
     .eq("id", normalizedId)
+    .not("activo", "is", false)
     .maybeSingle();
 
   if (error) {
@@ -255,23 +266,4 @@ export async function getStudentById(id: string): Promise<Student | null> {
   }
 
   return data;
-}
-
-export async function getStudentsByIds(ids: string[]): Promise<Student[]> {
-  const normalizedIds = filterValidUuids(ids);
-
-  if (!normalizedIds.length) {
-    return [];
-  }
-
-  const { data, error } = await supabasePublic
-    .from("social_bus_escolar")
-    .select("*")
-    .in("id", normalizedIds);
-
-  if (error) {
-    throw new Error("No se pudo consultar la base de alumnos.");
-  }
-
-  return data ?? [];
 }

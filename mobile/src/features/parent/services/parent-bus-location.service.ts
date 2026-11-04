@@ -1,5 +1,4 @@
 import { hasValidCoordinates } from "@/src/features/trips/domain/location-labels";
-import { getParentChildrenWithStatus } from "@/src/features/parent/services/parent-children.service";
 import type { ParentChildSummary } from "@/src/features/parent/types";
 import type { ParentBusLocation } from "@/src/features/parent/types/bus-location";
 
@@ -10,16 +9,30 @@ export type ParentBusLocationSnapshot = {
   activeTripIds: string[];
 };
 
+const OFF_BUS_STATUSES = new Set(["at_school", "dropped_off", "absent"]);
+
+/** Un padre ve el bus solo mientras su hijo viaja o lo espera. */
+function hasLeftTheBus(child: ParentChildSummary): boolean {
+  const { todayStatus, activeTrip } = child;
+  return todayStatus?.trip_id === activeTrip?.id && OFF_BUS_STATUSES.has(todayStatus?.status ?? "");
+}
+
 export function buildBusLocationSnapshotFromChildren(
   children: ParentChildSummary[],
 ): ParentBusLocationSnapshot {
-  const activeChildren = children.filter((child) => child.activeTrip?.status === "active");
+  const activeChildren = children.filter(
+    (child) => child.activeTrip?.status === "active" && !hasLeftTheBus(child),
+  );
   const locationMap = new Map<string, ParentBusLocation>();
 
   for (const child of activeChildren) {
     const trip = child.activeTrip!;
 
-    if (!hasValidCoordinates(trip.last_lat, trip.last_lng) || !trip.last_location_at) {
+    if (
+      trip.last_lng === null ||
+      !hasValidCoordinates(trip.last_lat, trip.last_lng) ||
+      !trip.last_location_at
+    ) {
       continue;
     }
 
@@ -52,9 +65,3 @@ export function buildBusLocationSnapshotFromChildren(
   };
 }
 
-export async function getParentBusLocationSnapshot(
-  userId: string,
-): Promise<ParentBusLocationSnapshot> {
-  const children = await getParentChildrenWithStatus(userId);
-  return buildBusLocationSnapshotFromChildren(children);
-}

@@ -1,3 +1,4 @@
+import '@/components/pwa-install-prompt';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
@@ -5,46 +6,59 @@ import type { Session } from '@supabase/supabase-js';
 import { Redirect, Stack, useSegments } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
+import NetInfo from '@react-native-community/netinfo';
 import { supabase } from '@/src/core/config/supabase';
 import { GUEST_CYCLE_KEY, useBootSplash } from '@/src/core/boot/useBootSplash';
 import { fadeScreenOptions } from '@/src/core/navigation/screenTransitions';
 import { AUTH_ROUTES } from '@/src/core/routes';
-import { getSession } from '@/src/features/auth/services/auth.service';
+import { RoleBlockedScreen } from '@/src/features/auth/components/RoleBlockedScreen';
+import { getSession, logout } from '@/src/features/auth/services/auth.service';
+import { clearLocalSessionData } from '@/src/features/auth/services/session-cleanup.service';
 import { usePostLoginRoute } from '@/src/features/auth/hooks/usePostLoginRoute';
+import { flushAttendanceQueue } from '@/src/features/trips/services/attendance-registration.service';
 import { tripStoreActions } from '@/src/features/trips/store/tripStore';
 import { AppThemeProvider } from '@/src/core/theme/ThemeProvider';
 import { AppLoadingScreen } from '@/src/shared/ui/AppLoadingScreen';
 import { BootSplashOverlay } from '@/src/shared/ui/BootSplashOverlay';
+import { showLogoutError } from '@/src/shared/utils/confirmAlert';
 import { perfMarkBootReady } from '@/src/shared/utils/perfMark';
+import { withTimeout } from '@/src/shared/utils/withTimeout';
 import { PushRegistrationSync } from '@/src/features/notifications/components/PushRegistrationSync';
 
 void SplashScreen.preventAutoHideAsync();
 
 const bootStartedAt = performance.now();
+const BOOT_HYDRATE_TIMEOUT_MS = 6_000;
 
 export default function RootLayout() {
   useEffect(() => {
     if (Platform.OS === 'web' && 'serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js')
-          .then(reg => console.log('Service Worker registrado con éxito:', reg))
-          .catch(err => console.log('Error al registrar el Service Worker:', err));
-      });
+      // Este efecto corre despues de 'load' en muchas cargas: escucharlo perderia el registro.
+      navigator.serviceWorker.register('/service-worker.js').catch(() => undefined);
     }
   }, []);
   const [fontsLoaded, fontsError] = useFonts({
     Inter_400Regular,
     Inter_600SemiBold,
     Inter_700Bold,
+    // En el HTML estatico debe estar registrada, o el icono sale vacio y no coincide con el cliente.
+    ...MaterialCommunityIcons.font,
   });
   const segments = useSegments();
   const [session, setSession] = useState<Session | null>(null);
   const [isBootLoading, setIsBootLoading] = useState(true);
+  const sessionUserId = session?.user?.id;
   const skipNextSessionHydrateRef = useRef(false);
   const guestSplashDoneRef = useRef(false);
   const splashHiddenRef = useRef(false);
-  const { ready: routeReady, href: postLoginHref } = usePostLoginRoute(session);
+  const {
+    ready: routeReady,
+    href: postLoginHref,
+    blockReason,
+    retry: retryPostLoginRoute,
+  } = usePostLoginRoute(session);
 
   const fontsReady = fontsLoaded || Boolean(fontsError);
   const waitingForRoute = Boolean(session) && !routeReady && !postLoginHref;
@@ -53,10 +67,8 @@ export default function RootLayout() {
   const splashActive = !guestSplashDoneRef.current || Boolean(session);
 
   const handleSplashHidden = useCallback(() => {
-    if (!session) {
-      guestSplashDoneRef.current = true;
-    }
-  }, [session]);
+    guestSplashDoneRef.current = true;
+  }, []);
 
   const { visible: splashVisible, opacity: splashOpacity } = useBootSplash({
     cycleKey: splashCycleKey,
@@ -81,7 +93,8 @@ export default function RootLayout() {
           tripStoreActions.clearActiveTrip();
         } else {
           skipNextSessionHydrateRef.current = true;
-          await tripStoreActions.hydrateActiveTrip().catch(() => null);
+          // Con senal debil se entra igual; la hidratacion sigue y actualiza la pantalla.
+          await withTimeout(tripStoreActions.hydrateActiveTrip(), BOOT_HYDRATE_TIMEOUT_MS, null);
         }
 
         setIsBootLoading(false);
@@ -89,9 +102,13 @@ export default function RootLayout() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      if (!isMounted) {
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      // INITIAL_SESSION llega null sin red con token vencido: el arranque ya lo resolvio arriba.
+      if (!isMounted || event === 'INITIAL_SESSION') {
         return;
+      }
+      if (event === 'SIGNED_OUT') {
+        void clearLocalSessionData().catch(() => undefined);
       }
       setSession(nextSession ?? null);
     });
@@ -101,6 +118,24 @@ export default function RootLayout() {
       subscription.unsubscribe();
     };
   }, []);
+
+  // Sin red, el refresco automatico del token retiene todas las peticiones durante minutos.
+  useEffect(
+    () =>
+      NetInfo.addEventListener(({ isConnected }) => {
+        void (isConnected === false
+          ? supabase.auth.stopAutoRefresh()
+          : supabase.auth.startAutoRefresh());
+      }),
+    [],
+  );
+
+  // Sube lo que esta cuenta dejo pendiente, aunque ya no tenga un viaje abierto en pantalla.
+  useEffect(() => {
+    if (!isBootLoading && sessionUserId) {
+      void flushAttendanceQueue().catch(() => undefined);
+    }
+  }, [isBootLoading, sessionUserId]);
 
   useEffect(() => {
     if (isBootLoading) {
@@ -174,7 +209,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <AppThemeProvider>
         <View style={styles.root}>
-          {!session && !inAuthGroup ? <Redirect href={AUTH_ROUTES.login} /> : null}
+          {!isBootLoading && !session && !inAuthGroup ? <Redirect href={AUTH_ROUTES.login} /> : null}
           {session && postLoginHref && inAuthGroup ? <Redirect href={postLoginHref} /> : null}
           {roleRedirectHref ? <Redirect href={roleRedirectHref} /> : null}
           <PushRegistrationSync session={session} postLoginHref={postLoginHref} />
@@ -183,6 +218,13 @@ export default function RootLayout() {
             <Stack.Screen name="(ops)" />
             <Stack.Screen name="(parent)" />
           </Stack>
+          {session && blockReason ? (
+            <RoleBlockedScreen
+              reason={blockReason}
+              onRetry={retryPostLoginRoute}
+              onLogout={() => void logout().catch(() => showLogoutError())}
+            />
+          ) : null}
           <BootSplashOverlay visible={splashVisible} opacity={splashOpacity} />
         </View>
       </AppThemeProvider>

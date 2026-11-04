@@ -21,7 +21,7 @@ type LoginFormProps = {
   password: string;
   errorMessage: string | null;
   isSubmitting: boolean;
-  isResettingPassword: boolean;
+  infoMessage: string | null;
   hasSupabaseConfig: boolean;
   onChangeEmail: (value: string) => void;
   onChangePassword: (value: string) => void;
@@ -34,7 +34,7 @@ export function LoginForm({
   password,
   errorMessage,
   isSubmitting,
-  isResettingPassword,
+  infoMessage,
   hasSupabaseConfig,
   onChangeEmail,
   onChangePassword,
@@ -149,7 +149,7 @@ export function LoginForm({
             <View style={styles.accentLine} />
 
             <View style={styles.formHeader}>
-              <Text style={styles.formTitle}>Ingreso de operador</Text>
+              <Text style={styles.formTitle}>Iniciar sesión</Text>
               <Text style={styles.formHint}>Control de asistencia en ruta escolar</Text>
             </View>
 
@@ -163,11 +163,12 @@ export function LoginForm({
                 autoCapitalize="none"
                 autoCorrect={false}
                 autoComplete="email"
+                accessibilityLabel="Usuario"
                 textContentType="username"
                 returnKeyType="next"
                 onSubmitEditing={() => passwordInputRef.current?.focus()}
                 blurOnSubmit={false}
-                disabled={isSubmitting || isResettingPassword}
+                disabled={isSubmitting}
                 left={<AppInput.Icon icon="account-outline" color={colors.authIconMuted} />}
               />
 
@@ -175,6 +176,7 @@ export function LoginForm({
                 ref={passwordInputRef}
                 variant="auth"
                 placeholder="Contraseña"
+                accessibilityLabel="Contraseña"
                 value={password}
                 onChangeText={onChangePassword}
                 secureTextEntry={!isPasswordVisible}
@@ -184,7 +186,7 @@ export function LoginForm({
                 textContentType="password"
                 returnKeyType="go"
                 onSubmitEditing={onSubmit}
-                disabled={isSubmitting || isResettingPassword}
+                disabled={isSubmitting}
                 left={<AppInput.Icon icon="lock-outline" color={colors.authIconMuted} />}
                 right={
                   <AppInput.Icon
@@ -212,9 +214,19 @@ export function LoginForm({
               </HelperText>
             ) : null}
 
-            <Pressable onPress={onForgotPassword} disabled={isSubmitting || isResettingPassword}>
+            {infoMessage ? (
+              <HelperText type="info" visible>
+                {infoMessage}
+              </HelperText>
+            ) : null}
+
+            <Pressable
+              onPress={onForgotPassword}
+              disabled={isSubmitting}
+              accessibilityRole="button"
+            >
               <Text style={styles.forgotPassword}>
-                {isResettingPassword ? 'Enviando enlace...' : '¿Olvidaste tu contraseña?'}
+                ¿Olvidaste tu contraseña?
               </Text>
             </Pressable>
 
@@ -222,7 +234,7 @@ export function LoginForm({
               variant="authPrimary"
               onPress={onSubmit}
               loading={isSubmitting}
-              disabled={isSubmitting || isResettingPassword}
+              disabled={isSubmitting}
               contentStyle={styles.buttonContent}
             >
               Ingresar

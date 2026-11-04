@@ -1,6 +1,7 @@
 import { supabase, supabasePublic } from "@/src/core/config/supabase";
 import type { ScanContext } from "@/src/features/trips/services/crew.service";
 import type { AttendanceEventType, AttendanceRecord } from "@/src/features/trips/types";
+import { withDeadline } from "@/src/shared/utils/withTimeout";
 
 export type PendingDropoffStudent = {
   id: string;
@@ -8,6 +9,9 @@ export type PendingDropoffStudent = {
   codigo: string | null;
   direccion: string | null;
 };
+
+// Pasado este tiempo se encola; si la peticion llega despues, el reintento da "Ya registrado".
+const REGISTER_TIMEOUT_MS = 8_000;
 
 function mapAttendanceRpcError(message?: string, code?: string) {
   if (code === "23505" || message?.includes("Ya registrado")) {
@@ -27,12 +31,15 @@ export async function registerAttendance(
   eventType: AttendanceEventType,
   scan?: ScanContext,
 ): Promise<AttendanceRecord> {
-  const { data, error } = await supabase.rpc("register_attendance", {
-    p_trip_id: tripId,
-    p_student_id: studentId,
-    p_event_type: eventType,
-    p_scan_role: scan?.scanRole ?? null,
-  });
+  const { data, error } = await withDeadline(
+    supabase.rpc("register_attendance", {
+      p_trip_id: tripId,
+      p_student_id: studentId,
+      p_event_type: eventType,
+      p_scan_role: scan?.scanRole ?? null,
+    }),
+    REGISTER_TIMEOUT_MS,
+  );
 
   if (error || !data) {
     throw new Error(mapAttendanceRpcError(error?.message, error?.code));
@@ -41,34 +48,12 @@ export async function registerAttendance(
   return data as AttendanceRecord;
 }
 
-export async function markManualAttendance(
-  tripId: string,
-  studentId: string,
-  scan?: ScanContext,
-): Promise<AttendanceRecord> {
-  return registerAttendance(tripId, studentId, "manual", scan);
-}
-
 export async function registerDropoffAttendance(
   tripId: string,
   studentId: string,
   scan?: ScanContext,
 ): Promise<AttendanceRecord> {
   return registerAttendance(tripId, studentId, "bajo", scan);
-}
-
-export async function getAttendanceByTrip(tripId: string): Promise<AttendanceRecord[]> {
-  const { data, error } = await supabase
-    .from("bus_attendance_records")
-    .select("*")
-    .eq("trip_id", tripId)
-    .order("scanned_at", { ascending: true });
-
-  if (error || !data) {
-    throw new Error("No se pudo cargar la asistencia del viaje.");
-  }
-
-  return data;
 }
 
 export async function voidAttendanceRecord(recordId: string, reason: string): Promise<void> {
