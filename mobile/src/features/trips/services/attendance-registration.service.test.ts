@@ -98,6 +98,28 @@ describe("attendance-registration.service", () => {
   });
 
   describe("flushAttendanceQueue", () => {
+    it("dos subidas simultaneas no envian dos veces el mismo registro", async () => {
+      await enqueue("stu-1");
+      await enqueue("stu-2");
+
+      const flushed = await Promise.all([
+        flushAttendanceQueue("trip-1"),
+        flushAttendanceQueue(),
+      ]);
+
+      expect(register).toHaveBeenCalledTimes(2);
+      expect(flushed).toEqual([2, 0]);
+      expect(await queuedStudents()).toEqual([]);
+    });
+
+    it("una subida que falla no bloquea la siguiente", async () => {
+      await enqueue("stu-1");
+      (getUser as jest.Mock).mockRejectedValueOnce(new Error("fallo inesperado"));
+
+      await expect(flushAttendanceQueue("trip-1")).rejects.toThrow("fallo inesperado");
+      await expect(flushAttendanceQueue("trip-1")).resolves.toBe(1);
+    });
+
     it("sigue con las demas entradas tras un error permanente", async () => {
       await enqueue("stu-1");
       await enqueue("stu-2");

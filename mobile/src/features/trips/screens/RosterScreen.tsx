@@ -531,6 +531,12 @@ export default function RosterScreen() {
           <View style={styles.centerFill}>
             <ActivityIndicator color={colors.primary} size="large" />
           </View>
+        ) : roster.errorMessage && roster.items.length === 0 ? (
+          <View style={styles.centerFill}>
+            <Button mode="contained" onPress={() => void roster.loadRoster()}>
+              Reintentar
+            </Button>
+          </View>
         ) : !roster.isLoading && roster.filteredItems.length === 0 ? (
           <View style={styles.centerFill}>
             <View style={styles.listEmptyState}>

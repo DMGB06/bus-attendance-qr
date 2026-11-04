@@ -301,7 +301,16 @@ export async function syncAttendanceToServer(
   }
 }
 
-export async function flushAttendanceQueue(tripId?: string): Promise<number> {
+let flushChain: Promise<unknown> = Promise.resolve();
+
+/** En fila: si corren a la vez, cada una lee la misma cola y sube lo mismo. */
+export function flushAttendanceQueue(tripId?: string): Promise<number> {
+  const run = flushChain.then(() => runAttendanceFlush(tripId));
+  flushChain = run.catch(() => undefined);
+  return run;
+}
+
+async function runAttendanceFlush(tripId?: string): Promise<number> {
   const queue = await loadAttendanceQueue();
   const tripQueue = tripId ? queue.filter((entry) => entry.tripId === tripId) : queue;
   if (tripQueue.length === 0) {

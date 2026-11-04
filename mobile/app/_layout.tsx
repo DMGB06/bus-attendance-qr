@@ -6,6 +6,7 @@ import type { Session } from '@supabase/supabase-js';
 import { Redirect, Stack, useSegments } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
 import NetInfo from '@react-native-community/netinfo';
 import { supabase } from '@/src/core/config/supabase';
@@ -42,6 +43,8 @@ export default function RootLayout() {
     Inter_400Regular,
     Inter_600SemiBold,
     Inter_700Bold,
+    // En el HTML estatico debe estar registrada, o el icono sale vacio y no coincide con el cliente.
+    ...MaterialCommunityIcons.font,
   });
   const segments = useSegments();
   const [session, setSession] = useState<Session | null>(null);

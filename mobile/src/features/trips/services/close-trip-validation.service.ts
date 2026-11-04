@@ -10,6 +10,7 @@ import {
   resolvePendingDropoffStudents,
 } from "@/src/features/trips/services/close-trip.service";
 import { getMorningAttendanceHints } from "@/src/features/trips/services/trip-day-context.service";
+import { getErrorMessage } from "@/src/shared/utils/errors";
 import { perfAsync, perfStart } from "@/src/shared/utils/perfMark";
 import {
   getTripAttendanceOnly,
@@ -59,6 +60,13 @@ function canReachServer(tripId: string): Promise<boolean> {
     SERVER_CHECK_TIMEOUT_MS,
     false,
   );
+}
+
+/** Sin servidor, el error interno (bus, perfil, viaje) no le dice nada util al chofer. */
+export async function getCloseTripFailureMessage(tripId: string, error: unknown): Promise<string> {
+  return (await canReachServer(tripId))
+    ? getErrorMessage(error, "No se pudo cerrar el viaje.")
+    : "No se pudo conectar con el servidor, así que el viaje sigue abierto. Lo registrado queda guardado en el teléfono. Intenta cerrarlo cuando vuelva la señal.";
 }
 
 async function resolveRosterItemsForClose(

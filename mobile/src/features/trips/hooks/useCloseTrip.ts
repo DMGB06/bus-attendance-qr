@@ -15,7 +15,10 @@ import {
   flushPendingAttendanceForClose,
 } from "@/src/features/trips/services/close-trip.service";
 import { getTripClosedSuccessMessage } from "@/src/features/trips/domain/trip-labels";
-import { loadCloseTripValidation } from "@/src/features/trips/services/close-trip-validation.service";
+import {
+  getCloseTripFailureMessage,
+  loadCloseTripValidation,
+} from "@/src/features/trips/services/close-trip-validation.service";
 import { closeTrip, getActiveTripForCurrentUser, isTripAlreadyClosedError } from "@/src/features/trips/services/trips.service";
 import {
   getRosterSnapshot,
@@ -62,6 +65,7 @@ export function useCloseTrip() {
     if (!activeTrip) {
       setValidation(EMPTY_VALIDATION);
       setValidationError(null);
+      setIsLoadingValidation(false);
       return;
     }
 
@@ -225,7 +229,7 @@ export function useCloseTrip() {
 
       await finishCloseLocally(freshTrip.id, freshTrip.direction);
     } catch (error: unknown) {
-      setErrorMessage(getErrorMessage(error, "No se pudo cerrar el viaje."));
+      setErrorMessage(await getCloseTripFailureMessage(tripId, error));
     } finally {
       closeInFlightRef.current = false;
       setIsClosing(false);

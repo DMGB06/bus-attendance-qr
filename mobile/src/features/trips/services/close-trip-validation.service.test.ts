@@ -1,4 +1,7 @@
-import { loadCloseTripValidation } from "@/src/features/trips/services/close-trip-validation.service";
+import {
+  getCloseTripFailureMessage,
+  loadCloseTripValidation,
+} from "@/src/features/trips/services/close-trip-validation.service";
 import { getTripAttendanceOnly, getTripRoster } from "@/src/features/trips/services/trip-roster.service";
 import { loadCachedRosterSnapshot } from "@/src/features/trips/storage/roster-cache.storage";
 import { getRosterSnapshot } from "@/src/features/trips/store/rosterStore";
@@ -94,5 +97,34 @@ describe("loadCloseTripValidation", () => {
     const result = await loadCloseTripValidation(trip);
 
     expect(result.connectivityWarning).toBeNull();
+  });
+});
+
+describe("getCloseTripFailureMessage", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("sin servidor explica que el viaje sigue abierto, no el error interno", async () => {
+    attendance.mockRejectedValue(new Error("sin red"));
+
+    const message = await getCloseTripFailureMessage(
+      "t1",
+      new Error("No se pudo consultar la asignación de bus."),
+    );
+
+    expect(message).toContain("viaje sigue abierto");
+    expect(message).not.toContain("asignación");
+  });
+
+  it("con servidor conserva el motivo real del rechazo", async () => {
+    attendance.mockResolvedValue([]);
+
+    const message = await getCloseTripFailureMessage(
+      "t1",
+      new Error("Solo el chofer puede cerrar el viaje."),
+    );
+
+    expect(message).toBe("Solo el chofer puede cerrar el viaje.");
   });
 });
