@@ -66,11 +66,11 @@ async function getSingleActivePilotBus(): Promise<BusUnit | null> {
     .order("code")
     .limit(2);
 
-  if (error || !data || data.length !== 1) {
-    return null;
+  if (error) {
+    throw new Error("No se pudo consultar la unidad.");
   }
 
-  return data[0] as BusUnit;
+  return data?.length === 1 ? (data[0] as BusUnit) : null;
 }
 
 async function resolvePilotAssignment(

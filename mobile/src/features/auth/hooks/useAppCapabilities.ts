@@ -1,6 +1,6 @@
+import { getSession } from "@/src/features/auth/services/auth.service";
 import { useCallback, useEffect, useState } from "react";
 
-import { supabase } from "@/src/core/config/supabase";
 import {
   getCapabilitiesForRole,
   getEffectiveRole,
@@ -24,9 +24,7 @@ export function useAppCapabilities(): AppCapabilitiesState {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    const session = await getSession();
     const user = session?.user;
 
     if (!user) {
@@ -55,9 +53,7 @@ export function useAppCapabilities(): AppCapabilitiesState {
 
     void (async () => {
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        const session = await getSession();
         const userEmail = session?.user?.email ?? "";
         const memoryProfile = userEmail ? getMemoryCachedProfile(userEmail) : null;
 

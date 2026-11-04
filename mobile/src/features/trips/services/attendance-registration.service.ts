@@ -1,10 +1,17 @@
+import NetInfo from "@react-native-community/netinfo";
+
 import {
   isLocalPendingRecord,
   isQueueEntrySyncedOnServer,
 } from "@/src/features/trips/domain/attendance-sync.rules";
 import { shouldFlushAttendanceQueueBeforeRefresh } from "@/src/features/trips/domain/attendance-queue-flush.rules";
 import { registerAttendance, registerDropoffAttendance, voidAttendanceRecord } from "@/src/features/trips/services/attendance.service";
-import { getScanContextForCurrentUser } from "@/src/features/trips/services/crew.service";
+import { getUser } from "@/src/features/auth/services/auth.service";
+import {
+  getScanContextForCurrentUser,
+  type ScanContext,
+} from "@/src/features/trips/services/crew.service";
+import { withDeadline, withTimeout } from "@/src/shared/utils/withTimeout";
 import { perfAsync, perfStart } from "@/src/shared/utils/perfMark";
 import {
   canRegisterBoarding,
@@ -43,6 +50,9 @@ import {
 } from "@/src/features/trips/storage/roster-cache.storage";
 
 export { mergeAttendanceRecords } from "@/src/features/trips/services/trip-roster-merge.service";
+
+const SCAN_CONTEXT_TIMEOUT_MS = 2_500;
+const ROSTER_REFRESH_TIMEOUT_MS = 12_000;
 
 export type AttendanceRegistrationResult =
   | { status: "synced" }
@@ -87,14 +97,30 @@ async function hasLocalBoardingRecord(tripId: string, studentId: string): Promis
   return hasBoarding && !hasDropoff;
 }
 
-async function flushBoardingWritesForStudent(tripId: string, studentId: string): Promise<void> {
-  const scan = await getScanContextForCurrentUser();
+function isOwnEntry(entry: QueuedAttendanceWrite, userId: string): boolean {
+  return !entry.scannedBy || entry.scannedBy === userId;
+}
+
+/** El rol es informativo: nunca debe retrasar el registro de una asistencia. */
+function resolveScanContext(userId: string): Promise<ScanContext> {
+  return withTimeout(getScanContextForCurrentUser(), SCAN_CONTEXT_TIMEOUT_MS, {
+    scannedBy: userId,
+    scanRole: null,
+  });
+}
+
+async function flushBoardingWritesForStudent(
+  tripId: string,
+  studentId: string,
+  scan: ScanContext,
+): Promise<void> {
   const queue = await loadAttendanceQueue();
   const boardingEntries = queue.filter(
     (entry) =>
       entry.tripId === tripId &&
       entry.studentId === studentId &&
-      isBoardingEventType(entry.eventType),
+      isBoardingEventType(entry.eventType) &&
+      isOwnEntry(entry, scan.scannedBy),
   );
 
   for (const entry of boardingEntries) {
@@ -202,12 +228,24 @@ export async function syncAttendanceToServer(
   studentId: string,
   eventType: AttendanceEventType,
 ): Promise<AttendanceRegistrationResult> {
-  const alreadyQueued = await hasQueuedWrite(tripId, studentId, eventType);
+  const user = await getUser();
+  if (!user) {
+    throw new Error("Debes iniciar sesión para registrar asistencia.");
+  }
+
+  const alreadyQueued = await hasQueuedWrite(tripId, studentId, eventType, user.id);
   if (alreadyQueued) {
     return { status: "queued" };
   }
 
-  const scan = await getScanContextForCurrentUser();
+  // Sin senal se guarda ya: esperar al servidor arriesga perderlo si se cierra la app.
+  const { isConnected } = await NetInfo.fetch();
+  if (isConnected === false) {
+    await enqueueAttendanceWrite({ tripId, studentId, eventType, scannedBy: user.id });
+    return { status: "queued" };
+  }
+
+  const scan = await resolveScanContext(user.id);
 
   try {
     if (eventType === "bajo") {
@@ -227,7 +265,7 @@ export async function syncAttendanceToServer(
       const hasBoarding = await hasLocalBoardingRecord(tripId, studentId);
       if (hasBoarding) {
         try {
-          await flushBoardingWritesForStudent(tripId, studentId);
+          await flushBoardingWritesForStudent(tripId, studentId, scan);
           await registerDropoffAttendance(tripId, studentId, scan);
           return { status: "synced" };
         } catch (retryError: unknown) {
@@ -270,17 +308,14 @@ export async function flushAttendanceQueue(tripId?: string): Promise<number> {
     return 0;
   }
 
-  let scan: Awaited<ReturnType<typeof getScanContextForCurrentUser>>;
-  try {
-    scan = await getScanContextForCurrentUser();
-  } catch {
+  const user = await getUser();
+  if (!user) {
     return 0;
   }
 
+  const scan = await resolveScanContext(user.id);
   // El servidor firma con el usuario actual: lo de otra cuenta espera a que esa cuenta vuelva.
-  const pending = sortQueueForFlush(
-    tripQueue.filter((entry) => !entry.scannedBy || entry.scannedBy === scan.scannedBy),
-  );
+  const pending = sortQueueForFlush(tripQueue.filter((entry) => isOwnEntry(entry, user.id)));
 
   let flushed = 0;
 
@@ -422,7 +457,7 @@ export async function refreshRosterFromNetwork(
             mode: "attendance-only",
           });
           try {
-            return await refreshRosterAttendanceOnly(tripId);
+            return await withDeadline(refreshRosterAttendanceOnly(tripId), ROSTER_REFRESH_TIMEOUT_MS);
           } finally {
             endMode();
           }
@@ -430,7 +465,7 @@ export async function refreshRosterFromNetwork(
 
         const endMode = perfStart("refreshRosterFromNetwork.mode", { tripId, mode: "full" });
         try {
-          return await refreshRosterFull(tripId);
+          return await withDeadline(refreshRosterFull(tripId), ROSTER_REFRESH_TIMEOUT_MS);
         } finally {
           endMode();
         }

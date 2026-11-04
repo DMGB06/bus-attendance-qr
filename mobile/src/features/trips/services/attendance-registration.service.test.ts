@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import NetInfo from "@react-native-community/netinfo";
 
 import {
   flushAttendanceQueue,
@@ -10,6 +11,7 @@ import {
   registerAttendance,
   registerDropoffAttendance,
 } from "@/src/features/trips/services/attendance.service";
+import { getUser } from "@/src/features/auth/services/auth.service";
 import { getScanContextForCurrentUser } from "@/src/features/trips/services/crew.service";
 import { getTripAttendanceOnly, getTripRosterRaw } from "@/src/features/trips/services/trip-roster.service";
 import {
@@ -38,6 +40,13 @@ jest.mock("@react-native-async-storage/async-storage", () => {
     },
   };
 });
+jest.mock("@react-native-community/netinfo", () => ({
+  __esModule: true,
+  default: { fetch: jest.fn() },
+}));
+jest.mock("@/src/features/auth/services/auth.service", () => ({
+  getUser: jest.fn(async () => ({ id: "user-1" })),
+}));
 jest.mock("@/src/features/trips/services/attendance.service", () => ({
   registerAttendance: jest.fn(),
   registerDropoffAttendance: jest.fn(),
@@ -83,6 +92,7 @@ describe("attendance-registration.service", () => {
     register.mockResolvedValue({});
     registerDropoff.mockResolvedValue({});
     scanContext.mockResolvedValue({ scannedBy: "user-1", scanRole: "chofer" });
+    (NetInfo.fetch as jest.Mock).mockResolvedValue({ isConnected: true });
   });
 
   describe("flushAttendanceQueue", () => {
@@ -126,7 +136,7 @@ describe("attendance-registration.service", () => {
 
     it("sin sesion conserva la cola sin lanzar error", async () => {
       await enqueue("stu-1");
-      scanContext.mockRejectedValue(new Error("Debes iniciar sesion."));
+      (getUser as jest.Mock).mockResolvedValueOnce(null);
 
       await expect(flushAttendanceQueue("trip-1")).resolves.toBe(0);
       expect(await queuedStudents()).toEqual(["stu-1"]);
@@ -167,6 +177,53 @@ describe("attendance-registration.service", () => {
   });
 
   describe("syncAttendanceToServer", () => {
+    it("sin conexion encola de inmediato sin tocar el servidor", async () => {
+      (NetInfo.fetch as jest.Mock).mockResolvedValue({ isConnected: false });
+
+      await expect(syncAttendanceToServer("trip-1", "stu-1", "subio")).resolves.toEqual({
+        status: "queued",
+      });
+
+      expect(scanContext).not.toHaveBeenCalled();
+      expect(register).not.toHaveBeenCalled();
+      expect((await loadAttendanceQueue())[0]?.scannedBy).toBe("user-1");
+    });
+
+    it("si el contexto de escaneo se cuelga, registra sin rol", async () => {
+      jest.useFakeTimers();
+      scanContext.mockReturnValue(new Promise(() => undefined));
+
+      const pending = syncAttendanceToServer("trip-1", "stu-1", "subio");
+      await jest.advanceTimersByTimeAsync(2_500);
+      await pending;
+      jest.useRealTimers();
+
+      expect(register).toHaveBeenCalledWith("trip-1", "stu-1", "subio", {
+        scannedBy: "user-1",
+        scanRole: null,
+      });
+    });
+
+    it("una entrada de otra cuenta no impide registrar a la actual", async () => {
+      await enqueue("stu-1", "subio", "otra");
+
+      await expect(syncAttendanceToServer("trip-1", "stu-1", "subio")).resolves.toEqual({
+        status: "synced",
+      });
+    });
+
+    it("al reintentar la bajada no sube la entrada de otra cuenta", async () => {
+      await enqueue("stu-1", "subio", "otra");
+      await enqueue("stu-2", "subio");
+      registerDropoff.mockRejectedValueOnce(
+        new Error("Primero debes registrar la entrada del alumno."),
+      );
+
+      await syncAttendanceToServer("trip-1", "stu-1", "bajo").catch(() => undefined);
+
+      expect(register).not.toHaveBeenCalled();
+    });
+
     it("encola si falla la red", async () => {
       register.mockRejectedValue(new Error("Network request failed"));
 
@@ -219,6 +276,19 @@ describe("attendance-registration.service", () => {
       await refreshRosterFromNetwork("trip-1", { skipQueueFlush: true });
 
       expect(saveStudents).not.toHaveBeenCalled();
+    });
+
+    it("con la red colgada termina con error en vez de esperar sin fin", async () => {
+      jest.useFakeTimers();
+      rosterRaw.mockReturnValue(new Promise(() => undefined));
+
+      const assertion = expect(
+        refreshRosterFromNetwork("trip-1", { skipQueueFlush: true }),
+      ).rejects.toThrow("No se pudo cargar");
+      await jest.advanceTimersByTimeAsync(12_000);
+
+      await assertion;
+      jest.useRealTimers();
     });
 
     it("guarda el padron cuando trae alumnos", async () => {

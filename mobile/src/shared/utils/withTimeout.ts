@@ -17,3 +17,21 @@ export function withTimeout<T>(
       });
   });
 }
+
+/** Como withTimeout, pero rechaza: sirve cuando quien llama debe tratarlo como fallo de red. */
+export function withDeadline<T>(promise: PromiseLike<T>, timeoutMs: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("timeout")), timeoutMs);
+
+    Promise.resolve(promise).then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}

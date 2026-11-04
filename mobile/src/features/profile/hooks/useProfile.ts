@@ -1,7 +1,7 @@
+import { getSession } from "@/src/features/auth/services/auth.service";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert } from "react-native";
 
-import { supabase } from "@/src/core/config/supabase";
 import { getErrorMessage } from "@/src/shared/utils/errors";
 import {
   getProfile,
@@ -50,9 +50,7 @@ export function useProfile() {
   const [appRole, setAppRole] = useState("");
 
   const loadProfile = useCallback(async (forceRefresh = false) => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    const session = await getSession();
     const user = session?.user;
     if (!user) {
       throw new Error("Usuario no autenticado");
@@ -92,9 +90,7 @@ export function useProfile() {
 
     void (async () => {
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        const session = await getSession();
         const userEmail = session?.user?.email ?? "";
         const memoryProfile = userEmail ? getMemoryCachedProfile(userEmail) : null;
 

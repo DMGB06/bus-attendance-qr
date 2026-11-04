@@ -83,8 +83,9 @@ export function queueEntryKey(
   return `${tripId}:${studentId}:${eventType}`;
 }
 
+/** Solo lectura: si falla el almacenamiento, operar sin cola es mejor que bloquear la app. */
 export function loadAttendanceQueue(): Promise<QueuedAttendanceWrite[]> {
-  return withQueueLock(readQueue);
+  return withQueueLock(readQueue).catch(() => []);
 }
 
 export function enqueueAttendanceWrite(
@@ -95,7 +96,9 @@ export function enqueueAttendanceWrite(
     const key = queueEntryKey(entry.tripId, entry.studentId, entry.eventType);
 
     const existing = queue.find(
-      (item) => queueEntryKey(item.tripId, item.studentId, item.eventType) === key,
+      (item) =>
+        queueEntryKey(item.tripId, item.studentId, item.eventType) === key &&
+        item.scannedBy === entry.scannedBy,
     );
     if (existing) {
       return existing;
@@ -149,11 +152,14 @@ export async function hasQueuedWrite(
   tripId: string,
   studentId: string,
   eventType: AttendanceEventType,
+  scannedBy: string,
 ): Promise<boolean> {
   const queue = await loadAttendanceQueue();
   const key = queueEntryKey(tripId, studentId, eventType);
   return queue.some(
-    (item) => queueEntryKey(item.tripId, item.studentId, item.eventType) === key,
+    (item) =>
+      queueEntryKey(item.tripId, item.studentId, item.eventType) === key &&
+      (!item.scannedBy || item.scannedBy === scannedBy),
   );
 }
 

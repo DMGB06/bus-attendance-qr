@@ -1,5 +1,3 @@
-import { AuthRetryableFetchError } from "@supabase/supabase-js";
-
 import { supabase } from "@/src/core/config/supabase";
 import { supabaseAuthStorage } from "@/src/core/config/supabase-auth-storage";
 import { getSession as authGetSession, getUser, logout } from "@/src/features/auth/services/auth.service";
@@ -24,50 +22,29 @@ const getSession = supabase.auth.getSession as jest.Mock;
 const remoteGetUser = supabase.auth.getUser as jest.Mock;
 const storageGetItem = supabaseAuthStorage.getItem as jest.Mock;
 
-describe("getUser", () => {
+describe("getUser y getSession", () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it("lee el usuario de la sesion local sin llamar a la red", async () => {
-    getSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } }, error: null });
+  it("leen el usuario guardado sin esperar a la libreria de auth", async () => {
+    storageGetItem.mockResolvedValue(JSON.stringify({ user: { id: "u1" } }));
 
     await expect(getUser()).resolves.toEqual({ id: "u1" });
+    await expect(authGetSession()).resolves.toMatchObject({ user: { id: "u1" } });
+    expect(getSession).not.toHaveBeenCalled();
     expect(remoteGetUser).not.toHaveBeenCalled();
+    expect(storageGetItem).toHaveBeenCalledWith("buscontrol-auth");
   });
 
-  it("devuelve null sin sesion", async () => {
-    getSession.mockResolvedValue({ data: { session: null }, error: null });
+  it("devuelven null sin sesion guardada", async () => {
+    storageGetItem.mockResolvedValue(null);
 
     await expect(getUser()).resolves.toBeNull();
   });
 
-  it("offline con token vencido usa el usuario guardado", async () => {
-    getSession.mockResolvedValue({
-      data: { session: null },
-      error: new AuthRetryableFetchError("Network request failed", 0),
-    });
-    storageGetItem.mockResolvedValue(JSON.stringify({ user: { id: "u1" } }));
+  it("devuelven null si lo guardado esta corrupto", async () => {
+    storageGetItem.mockResolvedValue("{no es json");
 
-    await expect(getUser()).resolves.toEqual({ id: "u1" });
-    expect(storageGetItem).toHaveBeenCalledWith("buscontrol-auth");
-  });
-
-  it("propaga errores que no son de red", async () => {
-    const error = new Error("refresh token invalido");
-    getSession.mockResolvedValue({ data: { session: null }, error });
-
-    await expect(getUser()).rejects.toThrow("refresh token invalido");
-  });
-});
-
-describe("getSession", () => {
-  it("offline con token vencido devuelve la sesion guardada", async () => {
-    getSession.mockResolvedValue({
-      data: { session: null },
-      error: new AuthRetryableFetchError("Network request failed", 0),
-    });
-    storageGetItem.mockResolvedValue(JSON.stringify({ user: { id: "u1" } }));
-
-    await expect(authGetSession()).resolves.toMatchObject({ user: { id: "u1" } });
+    await expect(authGetSession()).resolves.toBeNull();
   });
 });
 
@@ -78,7 +55,7 @@ describe("logout", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    getSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } }, error: null });
+    storageGetItem.mockResolvedValue(JSON.stringify({ user: { id: "u1" } }));
     signOut.mockResolvedValue({ error: null });
     deactivate.mockResolvedValue(undefined);
     cleanup.mockResolvedValue(undefined);
@@ -98,6 +75,19 @@ describe("logout", () => {
     await expect(logout()).resolves.toBeUndefined();
     expect(signOut).toHaveBeenCalled();
     expect(cleanup).toHaveBeenCalled();
+  });
+
+  it("sin red no deja colgado el boton de cerrar sesion", async () => {
+    jest.useFakeTimers();
+    signOut.mockReturnValue(new Promise(() => undefined));
+
+    const pending = logout();
+    const assertion = expect(pending).rejects.toThrow("timeout");
+    await jest.advanceTimersByTimeAsync(8_000);
+
+    await assertion;
+    expect(cleanup).not.toHaveBeenCalled();
+    jest.useRealTimers();
   });
 
   it("si signOut falla la sesion sigue activa y conserva sus datos", async () => {

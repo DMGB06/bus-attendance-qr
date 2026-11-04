@@ -91,6 +91,15 @@ describe("crew.service", () => {
     await expect(resolveOperationalBusContext("u1")).resolves.toBeNull();
   });
 
+  it("un fallo de red al consultar los buses no se confunde con sin bus", async () => {
+    mockTables({
+      bus_crew_assignments: { data: [], error: null },
+      bus_units: { data: null, error: { message: "Network request failed" } },
+    });
+
+    await expect(resolveOperationalBusContext("u1")).rejects.toThrow("No se pudo consultar");
+  });
+
   it("modo piloto: un solo bus activo se asigna al operador", async () => {
     mockTables({
       bus_crew_assignments: { data: [], error: null },

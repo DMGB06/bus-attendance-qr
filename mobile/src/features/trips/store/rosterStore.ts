@@ -305,7 +305,7 @@ async function refreshTripRoster(
   const inFlight = refreshInFlightByTrip.get(tripId);
   if (inFlight) {
     // Lo forzado debe ver datos posteriores a la recarga que ya estaba en curso.
-    return force ? inFlight.then(() => refreshTripRoster(tripId, options)) : inFlight;
+    return force || immediate ? inFlight.then(() => refreshTripRoster(tripId, options)) : inFlight;
   }
 
   const run = refreshTripRosterInternal(tripId, {
@@ -457,9 +457,10 @@ async function registerStudentAttendance(
 
     return { synced: true, queued: false, duplicate: false };
   } catch (error: unknown) {
+    const previousItem = previousItems.find((item) => item.student.id === studentId);
     setState({
-      items: getSnapshot().items.map(
-        (item) => previousItems.find((prev) => prev.student.id === item.student.id) ?? item,
+      items: getSnapshot().items.map((item) =>
+        item.student.id === studentId && previousItem ? previousItem : item,
       ),
     });
     void refreshTripRoster(tripId, { silent: true, immediate: true });

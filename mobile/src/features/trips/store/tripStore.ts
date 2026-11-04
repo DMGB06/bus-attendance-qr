@@ -7,6 +7,7 @@ import {
   saveActiveTripSnapshot,
 } from "@/src/features/trips/storage/active-trip-cache.storage";
 import type { Trip } from "@/src/features/trips/types";
+import { withDeadline } from "@/src/shared/utils/withTimeout";
 
 interface TripState {
   activeTrip: Trip | null;
@@ -34,6 +35,8 @@ let state: TripState = {
   isHydrating: false,
   hasHydratedOnce: false,
 };
+
+const HYDRATE_TIMEOUT_MS = 5_000;
 
 let hydrateInFlight: Promise<Trip | null> | null = null;
 // Sube con cada cambio local del viaje: una hidratacion anterior ya no puede aplicarse.
@@ -74,7 +77,7 @@ async function hydrateActiveTrip() {
 
   const epoch = tripEpoch;
   const current: Promise<Trip | null> = (async () => {
-    const snapshot = await resolveOperatorTripSnapshot().then(
+    const snapshot = await withDeadline(resolveOperatorTripSnapshot(), HYDRATE_TIMEOUT_MS).then(
       (fresh) => {
         if (epoch === tripEpoch) {
           void saveActiveTripSnapshot(fresh);

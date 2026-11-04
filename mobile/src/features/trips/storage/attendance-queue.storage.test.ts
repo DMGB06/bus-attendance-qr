@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import {
   enqueueAttendanceWrite,
+  hasQueuedWrite,
   loadAttendanceQueue,
   removeAttendanceWrite,
 } from "@/src/features/trips/storage/attendance-queue.storage";
@@ -64,6 +65,22 @@ describe("attendance-queue.storage", () => {
 
     const queue = await loadAttendanceQueue();
     expect(queue.map((entry) => entry.studentId)).toEqual(["stu-2"]);
+  });
+
+  it("leer la cola no rompe la app si falla el almacenamiento", async () => {
+    storage.getItem.mockRejectedValueOnce(new Error("io"));
+
+    await expect(loadAttendanceQueue()).resolves.toEqual([]);
+  });
+
+  it("el registro de otra cuenta no bloquea el de la cuenta actual", async () => {
+    await enqueueAttendanceWrite({ ...write("stu-1"), scannedBy: "otra" });
+
+    expect(await hasQueuedWrite("trip-1", "stu-1", "subio", "user-1")).toBe(false);
+    expect(await hasQueuedWrite("trip-1", "stu-1", "subio", "otra")).toBe(true);
+
+    await enqueueAttendanceWrite(write("stu-1"));
+    expect(await loadAttendanceQueue()).toHaveLength(2);
   });
 
   it("avisa al llamador si no pudo guardar en disco", async () => {

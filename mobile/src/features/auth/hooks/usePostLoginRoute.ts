@@ -47,7 +47,6 @@ export function usePostLoginRoute(session: Session | null): PostLoginRouteState 
 
     let mounted = true;
     setHref(null);
-    setBlockReason(null);
     setReady(false);
 
     const finish = (nextHref: PostLoginHref) => {

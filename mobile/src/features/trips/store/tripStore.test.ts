@@ -84,6 +84,21 @@ describe("tripStore", () => {
     expect(tripStoreActions.getActiveTripId()).toBeNull();
   });
 
+  it("con la red colgada recupera el viaje guardado sin esperar minutos", async () => {
+    snapshot.mockResolvedValueOnce({ context, activeTrip: trip("t1") });
+    await tripStoreActions.hydrateActiveTrip();
+    tripStoreActions.forgetActiveTripInMemory();
+
+    jest.useFakeTimers();
+    snapshot.mockReturnValueOnce(new Promise(() => undefined));
+    const pending = tripStoreActions.hydrateActiveTrip();
+    await jest.advanceTimersByTimeAsync(5_000);
+    await pending;
+    jest.useRealTimers();
+
+    expect(tripStoreActions.getActiveTripId()).toBe("t1");
+  });
+
   it("una hidratacion en vuelo no pisa el viaje recien iniciado", async () => {
     let finish: (value: unknown) => void = () => undefined;
     snapshot.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)));

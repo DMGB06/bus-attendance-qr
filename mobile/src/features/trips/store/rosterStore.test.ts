@@ -84,6 +84,41 @@ describe("rosterStore", () => {
     expect(getRosterSnapshot().items[0].status).toBe("pending");
   });
 
+  it("al revertir un alumno no deshace el registro de otro", async () => {
+    network.mockResolvedValue(networkResult([item("stu-1"), item("stu-2")]));
+    await rosterStoreActions.refreshTripRoster("t1", { silent: false });
+    let failFirst: (reason: Error) => void = () => undefined;
+    syncToServer.mockReturnValueOnce(new Promise((_resolve, reject) => (failFirst = reject)));
+    syncToServer.mockResolvedValueOnce({ status: "queued" });
+
+    const first = rosterStoreActions.registerStudentAttendance("t1", "stu-1", "subio");
+    await rosterStoreActions.registerStudentAttendance("t1", "stu-2", "subio");
+    network.mockReturnValue(new Promise(() => undefined));
+    failFirst(new Error("Viaje no activo."));
+    await expect(first).rejects.toThrow();
+
+    const statusOf = (id: string) =>
+      getRosterSnapshot().items.find((entry) => entry.student.id === id)?.status;
+    expect(statusOf("stu-1")).toBe("pending");
+    expect(statusOf("stu-2")).toBe("onboard");
+  });
+
+  it("un aviso de Realtime durante una recarga vuelve a consultar", async () => {
+    let finish: (value: unknown) => void = () => undefined;
+    network.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)));
+    network.mockResolvedValue(networkResult([item("stu-2")]));
+
+    const running = rosterStoreActions.refreshTripRoster("t1", { silent: false });
+    const fromRealtime = rosterStoreActions.refreshTripRoster("t1", {
+      silent: true,
+      immediate: true,
+    });
+    finish(networkResult([item("stu-1")]));
+    await Promise.all([running, fromRealtime]);
+
+    expect(network).toHaveBeenCalledTimes(2);
+  });
+
   it("no ejecuta dos sincronizaciones a la vez", async () => {
     let finish: (value: number) => void = () => undefined;
     flush.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)));

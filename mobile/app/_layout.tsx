@@ -7,6 +7,7 @@ import { Redirect, Stack, useSegments } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import { Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
+import NetInfo from '@react-native-community/netinfo';
 import { supabase } from '@/src/core/config/supabase';
 import { GUEST_CYCLE_KEY, useBootSplash } from '@/src/core/boot/useBootSplash';
 import { fadeScreenOptions } from '@/src/core/navigation/screenTransitions';
@@ -15,6 +16,7 @@ import { RoleBlockedScreen } from '@/src/features/auth/components/RoleBlockedScr
 import { getSession, logout } from '@/src/features/auth/services/auth.service';
 import { clearLocalSessionData } from '@/src/features/auth/services/session-cleanup.service';
 import { usePostLoginRoute } from '@/src/features/auth/hooks/usePostLoginRoute';
+import { flushAttendanceQueue } from '@/src/features/trips/services/attendance-registration.service';
 import { tripStoreActions } from '@/src/features/trips/store/tripStore';
 import { AppThemeProvider } from '@/src/core/theme/ThemeProvider';
 import { AppLoadingScreen } from '@/src/shared/ui/AppLoadingScreen';
@@ -44,6 +46,7 @@ export default function RootLayout() {
   const segments = useSegments();
   const [session, setSession] = useState<Session | null>(null);
   const [isBootLoading, setIsBootLoading] = useState(true);
+  const sessionUserId = session?.user?.id;
   const skipNextSessionHydrateRef = useRef(false);
   const guestSplashDoneRef = useRef(false);
   const splashHiddenRef = useRef(false);
@@ -114,6 +117,24 @@ export default function RootLayout() {
       subscription.unsubscribe();
     };
   }, []);
+
+  // Sin red, el refresco automatico del token retiene todas las peticiones durante minutos.
+  useEffect(
+    () =>
+      NetInfo.addEventListener(({ isConnected }) => {
+        void (isConnected === false
+          ? supabase.auth.stopAutoRefresh()
+          : supabase.auth.startAutoRefresh());
+      }),
+    [],
+  );
+
+  // Sube lo que esta cuenta dejo pendiente, aunque ya no tenga un viaje abierto en pantalla.
+  useEffect(() => {
+    if (!isBootLoading && sessionUserId) {
+      void flushAttendanceQueue().catch(() => undefined);
+    }
+  }, [isBootLoading, sessionUserId]);
 
   useEffect(() => {
     if (isBootLoading) {
