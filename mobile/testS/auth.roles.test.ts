@@ -19,6 +19,12 @@ describe("testS · roles y permisos", () => {
     expect(caps.isAssistant).toBe(true);
   });
 
+  it("asistenta controla la lista de llegada pero no inicia viajes", () => {
+    const caps = getCapabilitiesForRole(AppRole.ASISTENTA);
+    expect(caps.canBulkDropoff).toBe(true);
+    expect(caps.canStartTrip).toBe(false);
+  });
+
   it("padre sin permisos operativos", () => {
     const caps = getCapabilitiesForRole(AppRole.PADRE);
     expect(caps.canScan).toBe(false);

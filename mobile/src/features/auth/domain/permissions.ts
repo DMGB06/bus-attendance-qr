@@ -27,7 +27,7 @@ const ASISTENTA_CAPABILITIES: AppCapabilities = {
   canCloseTrip: false,
   canScan: true,
   canViewRoster: true,
-  canBulkDropoff: false,
+  canBulkDropoff: true,
   canMarkManual: true,
   isAssistant: true,
   isDriver: false,
