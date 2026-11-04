@@ -10,12 +10,15 @@ import { supabase } from '@/src/core/config/supabase';
 import { GUEST_CYCLE_KEY, useBootSplash } from '@/src/core/boot/useBootSplash';
 import { fadeScreenOptions } from '@/src/core/navigation/screenTransitions';
 import { AUTH_ROUTES } from '@/src/core/routes';
-import { getSession } from '@/src/features/auth/services/auth.service';
+import { RoleBlockedScreen } from '@/src/features/auth/components/RoleBlockedScreen';
+import { getSession, logout } from '@/src/features/auth/services/auth.service';
+import { clearLocalSessionData } from '@/src/features/auth/services/session-cleanup.service';
 import { usePostLoginRoute } from '@/src/features/auth/hooks/usePostLoginRoute';
 import { tripStoreActions } from '@/src/features/trips/store/tripStore';
 import { AppThemeProvider } from '@/src/core/theme/ThemeProvider';
 import { AppLoadingScreen } from '@/src/shared/ui/AppLoadingScreen';
 import { BootSplashOverlay } from '@/src/shared/ui/BootSplashOverlay';
+import { showLogoutError } from '@/src/shared/utils/confirmAlert';
 import { perfMarkBootReady } from '@/src/shared/utils/perfMark';
 import { PushRegistrationSync } from '@/src/features/notifications/components/PushRegistrationSync';
 
@@ -44,7 +47,12 @@ export default function RootLayout() {
   const skipNextSessionHydrateRef = useRef(false);
   const guestSplashDoneRef = useRef(false);
   const splashHiddenRef = useRef(false);
-  const { ready: routeReady, href: postLoginHref } = usePostLoginRoute(session);
+  const {
+    ready: routeReady,
+    href: postLoginHref,
+    blockReason,
+    retry: retryPostLoginRoute,
+  } = usePostLoginRoute(session);
 
   const fontsReady = fontsLoaded || Boolean(fontsError);
   const waitingForRoute = Boolean(session) && !routeReady && !postLoginHref;
@@ -89,9 +97,13 @@ export default function RootLayout() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      if (!isMounted) {
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      // INITIAL_SESSION llega null sin red con token vencido: el arranque ya lo resolvio arriba.
+      if (!isMounted || event === 'INITIAL_SESSION') {
         return;
+      }
+      if (event === 'SIGNED_OUT') {
+        void clearLocalSessionData().catch(() => undefined);
       }
       setSession(nextSession ?? null);
     });
@@ -174,7 +186,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <AppThemeProvider>
         <View style={styles.root}>
-          {!session && !inAuthGroup ? <Redirect href={AUTH_ROUTES.login} /> : null}
+          {!isBootLoading && !session && !inAuthGroup ? <Redirect href={AUTH_ROUTES.login} /> : null}
           {session && postLoginHref && inAuthGroup ? <Redirect href={postLoginHref} /> : null}
           {roleRedirectHref ? <Redirect href={roleRedirectHref} /> : null}
           <PushRegistrationSync session={session} postLoginHref={postLoginHref} />
@@ -183,6 +195,13 @@ export default function RootLayout() {
             <Stack.Screen name="(ops)" />
             <Stack.Screen name="(parent)" />
           </Stack>
+          {session && blockReason ? (
+            <RoleBlockedScreen
+              reason={blockReason}
+              onRetry={retryPostLoginRoute}
+              onLogout={() => void logout().catch(() => showLogoutError())}
+            />
+          ) : null}
           <BootSplashOverlay visible={splashVisible} opacity={splashOpacity} />
         </View>
       </AppThemeProvider>

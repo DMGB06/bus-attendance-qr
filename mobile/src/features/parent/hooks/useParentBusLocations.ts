@@ -56,7 +56,7 @@ export function useParentBusLocations(): ParentBusLocationsState {
 
     try {
       const trips = await fetchActiveTripGpsByIds(snapshot.activeTripIds);
-      parentChildrenStore.patchActiveTrips(trips);
+      parentChildrenStore.syncActiveTrips(snapshot.activeTripIds, trips);
       if (mountedRef.current) {
         setError(null);
       }

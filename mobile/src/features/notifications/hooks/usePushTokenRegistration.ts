@@ -1,10 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import type { Session } from "@supabase/supabase-js";
 
-import {
-  deactivatePushTokensForUser,
-  upsertPushToken,
-} from "@/src/features/notifications/services/push-token.service";
+import { upsertPushToken } from "@/src/features/notifications/services/push-token.service";
 import {
   getExpoPushToken,
   getPushPlatformLabel,
@@ -23,7 +20,6 @@ export function usePushTokenRegistration({
   enabled,
 }: UsePushTokenRegistrationOptions): void {
   const userId = session?.user.id;
-  const registeredForUserRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!enabled || !userId || !isPushAvailable()) {
@@ -51,8 +47,6 @@ export function usePushTokenRegistration({
           expoPushToken: token,
           platform: getPushPlatformLabel(),
         });
-
-        registeredForUserRef.current = userId;
       } catch (error) {
         console.warn("[push] No se pudo registrar el token:", toSafeLogMessage(error));
       }
@@ -62,20 +56,4 @@ export function usePushTokenRegistration({
       cancelled = true;
     };
   }, [enabled, userId]);
-
-  useEffect(() => {
-    if (session || !registeredForUserRef.current) {
-      return;
-    }
-
-    const previousUserId = registeredForUserRef.current;
-    registeredForUserRef.current = null;
-
-    void deactivatePushTokensForUser(previousUserId).catch((error) => {
-      console.warn(
-        "[push] No se pudo desactivar el token al cerrar sesión:",
-        toSafeLogMessage(error),
-      );
-    });
-  }, [session]);
 }

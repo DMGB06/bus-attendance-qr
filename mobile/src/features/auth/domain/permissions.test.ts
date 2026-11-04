@@ -1,10 +1,19 @@
 import { AppRole } from "@/src/features/profile/types";
 import {
   getCapabilitiesForRole,
+  getEffectiveRole,
   isParentRole,
 } from "@/src/features/auth/domain/permissions";
 
 describe("getCapabilitiesForRole", () => {
+  it("sin rol no concede permisos", () => {
+    for (const role of [null, undefined]) {
+      expect(getCapabilitiesForRole(role).canStartTrip).toBe(false);
+      expect(getCapabilitiesForRole(role).canScan).toBe(false);
+      expect(getCapabilitiesForRole(role).isDriver).toBe(false);
+    }
+  });
+
   it("da permisos completos al chofer", () => {
     const caps = getCapabilitiesForRole(AppRole.CHOFER);
 
@@ -38,10 +47,10 @@ describe("getCapabilitiesForRole", () => {
     expect(caps.isDriver).toBe(true);
   });
 
-  it("usa permisos de chofer si no hay rol asignado (V1)", () => {
-    const caps = getCapabilitiesForRole(null);
-
-    expect(caps.canStartTrip).toBe(true);
+  it("una cuenta inactiva no tiene rol efectivo", () => {
+    expect(getEffectiveRole({ app_role: AppRole.CHOFER, is_active: false })).toBeNull();
+    expect(getEffectiveRole({ app_role: AppRole.CHOFER, is_active: true })).toBe(AppRole.CHOFER);
+    expect(getEffectiveRole(null)).toBeNull();
   });
 });
 

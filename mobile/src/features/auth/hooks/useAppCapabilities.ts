@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/src/core/config/supabase";
 import {
   getCapabilitiesForRole,
+  getEffectiveRole,
   LOADING_CAPABILITIES,
   type AppCapabilities,
 } from "@/src/features/auth/domain/permissions";
@@ -37,13 +38,14 @@ export function useAppCapabilities(): AppCapabilitiesState {
     const userEmail = user.email ?? "";
     const memoryProfile = userEmail ? getMemoryCachedProfile(userEmail) : null;
     if (memoryProfile) {
-      setAppRole(memoryProfile.app_role ?? null);
-      setCapabilities(getCapabilitiesForRole(memoryProfile.app_role ?? null));
+      const memoryRole = getEffectiveRole(memoryProfile);
+      setAppRole(memoryRole);
+      setCapabilities(getCapabilitiesForRole(memoryRole));
       return;
     }
 
     const profile = await getProfileById(user.id, user);
-    const role = profile?.app_role ?? null;
+    const role = getEffectiveRole(profile);
     setAppRole(role);
     setCapabilities(getCapabilitiesForRole(role));
   }, []);
@@ -60,12 +62,15 @@ export function useAppCapabilities(): AppCapabilitiesState {
         const memoryProfile = userEmail ? getMemoryCachedProfile(userEmail) : null;
 
         if (memoryProfile && mounted) {
-          setAppRole(memoryProfile.app_role ?? null);
-          setCapabilities(getCapabilitiesForRole(memoryProfile.app_role ?? null));
+          const memoryRole = getEffectiveRole(memoryProfile);
+          setAppRole(memoryRole);
+          setCapabilities(getCapabilitiesForRole(memoryRole));
           setLoading(false);
         }
 
         await refresh();
+      } catch {
+        // Sin red ni perfil guardado: siguen los permisos neutros.
       } finally {
         if (mounted) {
           setLoading(false);

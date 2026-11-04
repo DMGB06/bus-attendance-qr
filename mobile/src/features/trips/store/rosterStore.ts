@@ -87,6 +87,8 @@ const refreshInFlightByTrip = new Map<string, Promise<void>>();
 const debouncedRealtimeRefreshByTrip = new Map<string, ReturnType<typeof setTimeout>>();
 /** Viaje con bajada masiva en curso en este dispositivo (chofer). */
 let bulkDropoffInFlightTripId: string | null = null;
+// Sube al limpiar el store: una respuesta anterior ya no se aplica.
+let storeEpoch = 0;
 
 function cancelDebouncedRealtimeRefresh(tripId: string): void {
   const timer = debouncedRealtimeRefreshByTrip.get(tripId);
@@ -215,6 +217,7 @@ async function hydrateTripRoster(tripId: string, options?: { force?: boolean }):
 
 async function hydrateTripRosterInternal(tripId: string, force: boolean): Promise<void> {
   const endHydrate = perfStart("hydrateTripRoster", { tripId });
+  const epoch = storeEpoch;
   const alreadyLoaded = state.tripId === tripId && state.items.length > 0;
 
   if (alreadyLoaded && !force) {
@@ -243,6 +246,10 @@ async function hydrateTripRosterInternal(tripId: string, force: boolean): Promis
     loadCachedStudents(),
   ]);
   endCacheLoad();
+  if (epoch !== storeEpoch) {
+    endHydrate();
+    return;
+  }
   if (cached?.items.length) {
     setState({
       items: cached.items,
@@ -324,12 +331,16 @@ async function refreshTripRosterInternal(
   }
 
   const endRefresh = perfStart("refreshTripRoster", { tripId, silent, force });
+  const epoch = storeEpoch;
 
   try {
     const result = await refreshRosterFromNetwork(tripId, {
       skipQueueFlush: options.skipQueueFlush,
       forceFullSync: force || !silent,
     });
+    if (epoch !== storeEpoch) {
+      return;
+    }
     setState({
       tripId,
       items: result.items,
@@ -342,16 +353,19 @@ async function refreshTripRosterInternal(
   } catch (error: unknown) {
     const message =
       error instanceof Error ? error.message : "No se pudo cargar la lista de asistencia.";
-    if (!state.items.length) {
+    if (epoch === storeEpoch && !state.items.length) {
       setState({ errorMessage: message });
     }
   } finally {
     endRefresh();
-    setState({ isHydrating: false, isRefreshing: false });
+    if (epoch === storeEpoch) {
+      setState({ isHydrating: false, isRefreshing: false });
+    }
   }
 }
 
 function clearRosterStore() {
+  storeEpoch += 1;
   lastRefreshAtByTrip.clear();
   hydrateInFlightByTrip.clear();
   refreshInFlightByTrip.clear();

@@ -89,6 +89,10 @@ const guardianCatalogCache = new Map<
   Pick<Student, "nombre_apoderado" | "telefono_apoderado" | "dni_apoderado"> | null
 >();
 
+export function clearGuardianCatalogCache(): void {
+  guardianCatalogCache.clear();
+}
+
 /** Catálogo CerroBus (bus_guardians) cuando SIGEM no trae apoderado en el padrón. */
 async function getGuardianFromCatalog(
   studentId: string,

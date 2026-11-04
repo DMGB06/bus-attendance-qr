@@ -1,3 +1,4 @@
+import { showLogoutError } from '@/src/shared/utils/confirmAlert';
 import { useCallback, useMemo } from "react";
 import { Tabs, useRouter } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -17,8 +18,12 @@ export default function ParentTabsLayout() {
   const { colors, tokens } = useAppTheme();
 
   const handleLogout = useCallback(async () => {
-    await logout();
-    router.replace(AUTH_ROUTES.login);
+    try {
+      await logout();
+      router.replace(AUTH_ROUTES.login);
+    } catch {
+      showLogoutError();
+    }
   }, [router]);
 
   const renderHeader = useCallback(

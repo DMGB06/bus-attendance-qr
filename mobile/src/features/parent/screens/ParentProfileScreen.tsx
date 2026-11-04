@@ -1,3 +1,4 @@
+import { showLogoutError } from '@/src/shared/utils/confirmAlert';
 import { useCallback, useMemo } from "react";
 import { ActivityIndicator, RefreshControl, StyleSheet, View } from "react-native";
 import { Avatar, Divider, Surface, Text } from "react-native-paper";
@@ -51,8 +52,12 @@ export default function ParentProfileScreen() {
   const { refreshProfile, refreshing } = profileState;
 
   const handleLogout = useCallback(async () => {
-    await logout();
-    router.replace(AUTH_ROUTES.login);
+    try {
+      await logout();
+      router.replace(AUTH_ROUTES.login);
+    } catch {
+      showLogoutError();
+    }
   }, [router]);
 
   const handleRefresh = useCallback(() => {

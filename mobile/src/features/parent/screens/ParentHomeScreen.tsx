@@ -101,7 +101,7 @@ export default function ParentHomeScreen() {
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        {!children.length ? (
+        {!children.length && error ? null : !children.length ? (
           <ParentEmptyState
             title="Sin hijos vinculados"
             message="Contacta a la municipalidad para vincular tu cuenta con los alumnos a tu cargo."

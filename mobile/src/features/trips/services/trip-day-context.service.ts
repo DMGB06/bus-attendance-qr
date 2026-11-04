@@ -4,6 +4,10 @@ import { isBoardingEvent } from "@/src/features/trips/domain/attendance.rules";
 
 const morningHintsCache = new Map<string, Promise<Set<string>>>();
 
+export function clearMorningHintsCache(): void {
+  morningHintsCache.clear();
+}
+
 /** Limpia la caché de prioritarios (p. ej. tras pull-to-refresh). */
 export function invalidateMorningAttendanceHints(tripDate?: string): void {
   if (tripDate) {

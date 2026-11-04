@@ -1,33 +1,41 @@
 import type { User } from "@supabase/supabase-js";
 import { OPS_ROUTES, PARENT_ROUTES, type PostLoginHref } from "@/src/core/routes";
-import { isOpsRole, isParentRole } from "@/src/features/auth/domain/permissions";
+import { getEffectiveRole, isOpsRole, isParentRole } from "@/src/features/auth/domain/permissions";
 import { getGuardianLinksForUser } from "@/src/features/parent/services/guardians.service";
 import { getProfileById } from "@/src/features/profile/services/profile.service";
+import { loadCachedProfile } from "@/src/features/profile/storage/profile-cache.storage";
+import type { AppProfile } from "@/src/features/profile/types";
+
+function hrefForProfile(profile: AppProfile | null): PostLoginHref | null {
+  const role = getEffectiveRole(profile);
+  if (isParentRole(role)) {
+    return PARENT_ROUTES.home;
+  }
+  return isOpsRole(role) ? OPS_ROUTES.trip : null;
+}
 
 /**
- * Resuelve la ruta inicial tras login.
- * Operadores (chofer/asistenta/coordinador) siempre van a ops aunque tengan vínculos apoderado.
- * Padres explícitos o sin rol pero con vínculos van a la vista de padre.
+ * Resuelve la ruta inicial tras login. Devuelve null si la cuenta no tiene acceso
+ * y lanza error si no se pudo consultar: nunca asume un rol.
+ * Operadores siempre van a ops aunque tengan vínculos de apoderado.
  */
 export async function resolvePostLoginHref(
   userId: string,
   user?: User | null,
-): Promise<PostLoginHref> {
-  const profile = await getProfileById(userId, user).catch(() => null);
-  const role = profile?.app_role ?? null;
-
-  if (isParentRole(role)) {
-    return PARENT_ROUTES.home;
+): Promise<PostLoginHref | null> {
+  const profile = await getProfileById(userId, user);
+  const href = hrefForProfile(profile);
+  if (href || profile?.is_active === false) {
+    return href;
   }
 
-  if (isOpsRole(role)) {
-    return OPS_ROUTES.trip;
-  }
+  const guardianLinks = await getGuardianLinksForUser(userId);
+  return guardianLinks.length > 0 ? PARENT_ROUTES.home : null;
+}
 
-  const guardianLinks = await getGuardianLinksForUser(userId).catch(() => []);
-  if (guardianLinks.length > 0) {
-    return PARENT_ROUTES.home;
-  }
-
-  return OPS_ROUTES.trip;
+export async function resolveCachedPostLoginHref(
+  user: User | null,
+): Promise<PostLoginHref | null> {
+  const profile = user?.email ? await loadCachedProfile(user.email) : null;
+  return profile?.id === user?.id ? hrefForProfile(profile) : null;
 }
