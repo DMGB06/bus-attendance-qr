@@ -100,6 +100,33 @@ export async function getChildTimelineToday(studentId: string): Promise<ChildTim
   return buildTimelineForRecords(slice, trips, today);
 }
 
+/** Registros de un alumno en un dia del historial (YYYY-MM-DD). */
+export async function getChildTimelineForDay(
+  studentId: string,
+  date: string,
+): Promise<ChildTimelineEvent[]> {
+  if (!isUuid(studentId)) {
+    return [];
+  }
+
+  const { data: records, error: recordsError } = await supabase
+    .from("bus_attendance_records")
+    .select("id, student_id, event_type, scanned_at, trip_id, voided_at")
+    .eq("student_id", studentId)
+    .is("voided_at", null)
+    .gte("scanned_at", getLocalDayStartIso(date))
+    .lte("scanned_at", `${date}T23:59:59.999-05:00`)
+    .order("scanned_at", { ascending: true });
+
+  if (recordsError) {
+    throw new Error("No se pudo cargar el historial.");
+  }
+
+  const slice = (records ?? []) as AttendanceRecordSlice[];
+  const trips = await fetchTripsForTimeline([...new Set(slice.map((record) => record.trip_id))]);
+  return buildTimelineForRecords(slice, trips, date);
+}
+
 /** Historial del día para varios hijos (lista padre). */
 export async function getChildrenTimelinesToday(
   studentIds: string[],
