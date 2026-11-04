@@ -336,7 +336,7 @@ export default function TripActivityScreen() {
               </Text>
               <Text style={styles.listHeaderCount}>{listHeaderCountLabel}</Text>
             </View>
-            <SectionList
+            <SectionList<ActivityListItem, ActivityListSection>
               sections={sections}
               keyExtractor={keyExtractor}
               renderItem={renderItem}

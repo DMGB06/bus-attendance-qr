@@ -20,12 +20,12 @@ export type Student = {
   telefono_apoderado: string | null;
   dni_apoderado: string | null;
   direccion: string | null;
-  usuario_registro: string | null;
+  usuario_registro?: string | null;
   created_at: string;
   codigo: string | null;
   foto_url: string | null;
   activo: boolean | null;
-  notas: string | null;
+  notas?: string | null;
 };
 
 export type Trip = {

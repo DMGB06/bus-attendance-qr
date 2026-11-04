@@ -19,7 +19,11 @@ export function buildBusLocationSnapshotFromChildren(
   for (const child of activeChildren) {
     const trip = child.activeTrip!;
 
-    if (!hasValidCoordinates(trip.last_lat, trip.last_lng) || !trip.last_location_at) {
+    if (
+      trip.last_lng === null ||
+      !hasValidCoordinates(trip.last_lat, trip.last_lng) ||
+      !trip.last_location_at
+    ) {
       continue;
     }
 

@@ -64,7 +64,8 @@ async function fetchAttendanceSlices(studentIds: string[], today: string): Promi
     throw new Error("No se pudo consultar la asistencia del día.");
   }
 
-  return data ?? [];
+  // El filtro gte descarta filas con scanned_at nulo.
+  return (data ?? []) as AttendanceSlice[];
 }
 
 async function fetchTripsByIds(tripIds: string[]): Promise<TripSlice[]> {
