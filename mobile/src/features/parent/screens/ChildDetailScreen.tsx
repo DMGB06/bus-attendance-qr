@@ -6,11 +6,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
-import {
-  formatLastUpdatedAt,
-  mapLatestTimelineEventToPresentation,
-  mapStudentTripStatusToPresentation,
-} from "@/src/features/parent/domain/student-status.mapper";
+import { formatLastUpdatedAt, mapChildStatusToPresentation } from "@/src/features/parent/domain/student-status.mapper";
 import { ChildStatusBadge, ChildStatusIcon } from "@/src/features/parent/components/ChildStatusBadge";
 import { ChildTimelineList } from "@/src/features/parent/components/ChildTimelineList";
 import { useChildDetail } from "@/src/features/parent/hooks/useChildDetail";
@@ -219,12 +215,12 @@ export default function ChildDetailScreen() {
   }
 
   const latestTimelineEvent = timeline.at(-1) ?? null;
-  const presentation = latestTimelineEvent
-    ? mapLatestTimelineEventToPresentation(latestTimelineEvent)
-    : mapStudentTripStatusToPresentation(
-        child.todayStatus?.status ?? null,
-        child.todayStatus?.direction ?? child.activeTrip?.direction ?? null,
-      );
+  const presentation = mapChildStatusToPresentation({
+    latestEvent: latestTimelineEvent,
+    status: child.todayStatus?.status ?? null,
+    direction: child.todayStatus?.direction ?? child.activeTrip?.direction ?? null,
+    hasActiveTrip: child.activeTrip?.status === "active",
+  });
   const lastUpdated = formatLastUpdatedAt(
     latestTimelineEvent?.scanned_at ?? child.todayStatus?.last_event_at,
   );

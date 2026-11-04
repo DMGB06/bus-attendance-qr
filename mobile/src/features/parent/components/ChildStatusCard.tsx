@@ -4,11 +4,7 @@ import { Text } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
-import {
-  formatLastUpdatedAt,
-  mapLatestTimelineEventToPresentation,
-  mapStudentTripStatusToPresentation,
-} from "@/src/features/parent/domain/student-status.mapper";
+import { formatLastUpdatedAt, mapChildStatusToPresentation } from "@/src/features/parent/domain/student-status.mapper";
 import { ChildStatusIcon } from "@/src/features/parent/components/ChildStatusBadge";
 import { ChildTimelinePreview } from "@/src/features/parent/components/ChildTimelinePreview";
 import type { ParentChildSummary, ParentStatusTone } from "@/src/features/parent/types";
@@ -90,12 +86,12 @@ export const ChildStatusCard = memo(function ChildStatusCard({
   }, [onOpenChild, studentId]);
   const { colors, tokens } = useAppTheme();
   const latestTimelineEvent = item.todayTimeline.at(-1) ?? null;
-  const presentation = latestTimelineEvent
-    ? mapLatestTimelineEventToPresentation(latestTimelineEvent)
-    : mapStudentTripStatusToPresentation(
-        item.todayStatus?.status ?? null,
-        item.todayStatus?.direction ?? item.activeTrip?.direction ?? null,
-      );
+  const presentation = mapChildStatusToPresentation({
+    latestEvent: latestTimelineEvent,
+    status: item.todayStatus?.status ?? null,
+    direction: item.todayStatus?.direction ?? item.activeTrip?.direction ?? null,
+    hasActiveTrip: item.activeTrip?.status === "active",
+  });
   const lastUpdated = formatLastUpdatedAt(
     latestTimelineEvent?.scanned_at ?? item.todayStatus?.last_event_at,
   );

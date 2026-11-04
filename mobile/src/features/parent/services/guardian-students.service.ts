@@ -5,8 +5,7 @@ import { filterValidUuids } from "@/src/shared/utils/uuid";
 /**
  * Alumnos del padrón visibles para el apoderado autenticado.
  * 1) RPC SECURITY DEFINER (recomendado tras migración 016)
- * 2) SELECT con RLS guardian_read_linked_padron (014)
- * 3) SELECT por IDs (legacy)
+ * 2) SELECT por IDs con RLS guardian_read_linked_padron (014)
  */
 export async function getGuardianPadronStudents(
   linkedStudentIds: string[],
@@ -24,26 +23,10 @@ export async function getGuardianPadronStudents(
     return matched.length > 0 ? matched : rows;
   }
 
-  const scopedResult =
-    validIds.length > 0
-      ? await supabasePublic
-          .from("social_bus_escolar")
-          .select("*")
-          .in("id", validIds)
-      : await supabasePublic.from("social_bus_escolar").select("*").eq("activo", true).limit(0);
-  if (!scopedResult.error && scopedResult.data?.length) {
-    const rows = scopedResult.data as Student[];
-    if (!validIds.length) {
-      return rows;
-    }
-    const matched = rows.filter((row) => idSet.has(row.id));
-    if (matched.length > 0) {
-      return matched;
-    }
-    return rows;
-  }
-
   if (!validIds.length) {
+    if (rpcResult.error) {
+      throw new Error("No se pudo consultar la base de alumnos.");
+    }
     return [];
   }
 

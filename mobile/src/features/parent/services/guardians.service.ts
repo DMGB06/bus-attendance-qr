@@ -76,17 +76,19 @@ async function getLinksFromStudentGuardians(userId: string): Promise<ParentStude
 
 /**
  * Hijos del apoderado logueado.
- * Prioriza catálogo municipal (`bus_guardians` + `bus_student_guardians`);
- * fallback a `student_guardians` si no hay fila en catálogo.
+ * Une catálogo municipal y `student_guardians`, igual que `is_guardian_of_student` en la BD.
  */
 export async function getGuardianLinksForUser(userId: string): Promise<ParentStudentLink[]> {
-  const fromCatalog = await getLinksFromBusGuardians(userId);
+  const [fromCatalog, fromStudentGuardians] = await Promise.all([
+    getLinksFromBusGuardians(userId),
+    getLinksFromStudentGuardians(userId),
+  ]);
 
-  if (fromCatalog.length) {
-    return fromCatalog;
-  }
-
-  return getLinksFromStudentGuardians(userId);
+  const catalogStudentIds = new Set(fromCatalog.map((link) => link.student_id));
+  return [
+    ...fromCatalog,
+    ...fromStudentGuardians.filter((link) => !catalogStudentIds.has(link.student_id)),
+  ];
 }
 
 /**

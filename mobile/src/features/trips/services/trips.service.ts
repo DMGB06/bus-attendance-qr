@@ -11,12 +11,9 @@ import { isUuid } from "@/src/shared/utils/uuid";
 import { getLocalTodayDateIso } from "@/src/shared/utils/local-date";
 import type { Trip, TurnType } from "@/src/features/trips/types";
 
-function formatSupabaseError(
-  prefix: string,
-  err: { message: string; details?: string; hint?: string; code?: string },
-) {
-  const parts = [err.message, err.details, err.hint].filter(Boolean);
-  return `${prefix}${parts.length ? `: ${parts.join(" — ")}` : ""}${err.code ? ` [${err.code}]` : ""}`;
+/** P0001 = RAISE EXCEPTION: son los mensajes escritos para el usuario en las funciones SQL. */
+export function formatSupabaseError(prefix: string, err: { message: string; code?: string }) {
+  return err.code === "P0001" ? err.message : `${prefix}.`;
 }
 
 async function getAuthenticatedUserId() {

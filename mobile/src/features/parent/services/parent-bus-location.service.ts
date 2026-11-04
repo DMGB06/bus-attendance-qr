@@ -10,10 +10,20 @@ export type ParentBusLocationSnapshot = {
   activeTripIds: string[];
 };
 
+const OFF_BUS_STATUSES = new Set(["at_school", "dropped_off", "absent"]);
+
+/** Un padre ve el bus solo mientras su hijo viaja o lo espera. */
+function hasLeftTheBus(child: ParentChildSummary): boolean {
+  const { todayStatus, activeTrip } = child;
+  return todayStatus?.trip_id === activeTrip?.id && OFF_BUS_STATUSES.has(todayStatus?.status ?? "");
+}
+
 export function buildBusLocationSnapshotFromChildren(
   children: ParentChildSummary[],
 ): ParentBusLocationSnapshot {
-  const activeChildren = children.filter((child) => child.activeTrip?.status === "active");
+  const activeChildren = children.filter(
+    (child) => child.activeTrip?.status === "active" && !hasLeftTheBus(child),
+  );
   const locationMap = new Map<string, ParentBusLocation>();
 
   for (const child of activeChildren) {

@@ -23,8 +23,9 @@ export async function findStudentByCode(code: string): Promise<Student | null> {
 
   const { data, error } = await supabasePublic
     .from("social_bus_escolar")
-    .select("*")
+    .select(STUDENT_PADRON_SELECT)
     .eq("codigo", normalizedCode)
+    .not("activo", "is", false)
     .maybeSingle();
 
   if (error) {
@@ -43,8 +44,9 @@ export async function findStudentByCode(code: string): Promise<Student | null> {
   if (upperCode !== normalizedCode) {
     const { data: upperData, error: upperError } = await supabasePublic
       .from("social_bus_escolar")
-      .select("*")
+      .select(STUDENT_PADRON_SELECT)
       .eq("codigo", upperCode)
+      .not("activo", "is", false)
       .maybeSingle();
 
     if (upperError) {
@@ -113,9 +115,9 @@ async function getGuardianFromCatalog(
   }
 
   const rows = data as CatalogGuardianRow[];
-  const link =
-    rows.find((row) => row.bus_guardians?.is_active !== false && row.bus_guardians) ?? rows[0];
-  const guardian = link.bus_guardians;
+  const guardian =
+    rows.find((row) => row.bus_guardians?.is_active !== false && row.bus_guardians)?.bus_guardians ??
+    null;
 
   if (!guardian) {
     guardianCatalogCache.set(studentId, null);
@@ -250,8 +252,9 @@ export async function getStudentById(id: string): Promise<Student | null> {
 
   const { data, error } = await supabasePublic
     .from("social_bus_escolar")
-    .select("*")
+    .select(STUDENT_PADRON_SELECT)
     .eq("id", normalizedId)
+    .not("activo", "is", false)
     .maybeSingle();
 
   if (error) {

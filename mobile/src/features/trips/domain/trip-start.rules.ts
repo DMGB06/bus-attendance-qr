@@ -1,3 +1,4 @@
+import { APP_TIME_ZONE } from "@/src/shared/utils/local-date";
 import type { AfternoonTurnType } from "@/src/features/trips/domain/trip-turn";
 import type { TurnType } from "@/src/features/trips/types";
 
@@ -13,9 +14,24 @@ export function isTurnCompletedToday(completedTurns: TurnType[], turnType: TurnT
   return completedTurns.includes(turnType);
 }
 
+const AFTERNOON_START_HOUR = 12;
+
 /** Sugiere mañana o tarde según lo ya cerrado hoy (sin bloquear). */
-export function getDefaultTripPeriod(completedTurns: TurnType[]): "mañana" | "tarde" {
-  return isTurnCompletedToday(completedTurns, "mañana") ? "tarde" : "mañana";
+export function getDefaultTripPeriod(
+  completedTurns: TurnType[],
+  now: Date = new Date(),
+): "mañana" | "tarde" {
+  if (isTurnCompletedToday(completedTurns, "mañana")) {
+    return "tarde";
+  }
+  const limaHour = Number(
+    new Intl.DateTimeFormat("en-US", {
+      hour: "numeric",
+      hourCycle: "h23",
+      timeZone: APP_TIME_ZONE,
+    }).format(now),
+  );
+  return limaHour >= AFTERNOON_START_HOUR ? "tarde" : "mañana";
 }
 
 /** Sugiere el siguiente tramo tarde habitual (sin bloquear). */

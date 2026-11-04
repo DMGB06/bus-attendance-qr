@@ -8,7 +8,7 @@ import {
   canVoidSyncedRecord,
 } from "@/src/features/trips/domain/attendance-sync.rules";
 import { canRegisterDropoff } from "@/src/features/trips/domain/attendance.rules";
-import { deriveRosterStatus } from "@/src/features/trips/domain/trip-roster.builder";
+import { buildTripRosterItems, deriveRosterStatus } from "@/src/features/trips/domain/trip-roster.builder";
 import type { TripRosterItem } from "@/src/features/trips/types/trip-roster";
 import type { AttendanceRecord, Student } from "@/src/features/trips/types";
 import type { QueuedAttendanceWrite } from "@/src/features/trips/storage/attendance-queue.storage";
@@ -112,5 +112,21 @@ describe("testS · chofer sync y roster", () => {
         canVoid: true,
       }),
     ).toBe(false);
+  });
+});
+
+describe("testS · buildTripRosterItems", () => {
+  it("muestra el ultimo registro activo aunque lleguen desordenados o anulados", () => {
+    const [item] = buildTripRosterItems(
+      [student],
+      [
+        record("nuevo", "subio", "2026-06-21T12:30:00Z"),
+        record("viejo", "subio", "2026-06-21T12:00:00Z", "2026-06-21T12:10:00Z"),
+        record("anulado-tarde", "bajo", "2026-06-21T12:40:00Z", "2026-06-21T12:41:00Z"),
+      ],
+    );
+
+    expect(item.attendance?.id).toBe("nuevo");
+    expect(item.status).toBe("onboard");
   });
 });

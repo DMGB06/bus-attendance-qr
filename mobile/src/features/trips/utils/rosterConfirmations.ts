@@ -72,6 +72,16 @@ export function confirmUndoPendingRegistration(studentName: string) {
   });
 }
 
+export function confirmCloseWithMissingPrioritarios(studentNames: string[]) {
+  return confirmAlert({
+    title: "Alumnos prioritarios sin registrar",
+    message: `Subieron en la mañana y faltan en este viaje:\n\n${studentNames.join("\n")}\n\n¿Cerrar el viaje de todas formas?`,
+    confirmLabel: "Cerrar de todas formas",
+    cancelLabel: "Volver a revisar",
+    destructive: true,
+  });
+}
+
 export function confirmCloseWithPendingSync(pendingCount: number) {
   return confirmAlert({
     title: "Registros sin sincronizar",

@@ -29,3 +29,20 @@ describe("trip-start.rules", () => {
     expect(shouldBlockTurnStart(["mañana"], "mañana")).toBe(false);
   });
 });
+
+describe("getDefaultTripPeriod segun la hora de Lima", () => {
+  const atLimaHour = (hour: number) =>
+    new Date(`2026-06-21T${String(hour + 5).padStart(2, "0")}:00:00.000Z`);
+
+  it("en la manana propone el recojo", () => {
+    expect(getDefaultTripPeriod([], atLimaHour(7))).toBe("mañana");
+  });
+
+  it("en la tarde propone tarde aunque no se haya hecho el recojo", () => {
+    expect(getDefaultTripPeriod([], atLimaHour(14))).toBe("tarde");
+  });
+
+  it("con el recojo hecho propone tarde a cualquier hora", () => {
+    expect(getDefaultTripPeriod(["mañana"], atLimaHour(7))).toBe("tarde");
+  });
+});

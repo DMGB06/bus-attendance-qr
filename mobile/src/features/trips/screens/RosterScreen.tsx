@@ -11,6 +11,7 @@ import { RosterTurnHintBanner } from "@/src/features/trips/components/roster/Ros
 import { RosterStudentRow } from "@/src/features/trips/components/roster/RosterStudentRow";
 import { ROSTER_ROW_HEIGHT } from "@/src/features/trips/components/roster/rosterRowTheme";
 import { RosterSyncBanner } from "@/src/features/trips/components/roster/RosterSyncBanner";
+import { useAppCapabilities } from "@/src/features/auth/hooks/useAppCapabilities";
 import { useTripRoster, type RosterViewMode } from "@/src/features/trips/hooks/useTripRoster";
 import {
   getDropoffLabel,
@@ -70,6 +71,7 @@ export default function RosterScreen() {
   const { activeTrip } = useTripStore();
   const { isOffline } = useNetworkStatus();
   const roster = useTripRoster(activeTrip?.id);
+  const { capabilities } = useAppCapabilities();
   const [searchOpen, setSearchOpen] = useState(false);
 
   const styles = useMemo(
@@ -499,7 +501,7 @@ export default function RosterScreen() {
           />
         ) : null}
 
-        {roster.totalOnboardCount > 0 ? (
+        {capabilities.canBulkDropoff && roster.totalOnboardCount > 0 ? (
           <Button
             mode="contained"
             icon={activeTrip.direction === "recojo" ? "school" : "home"}

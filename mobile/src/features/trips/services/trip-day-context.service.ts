@@ -2,7 +2,8 @@ import { supabase } from "@/src/core/config/supabase";
 import type { AttendanceEventType } from "@/src/features/trips/types";
 import { isBoardingEvent } from "@/src/features/trips/domain/attendance.rules";
 
-const morningHintsCache = new Map<string, Promise<Set<string>>>();
+const MORNING_HINTS_TTL_MS = 5 * 60 * 1000;
+const morningHintsCache = new Map<string, { promise: Promise<Set<string>>; savedAt: number }>();
 
 export function clearMorningHintsCache(): void {
   morningHintsCache.clear();
@@ -20,12 +21,12 @@ export function invalidateMorningAttendanceHints(tripDate?: string): void {
 /** Alumnos que completaron recojo mañana (subió + bajó en colegio) ese día. */
 export async function getMorningAttendanceHints(tripDate: string): Promise<Set<string>> {
   const cached = morningHintsCache.get(tripDate);
-  if (cached) {
-    return cached;
+  if (cached && Date.now() - cached.savedAt < MORNING_HINTS_TTL_MS) {
+    return cached.promise;
   }
 
   const promise = fetchMorningAttendanceHints(tripDate);
-  morningHintsCache.set(tripDate, promise);
+  morningHintsCache.set(tripDate, { promise, savedAt: Date.now() });
   void promise.catch(() => {
     morningHintsCache.delete(tripDate);
   });
@@ -52,7 +53,8 @@ async function fetchMorningAttendanceHints(tripDate: string): Promise<Set<string
   const { data: records, error: recordsError } = await supabase
     .from("bus_attendance_records")
     .select("trip_id, student_id, event_type")
-    .in("trip_id", tripIds);
+    .in("trip_id", tripIds)
+    .is("voided_at", null);
 
   if (recordsError) {
     throw new Error("No se pudo consultar la asistencia de la mañana.");

@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { OPS_ROUTES } from "@/src/core/routes";
 
 import {
+  hasMissingPrioritarios,
   hasPendingDropoffIssues,
   type CloseTripValidationResult,
 } from "@/src/features/trips/domain/close-trip-validation";
@@ -22,6 +23,7 @@ import {
 } from "@/src/features/trips/store/rosterStore";
 import { tripStoreActions, useTripStore } from "@/src/features/trips/store/tripStore";
 import {
+  confirmCloseWithMissingPrioritarios,
   confirmCloseWithPendingStudents,
   confirmCloseWithPendingSync,
 } from "@/src/features/trips/utils/rosterConfirmations";
@@ -39,6 +41,7 @@ export function useCloseTrip() {
   const { activeTrip, releaseActiveTripAfterClose, setActiveTrip } = useTripStore();
   const rosterItems = useRosterItems(activeTrip?.id);
   const hadRosterItemsRef = useRef(false);
+  const closeInFlightRef = useRef(false);
   const [isClosing, setIsClosing] = useState(false);
   const [isLoadingValidation, setIsLoadingValidation] = useState(false);
   const [validation, setValidation] = useState<CloseTripValidationResult>(EMPTY_VALIDATION);
@@ -112,7 +115,12 @@ export function useCloseTrip() {
       return;
     }
 
+    if (closeInFlightRef.current) {
+      return;
+    }
+
     const tripId = activeTrip.id;
+    closeInFlightRef.current = true;
     setErrorMessage(null);
     setIsClosing(true);
 
@@ -132,6 +140,16 @@ export function useCloseTrip() {
           latestValidation.pendingDropoff,
           latestValidation.pendingDropoff.length,
           activeTrip.direction,
+        );
+
+        if (!shouldClose) {
+          return;
+        }
+      }
+
+      if (hasMissingPrioritarios(latestValidation)) {
+        const shouldClose = await confirmCloseWithMissingPrioritarios(
+          latestValidation.missingPrioritarios.map((student) => student.nombre_alumno),
         );
 
         if (!shouldClose) {
@@ -177,6 +195,7 @@ export function useCloseTrip() {
     } catch (error: unknown) {
       setErrorMessage(getErrorMessage(error, "No se pudo cerrar el viaje."));
     } finally {
+      closeInFlightRef.current = false;
       setIsClosing(false);
     }
   }, [

@@ -1,4 +1,7 @@
+import type { ChildTimelineEvent } from "@/src/features/parent/types";
 import {
+  mapChildStatusToPresentation,
+  mapLatestTimelineEventToPresentation,
   mapStudentTripStatusToPresentation,
   mapTimelineEventLabel,
 } from "@/src/features/parent/domain/student-status.mapper";
@@ -42,5 +45,56 @@ describe("mapTimelineEventLabel", () => {
 
   it("etiqueta bajada en retorno", () => {
     expect(mapTimelineEventLabel("bajo", "retorno", null)).toBe("Llegó a casa");
+  });
+});
+
+describe("mapStudentTripStatusToPresentation con el viaje cerrado", () => {
+  it("no sigue diciendo que subio al bus", () => {
+    const presentation = mapStudentTripStatusToPresentation("onboard", "recojo", { tripEnded: true });
+
+    expect(presentation.label).toBe("Viaje finalizado");
+    expect(presentation.tone).toBe("pending");
+  });
+
+  it("no cambia un estado ya terminado", () => {
+    const presentation = mapStudentTripStatusToPresentation("at_school", "recojo", { tripEnded: true });
+
+    expect(presentation.tone).toBe("completed");
+  });
+
+  it("con el viaje en curso mantiene el estado", () => {
+    expect(mapStudentTripStatusToPresentation("onboard", "recojo").label).toBe("Subió al bus");
+  });
+});
+
+describe("mapChildStatusToPresentation", () => {
+  const boardedEvent = {
+    id: "e1",
+    event_type: "subio",
+    scanned_at: "2026-06-21T12:00:00Z",
+    direction: "recojo",
+    turn_type: "mañana",
+  } as unknown as ChildTimelineEvent;
+
+  it("con el viaje cerrado no repite el ultimo evento de subida", () => {
+    const presentation = mapChildStatusToPresentation({
+      latestEvent: boardedEvent,
+      status: "onboard",
+      direction: "recojo",
+      hasActiveTrip: false,
+    });
+
+    expect(presentation.label).toBe("Viaje finalizado");
+  });
+
+  it("con el viaje en curso muestra el ultimo evento", () => {
+    const presentation = mapChildStatusToPresentation({
+      latestEvent: boardedEvent,
+      status: "onboard",
+      direction: "recojo",
+      hasActiveTrip: true,
+    });
+
+    expect(presentation).toEqual(mapLatestTimelineEventToPresentation(boardedEvent));
   });
 });
