@@ -13,7 +13,7 @@ describe("trip-start.rules", () => {
 
   it("sugiere tarde si mañana ya cerró", () => {
     expect(getDefaultTripPeriod(["mañana"])).toBe("tarde");
-    expect(getDefaultTripPeriod([])).toBe("mañana");
+    expect(getDefaultTripPeriod([], new Date("2026-03-10T13:00:00Z"))).toBe("mañana");
   });
 
   it("sugiere el siguiente tramo tarde disponible", () => {
