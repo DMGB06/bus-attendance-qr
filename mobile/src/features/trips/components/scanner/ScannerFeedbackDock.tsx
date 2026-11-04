@@ -104,7 +104,7 @@ export function ScannerFeedbackDock({
         },
         resetLabel: {
           ...tokens.typography.label,
-          color: colors.primary,
+          color: colors.textLink,
         },
       }),
     [colors, tokens],

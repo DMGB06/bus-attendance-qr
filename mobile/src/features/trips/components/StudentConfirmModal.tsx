@@ -203,7 +203,7 @@ export function StudentConfirmModal({
                   </Button>
                   <Button
                     mode="outlined"
-                    textColor={colors.primary}
+                    textColor={colors.tripActionOutlineText}
                     onPress={() => {
                       if (!isSubmitting) {
                         onDismiss();

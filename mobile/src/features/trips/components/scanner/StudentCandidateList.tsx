@@ -104,7 +104,7 @@ export function StudentCandidateList({ candidates, onSelect }: StudentCandidateL
         },
         chooseLabel: {
           ...tokens.typography.label,
-          color: colors.primary,
+          color: colors.textLink,
         },
       }),
     [colors, tokens],

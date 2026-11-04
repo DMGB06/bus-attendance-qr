@@ -64,7 +64,7 @@ export function WaveHeader({ title, subtitle, onBack, right, children }: WaveHea
           </Text>
           {subtitle ? (
             <Text
-              numberOfLines={1}
+              numberOfLines={2}
               style={[tokens.typography.caption, { color: colors.onHeaderMuted }]}
             >
               {subtitle}

@@ -226,7 +226,7 @@ export function ScannerControlPanel({
         },
         secondaryActionLabel: {
           ...tokens.typography.bodyStrong,
-          color: colors.primary,
+          color: colors.textLink,
         },
         intentBadge: {
           flexDirection: "row",
@@ -395,7 +395,7 @@ export function ScannerControlPanel({
             style={[styles.secondaryAction, styles.footerAction]}
             contentStyle={styles.secondaryActionContent}
             labelStyle={styles.secondaryActionLabel}
-            textColor={colors.primary}
+            textColor={colors.tripActionOutlineText}
           >
             {resetLabel}
           </Button>

@@ -360,7 +360,7 @@ export default function RosterScreen() {
 
         <RosterTurnHintBanner turnType={activeTrip.turn_type} />
 
-        {roster.isAfternoonReturn ? (
+        {roster.isAfternoonReturn && roster.viewMode !== "prioritarios" ? (
           <MorningRiderReminderBanner
             count={roster.stats.morningRiderPendingCount}
             preview={roster.morningRidersPreview}
