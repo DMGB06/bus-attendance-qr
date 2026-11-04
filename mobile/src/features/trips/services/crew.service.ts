@@ -2,6 +2,7 @@ import { supabase } from "@/src/core/config/supabase";
 import { getUser } from "@/src/features/auth/services/auth.service";
 import { getProfileById } from "@/src/features/profile/services/profile.service";
 import { AppRole } from "@/src/features/profile/types";
+import { getLocalTodayDateIso } from "@/src/shared/utils/local-date";
 
 export type CrewRole = "chofer" | "asistenta";
 
@@ -34,10 +35,6 @@ export type ScanContext = {
   scannedBy: string;
   scanRole: CrewRole | null;
 };
-
-function getTodayDate() {
-  return new Date().toISOString().split("T")[0];
-}
 
 function isOperatorAppRole(role: AppRole | null | undefined): boolean {
   return role === AppRole.CHOFER || role === AppRole.ASISTENTA || role === AppRole.COORDINADOR;
@@ -76,28 +73,7 @@ async function getSingleActivePilotBus(): Promise<BusUnit | null> {
   return data[0] as BusUnit;
 }
 
-async function getDefaultBusUnit(): Promise<BusUnit | null> {
-  const pilotBus = await getSingleActivePilotBus();
-  if (pilotBus) {
-    return pilotBus;
-  }
-
-  const { data, error } = await supabase
-    .from("bus_units")
-    .select("id, code, plate, label, is_active")
-    .eq("code", "BUS-01")
-    .eq("is_active", true)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error("No se pudo consultar la unidad BUS-01.");
-  }
-
-  return data as BusUnit | null;
-}
-
 async function resolvePilotAssignment(
-  userId: string,
   appRole: AppRole | null,
 ): Promise<{ bus: BusUnit; crewRole: CrewRole } | null> {
   if (!isOperatorAppRole(appRole)) {
@@ -124,19 +100,21 @@ export async function getAssignedBusForToday(userId?: string): Promise<{
     return null;
   }
 
-  const today = getTodayDate();
-  const { data: assignment, error } = await supabase
+  const today = getLocalTodayDateIso();
+  const { data: assignments, error } = await supabase
     .from("bus_crew_assignments")
     .select("bus_id, crew_role")
     .eq("user_id", uid)
     .eq("assignment_date", today)
-    .eq("is_active", true)
-    .limit(1)
-    .maybeSingle();
+    .eq("is_active", true);
 
   if (error) {
     throw new Error("No se pudo consultar la asignación de bus.");
   }
+
+  // Mismo criterio que get_user_bus_id_today: chofer primero.
+  const assignment =
+    assignments?.find((row) => row.crew_role === "chofer") ?? assignments?.[0] ?? null;
 
   if (assignment) {
     const { data: bus, error: busError } = await supabase
@@ -160,12 +138,12 @@ export async function getAssignedBusForToday(userId?: string): Promise<{
   }
 
   const profile = await getProfileById(uid);
-  return resolvePilotAssignment(uid, profile?.app_role ?? null);
+  return resolvePilotAssignment(profile?.app_role ?? null);
 }
 
 export async function getCrewForBus(
   busId: string,
-  assignmentDate = getTodayDate(),
+  assignmentDate = getLocalTodayDateIso(),
 ): Promise<CrewAssignment[]> {
   const { data, error } = await supabase
     .from("bus_crew_assignments")
@@ -206,33 +184,7 @@ export async function resolveOperationalBusContext(
     };
   }
 
-  if (appRole === AppRole.PADRE) {
-    return null;
-  }
-
-  const pilotAssignment = await resolvePilotAssignment(uid, appRole);
-  if (pilotAssignment) {
-    return {
-      busId: pilotAssignment.bus.id,
-      busCode: pilotAssignment.bus.code,
-      busLabel: pilotAssignment.bus.label,
-      crewRole: pilotAssignment.crewRole,
-      appRole,
-    };
-  }
-
-  const defaultBus = await getDefaultBusUnit();
-  if (!defaultBus) {
-    return null;
-  }
-
-  return {
-    busId: defaultBus.id,
-    busCode: defaultBus.code,
-    busLabel: defaultBus.label,
-    crewRole: crewRoleForAppRole(appRole),
-    appRole,
-  };
+  return null;
 }
 
 export async function getScanContextForCurrentUser(): Promise<ScanContext> {
@@ -241,15 +193,23 @@ export async function getScanContextForCurrentUser(): Promise<ScanContext> {
     throw new Error("Debes iniciar sesión para registrar asistencia.");
   }
 
-  const assignment = await getAssignedBusForToday(user.id);
-  if (assignment?.crewRole) {
-    return { scannedBy: user.id, scanRole: assignment.crewRole };
+  try {
+    const assignment = await getAssignedBusForToday(user.id);
+    if (assignment?.crewRole) {
+      return { scannedBy: user.id, scanRole: assignment.crewRole };
+    }
+  } catch {
+    /* sin red: se usa el perfil guardado */
   }
 
-  const profile = await getProfileById(user.id);
-  if (profile?.app_role === AppRole.ASISTENTA) {
-    return { scannedBy: user.id, scanRole: "asistenta" };
+  try {
+    const profile = await getProfileById(user.id, user);
+    if (profile) {
+      return { scannedBy: user.id, scanRole: crewRoleForAppRole(profile.app_role) };
+    }
+  } catch {
+    /* sin red ni perfil guardado: el rol queda sin informar */
   }
 
-  return { scannedBy: user.id, scanRole: "chofer" };
+  return { scannedBy: user.id, scanRole: null };
 }

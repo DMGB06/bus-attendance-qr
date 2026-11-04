@@ -11,13 +11,14 @@ function createLocalAttendanceRecord(
   studentId: string,
   eventType: AttendanceEventType,
   queueId: string,
+  scannedAt: string,
 ): AttendanceRecord {
   return {
     id: `local-${queueId}`,
     trip_id: tripId,
     student_id: studentId,
     event_type: eventType,
-    scanned_at: new Date().toISOString(),
+    scanned_at: scannedAt,
     lat: null,
     lng: null,
     operator_id: null,
@@ -31,7 +32,13 @@ function createLocalAttendanceRecord(
 }
 
 function queueToAttendanceRecord(entry: QueuedAttendanceWrite): AttendanceRecord {
-  return createLocalAttendanceRecord(entry.tripId, entry.studentId, entry.eventType, entry.id);
+  return createLocalAttendanceRecord(
+    entry.tripId,
+    entry.studentId,
+    entry.eventType,
+    entry.id,
+    entry.createdAt,
+  );
 }
 
 export function mergeAttendanceRecords(
@@ -39,7 +46,9 @@ export function mergeAttendanceRecords(
   queuedWrites: QueuedAttendanceWrite[],
 ): AttendanceRecord[] {
   const seen = new Set(
-    serverRecords.map((record) => `${record.student_id}:${record.event_type}`),
+    serverRecords
+      .filter((record) => record.voided_at == null)
+      .map((record) => `${record.student_id}:${record.event_type}`),
   );
   const merged = [...serverRecords];
 
@@ -64,7 +73,7 @@ export function createOptimisticAttendanceRecord(
   eventType: AttendanceEventType,
   queueId: string,
 ): AttendanceRecord {
-  return createLocalAttendanceRecord(tripId, studentId, eventType, queueId);
+  return createLocalAttendanceRecord(tripId, studentId, eventType, queueId, new Date().toISOString());
 }
 
 export async function buildRosterItemsFromSources(

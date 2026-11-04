@@ -70,7 +70,15 @@ export async function getProfileById(
     return null;
   }
 
-  return getOwnProfile();
+  try {
+    return await getOwnProfile();
+  } catch (error: unknown) {
+    const cached = resolvedUser.email ? await loadCachedProfile(resolvedUser.email) : null;
+    if (cached?.id === id) {
+      return cached;
+    }
+    throw error;
+  }
 }
 
 export async function updateProfile(id: string, payload: UpdateAppProfile): Promise<AppProfile> {

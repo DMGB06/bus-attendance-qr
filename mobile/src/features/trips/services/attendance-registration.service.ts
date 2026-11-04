@@ -4,8 +4,6 @@ import {
 } from "@/src/features/trips/domain/attendance-sync.rules";
 import { shouldFlushAttendanceQueueBeforeRefresh } from "@/src/features/trips/domain/attendance-queue-flush.rules";
 import { registerAttendance, registerDropoffAttendance, voidAttendanceRecord } from "@/src/features/trips/services/attendance.service";
-import { getUser } from "@/src/features/auth/services/auth.service";
-import type { ScanContext } from "@/src/features/trips/services/crew.service";
 import { getScanContextForCurrentUser } from "@/src/features/trips/services/crew.service";
 import { perfAsync, perfStart } from "@/src/shared/utils/perfMark";
 import {
@@ -56,7 +54,7 @@ function isDuplicateError(message: string): boolean {
 }
 
 function isMissingBoardingError(message: string): boolean {
-  return message.includes("Primero debes registrar la asistencia de entrada");
+  return message.includes("Primero debes registrar");
 }
 
 function isBoardingEventType(eventType: AttendanceEventType): boolean {
@@ -236,6 +234,9 @@ export async function syncAttendanceToServer(
           if (isDuplicateError(retryMessage)) {
             return { status: "duplicate" };
           }
+          if (!isNetworkError(retryError)) {
+            throw retryError;
+          }
           await enqueueAttendanceWrite({
             tripId,
             studentId,
@@ -261,36 +262,29 @@ export async function syncAttendanceToServer(
   }
 }
 
-async function resolveScanForQueueFlush(
-  entry: QueuedAttendanceWrite,
-): Promise<ScanContext> {
-  try {
-    return await getScanContextForCurrentUser();
-  } catch {
-    const user = await getUser();
-    if (!user) {
-      throw new Error("Debes iniciar sesión para sincronizar.");
-    }
-
-    return {
-      scannedBy: entry.scannedBy ?? user.id,
-      scanRole: "chofer",
-    };
-  }
-}
-
 export async function flushAttendanceQueue(tripId?: string): Promise<number> {
   const queue = await loadAttendanceQueue();
+  const tripQueue = tripId ? queue.filter((entry) => entry.tripId === tripId) : queue;
+  if (tripQueue.length === 0) {
+    return 0;
+  }
+
+  let scan: Awaited<ReturnType<typeof getScanContextForCurrentUser>>;
+  try {
+    scan = await getScanContextForCurrentUser();
+  } catch {
+    return 0;
+  }
+
+  // El servidor firma con el usuario actual: lo de otra cuenta espera a que esa cuenta vuelva.
   const pending = sortQueueForFlush(
-    tripId ? queue.filter((entry) => entry.tripId === tripId) : queue,
+    tripQueue.filter((entry) => !entry.scannedBy || entry.scannedBy === scan.scannedBy),
   );
 
   let flushed = 0;
 
   for (const entry of pending) {
     try {
-      const scan = await resolveScanForQueueFlush(entry);
-
       if (entry.eventType === "bajo") {
         await registerDropoffAttendance(entry.tripId, entry.studentId, scan);
       } else {
@@ -308,8 +302,7 @@ export async function flushAttendanceQueue(tripId?: string): Promise<number> {
       if (isNetworkError(error)) {
         break;
       }
-      // Error de servidor/permisos: conservar en cola y reintentar luego.
-      break;
+      // Error de servidor/permisos: conservar esta entrada y seguir con las demas.
     }
   }
 
@@ -328,8 +321,8 @@ export async function pruneStaleQueueEntriesForTrip(tripId: string): Promise<num
   try {
     serverRecords = await getTripAttendanceOnly(tripId);
   } catch {
-    const cached = await loadCachedTripAttendance(tripId);
-    serverRecords = cached?.records ?? [];
+    // La cache incluye registros optimistas locales: no prueba que el servidor los tenga.
+    return 0;
   }
 
   let pruned = 0;
@@ -356,7 +349,9 @@ async function refreshRosterFull(tripId: string): Promise<{
   cacheSavedAt: string | null;
 }> {
   const { students, attendanceRecords } = await getTripRosterRaw(tripId);
-  await saveCachedStudents(students);
+  if (students.length > 0) {
+    await saveCachedStudents(students);
+  }
   await saveCachedTripAttendance(tripId, attendanceRecords);
 
   const items = await buildRosterItemsFromSources(tripId, students, attendanceRecords);

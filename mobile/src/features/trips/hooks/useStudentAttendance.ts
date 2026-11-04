@@ -24,6 +24,7 @@ export type ScannerViewMode = "scanner" | "manual";
 const SCAN_DEBOUNCE_MS = 800;
 const CANCEL_RESCAN_SUPPRESS_MS = 3000;
 const LOOKUP_TIMEOUT_MS = 8_000;
+const LOOKUP_TIMED_OUT = Symbol("lookup-timed-out");
 export const MANUAL_SEARCH_MIN_CHARS = 2;
 
 type ScanRecord = {
@@ -218,13 +219,13 @@ export function useStudentAttendance(
         }
 
         setLookupState("searching");
-        const foundStudent = await withTimeout(
+        const foundStudent = await withTimeout<Student | null | typeof LOOKUP_TIMED_OUT>(
           findStudentByLookup(normalizedValue, rosterStudents),
           LOOKUP_TIMEOUT_MS,
-          null,
+          LOOKUP_TIMED_OUT,
         );
 
-        if (foundStudent === null) {
+        if (foundStudent === LOOKUP_TIMED_OUT) {
           setLookupState("idle");
           setIsConfirmModalVisible(false);
           setErrorMessage("La búsqueda tardó demasiado. Revisa tu conexión e intenta de nuevo.");
