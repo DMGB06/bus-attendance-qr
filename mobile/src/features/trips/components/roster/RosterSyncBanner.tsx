@@ -18,6 +18,9 @@ function formatCacheAge(savedAt: string | null): string | null {
   }
 
   const ageMs = Date.now() - new Date(savedAt).getTime();
+  if (Number.isNaN(ageMs)) {
+    return null;
+  }
   if (ageMs < 60_000) {
     return 'hace un momento';
   }

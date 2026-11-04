@@ -122,6 +122,8 @@ export function ScannerActiveView({ activeTrip }: ScannerActiveViewProps) {
                   style={[styles.modeButton, isActive && styles.modeButtonActive]}
                   onPress={() => attendance.setViewMode(option.id)}
                   disabled={attendance.isRegistering}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isActive }}
                 >
                   <MaterialCommunityIcons
                     name={option.icon}

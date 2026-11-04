@@ -230,7 +230,7 @@ export default function TripScreen() {
 
   if (capabilities.isAssistant && !activeTrip) {
     if (operationalContext === undefined) {
-      return null;
+      return <ActivityIndicator style={{ flex: 1 }} color={colors.primary} />;
     }
 
     if (!operationalContext) {
@@ -239,7 +239,7 @@ export default function TripScreen() {
           busLabel={null}
           isRefreshing={false}
           title="Sin bus asignado"
-          body="No tienes una unidad asignada para hoy. Pide al coordinador que te registre en BUS-01."
+          body="No tienes una unidad asignada para hoy. Pide al coordinador que te asigne una."
           footer={historyFooter}
         />
       );
@@ -423,6 +423,8 @@ export default function TripScreen() {
                     period === 'mañana' && styles.selectorButtonActive,
                   ]}
                   onPress={() => setPeriod('mañana')}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: period === 'mañana' }}
                 >
                   <MaterialCommunityIcons
                     name="weather-sunny"
@@ -442,6 +444,8 @@ export default function TripScreen() {
                 <Pressable
                   style={[styles.selectorButton, period === 'tarde' && styles.selectorButtonActive]}
                   onPress={() => setPeriod('tarde')}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: period === 'tarde' }}
                 >
                   <MaterialCommunityIcons
                     name="weather-sunset"

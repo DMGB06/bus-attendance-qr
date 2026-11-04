@@ -256,7 +256,7 @@ export const ChildStatusCard = memo(function ChildStatusCard({
       onPress={handlePress}
       style={({ pressed }) => [styles.card, pressed ? { opacity: 0.94 } : null]}
       accessibilityRole="button"
-      accessibilityLabel={`Ver estado de ${item.student.nombre_alumno}`}
+      accessibilityLabel={`${item.student.nombre_alumno}: ${presentation.label}. Ver detalle`}
     >
       <View style={styles.identitySection}>
         <View style={styles.avatar}>

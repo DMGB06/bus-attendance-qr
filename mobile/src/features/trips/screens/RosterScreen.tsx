@@ -401,7 +401,12 @@ export default function RosterScreen() {
               styles.searchToggle,
               (searchOpen || roster.searchQuery.length > 0) && styles.searchToggleActive,
             ]}
-            onPress={() => setSearchOpen((open) => !open)}
+            onPress={() => setSearchOpen((open) => {
+                if (open) {
+                  roster.setSearchQuery("");
+                }
+                return !open;
+              })}
             accessibilityRole="button"
             accessibilityLabel="Buscar alumno"
           >

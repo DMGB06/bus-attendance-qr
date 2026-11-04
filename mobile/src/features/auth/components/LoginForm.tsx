@@ -163,6 +163,7 @@ export function LoginForm({
                 autoCapitalize="none"
                 autoCorrect={false}
                 autoComplete="email"
+                accessibilityLabel="Usuario"
                 textContentType="username"
                 returnKeyType="next"
                 onSubmitEditing={() => passwordInputRef.current?.focus()}
@@ -175,6 +176,7 @@ export function LoginForm({
                 ref={passwordInputRef}
                 variant="auth"
                 placeholder="Contraseña"
+                accessibilityLabel="Contraseña"
                 value={password}
                 onChangeText={onChangePassword}
                 secureTextEntry={!isPasswordVisible}
@@ -218,7 +220,11 @@ export function LoginForm({
               </HelperText>
             ) : null}
 
-            <Pressable onPress={onForgotPassword} disabled={isSubmitting}>
+            <Pressable
+              onPress={onForgotPassword}
+              disabled={isSubmitting}
+              accessibilityRole="button"
+            >
               <Text style={styles.forgotPassword}>
                 ¿Olvidaste tu contraseña?
               </Text>

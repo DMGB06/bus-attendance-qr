@@ -47,6 +47,7 @@ export function HighContrastToggle() {
       </View>
       <Switch
         value={highContrastEnabled}
+        accessibilityLabel="Alto contraste"
         onValueChange={setHighContrastEnabled}
         disabled={isDark}
         color={colors.primary}

@@ -24,7 +24,7 @@ export function useParentChildren(): ParentChildrenState {
       throw new Error("Debes iniciar sesión.");
     }
 
-    await parentChildrenStore.fetchChildren(user.id, { silent: true, force: true });
+    await parentChildrenStore.fetchChildren(user.id, { force: true });
   }, []);
 
   return {
