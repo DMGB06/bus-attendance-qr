@@ -2,14 +2,6 @@ import { APP_TIME_ZONE } from "@/src/shared/utils/local-date";
 import type { AfternoonTurnType } from "@/src/features/trips/domain/trip-turn";
 import type { TurnType } from "@/src/features/trips/types";
 
-/** Tramos posibles en un día operativo (referencia para sugerencias). */
-export const DAILY_TURN_TYPES: TurnType[] = [
-  "mañana",
-  "tarde_primaria",
-  "tarde_secundaria",
-  "tarde_unica",
-];
-
 export function isTurnCompletedToday(completedTurns: TurnType[], turnType: TurnType): boolean {
   return completedTurns.includes(turnType);
 }
@@ -88,9 +80,4 @@ export function getTurnStartSuggestion(
   }
 
   return null;
-}
-
-/** @deprecated Solo tests — la app ya no bloquea por turno completado. */
-export function shouldBlockTurnStart(_completedTurns: TurnType[], _turnType: TurnType): boolean {
-  return false;
 }

@@ -16,7 +16,6 @@ export type DailyChecklistContext = {
   pendingCount: number;
   completedCount: number;
   morningRiderPendingCount: number;
-  /** Sin rol asignado (V1): operador con permisos de chofer. */
   setupPeriod?: "mañana" | "tarde";
   /** Si false, oculta pasos de cierre (asistenta). */
   canCloseTrip?: boolean;

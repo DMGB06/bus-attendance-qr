@@ -3,7 +3,6 @@ import {
   getDefaultTripPeriod,
   getTurnStartSuggestion,
   isTurnCompletedToday,
-  shouldBlockTurnStart,
 } from "@/src/features/trips/domain/trip-start.rules";
 
 describe("trip-start.rules", () => {
@@ -26,7 +25,6 @@ describe("trip-start.rules", () => {
   it("muestra sugerencia informativa sin bloquear", () => {
     expect(getTurnStartSuggestion(["mañana"], "mañana")).toMatch(/tarde/i);
     expect(getTurnStartSuggestion([], "tarde_primaria")).toMatch(/habitual/i);
-    expect(shouldBlockTurnStart(["mañana"], "mañana")).toBe(false);
   });
 });
 

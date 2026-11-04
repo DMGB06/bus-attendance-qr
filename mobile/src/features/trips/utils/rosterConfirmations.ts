@@ -10,13 +10,6 @@ import {
 } from "@/src/features/trips/domain/trip-labels";
 import { confirmAlert } from "@/src/shared/utils/confirmAlert";
 
-export function confirmManualAttendance(studentName: string) {
-  return confirmAlert({
-    title: "Confirmar registro manual",
-    message: `¿Registrar manualmente a ${studentName}?\n\nEsta acción no se puede deshacer desde esta pantalla.`,
-  });
-}
-
 export function confirmStudentDropoff(studentName: string, direction: TripDirection) {
   return confirmAlert({
     title: getDropoffConfirmTitle(direction),
@@ -36,14 +29,6 @@ export function confirmCloseWithPendingStudents(
     cancelLabel: "Volver a revisar",
     destructive: true,
   });
-}
-
-export function confirmBulkSchoolDropoff(count: number) {
-  return confirmBulkDropoff(count, "recojo");
-}
-
-export function confirmBulkHomeDropoff(count: number) {
-  return confirmBulkDropoff(count, "retorno");
 }
 
 export function confirmBulkDropoff(count: number, direction: TripDirection) {

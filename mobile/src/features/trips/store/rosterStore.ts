@@ -629,10 +629,6 @@ export function getRosterMetaSnapshot(tripId: string | undefined): RosterMetaSna
   return meta;
 }
 
-export function useRosterStore(): RosterStoreState {
-  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
-}
-
 /** Solo re-renderiza cuando cambia la lista de alumnos del viaje activo. */
 export function useRosterItems(tripId: string | undefined): TripRosterItem[] {
   const getItemsSnapshot = () => {

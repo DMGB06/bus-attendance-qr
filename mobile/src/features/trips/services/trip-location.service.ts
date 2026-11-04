@@ -1,7 +1,6 @@
 import { supabase } from "@/src/core/config/supabase";
 import { getUser } from "@/src/features/auth/services/auth.service";
 import { isUuid } from "@/src/shared/utils/uuid";
-import type { TripLocationPoint } from "@/src/features/trips/types";
 
 type PublishLocationInput = {
   tripId: string;
@@ -33,20 +32,4 @@ export async function publishDriverLocation({
   if (error) {
     throw new Error(error.message || "No se pudo guardar el punto GPS del viaje.");
   }
-}
-
-export async function getLatestTripLocation(tripId: string): Promise<TripLocationPoint | null> {
-  const { data, error } = await supabase
-    .from("bus_trip_locations")
-    .select("*")
-    .eq("trip_id", tripId)
-    .order("recorded_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error("No se pudo consultar la ubicación del bus.");
-  }
-
-  return (data as TripLocationPoint | null) ?? null;
 }

@@ -121,12 +121,6 @@ export function getCloseTripScreenSubtitle(direction: TripDirection): string {
     : "Confirma que todos los alumnos bajaron en su casa antes de finalizar.";
 }
 
-export function getCloseTripValidationMessage(direction: TripDirection): string {
-  return direction === "recojo"
-    ? "Se verificará si quedan alumnos a bordo sin registro en colegio."
-    : "Se verificará si quedan alumnos a bordo sin registro en casa.";
-}
-
 export function getDropoffConfirmTitle(direction: TripDirection): string {
   return `Confirmar ${getDropoffLabel(direction).toLowerCase()}`;
 }

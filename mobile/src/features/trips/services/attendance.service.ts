@@ -41,34 +41,12 @@ export async function registerAttendance(
   return data as AttendanceRecord;
 }
 
-export async function markManualAttendance(
-  tripId: string,
-  studentId: string,
-  scan?: ScanContext,
-): Promise<AttendanceRecord> {
-  return registerAttendance(tripId, studentId, "manual", scan);
-}
-
 export async function registerDropoffAttendance(
   tripId: string,
   studentId: string,
   scan?: ScanContext,
 ): Promise<AttendanceRecord> {
   return registerAttendance(tripId, studentId, "bajo", scan);
-}
-
-export async function getAttendanceByTrip(tripId: string): Promise<AttendanceRecord[]> {
-  const { data, error } = await supabase
-    .from("bus_attendance_records")
-    .select("*")
-    .eq("trip_id", tripId)
-    .order("scanned_at", { ascending: true });
-
-  if (error || !data) {
-    throw new Error("No se pudo cargar la asistencia del viaje.");
-  }
-
-  return data;
 }
 
 export async function voidAttendanceRecord(recordId: string, reason: string): Promise<void> {

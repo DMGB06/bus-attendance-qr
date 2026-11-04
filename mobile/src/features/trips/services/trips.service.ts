@@ -69,10 +69,6 @@ async function getActiveTripByBusId(busId: string): Promise<Trip | null> {
   return data;
 }
 
-export async function getOperationalContext(): Promise<OperationalBusContext | null> {
-  return resolveOperationalBusContext();
-}
-
 export async function resolveOperatorTripSnapshot(): Promise<{
   context: OperationalBusContext | null;
   activeTrip: Trip | null;
@@ -89,11 +85,6 @@ export async function resolveOperatorTripSnapshot(): Promise<{
 export async function getActiveTripForCurrentUser(): Promise<Trip | null> {
   const { activeTrip } = await resolveOperatorTripSnapshot();
   return activeTrip;
-}
-
-/** @deprecated Usar getActiveTripForCurrentUser — conservado por compatibilidad interna. */
-export async function getActiveTripByOperator(): Promise<Trip | null> {
-  return getActiveTripForCurrentUser();
 }
 
 export async function getCompletedTurnTypesForBusToday(busId: string): Promise<TurnType[]> {

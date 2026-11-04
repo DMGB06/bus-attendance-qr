@@ -72,7 +72,3 @@ export function resolveScannerEventForStudent(
 ): ResolvedScannerEvent {
   return resolveScannerEvent(direction, findRosterItem(items, studentId));
 }
-
-export function getScannerAutoModeHint(_direction: TripDirection): string {
-  return "Escanear al subir al bus";
-}

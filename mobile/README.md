@@ -1,57 +1,51 @@
-# Welcome to your Expo app 👋
+# CerroBus (app móvil y PWA)
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+App de transporte escolar de la Municipalidad de Cerro Azul. Choferes y asistentas registran la asistencia con QR, también sin señal. Los apoderados ven el estado de sus hijos y la ubicación del bus.
 
-## Get started
+Stack: Expo 54, React Native, TypeScript, expo-router y Supabase (schema `buscontrol` y padrón en `public.social_bus_escolar`).
 
-1. Install dependencies
+## Requisitos
 
-   ```bash
-   npm install
-   ```
+- Node 20.19.4 o superior
+- Cuenta de Expo y EAS para builds nativos
 
-2. Start the app on your local network
-
-   ```bash
-   npm run start
-   ```
-
-   s
-   If you specifically need a tunnel, use:
-
-   ```bash
-   npm run start:tunnel
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Instalación
 
 ```bash
-npm run reset-project
+npm install
+cp .env.example .env
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Completa `.env` con la URL y la clave anónima del proyecto Supabase. La clave `service_role` nunca debe llevar el prefijo `EXPO_PUBLIC_`.
 
-## Learn more
+## Comandos
 
-To learn more about developing your project with Expo, look at the following resources:
+| Comando | Qué hace |
+|---------|----------|
+| `npm start` | Servidor de desarrollo con dev client en la red local |
+| `npm run start:tunnel` | Igual, por túnel |
+| `npm run web` | Versión web |
+| `npm run build` | Exporta la PWA a `dist/` |
+| `npm run lint` | ESLint |
+| `npm test` | Pruebas con Jest |
+| `npx tsc --noEmit` | Revisión de tipos |
+| `npm run test:all` | Lint y pruebas, con reporte en `testS/LAST-RUN.md` |
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Builds
 
-## Join the community
+```bash
+eas build --profile preview --platform android     # APK de prueba interna
+eas build --profile production --platform android  # AAB para Play Store
+```
 
-Join our community of developers creating universal apps.
+## Estructura
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- `app/`: rutas de expo-router. `(auth)` login, `(ops)` chofer y asistenta, `(parent)` apoderados.
+- `src/features/`: código por dominio (`trips`, `parent`, `auth`, `notifications`, `profile`).
+- `src/core/`: configuración, tema y conectividad.
+- `src/shared/`: componentes y utilidades comunes.
+- `testS/`: pruebas por rol y verificación de push.
+
+## Modo sin conexión
+
+Las asistencias sin señal se guardan en una cola local y se suben al volver la red. La cola no se borra al cerrar sesión: solo la sube la misma cuenta que registró los datos.

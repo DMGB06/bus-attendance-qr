@@ -4,7 +4,7 @@ import {
   pickPreferredStudentTripStatusForParent,
 } from "@/src/features/parent/domain/parent-linked-students";
 import { getTodayDateIso } from "@/src/features/parent/utils/date";
-import { APP_TIME_ZONE } from "@/src/shared/utils/local-date";
+import { getLocalDayStartIso } from "@/src/shared/utils/local-date";
 import { filterValidUuids } from "@/src/shared/utils/uuid";
 import type { StudentTripStatus } from "@/src/features/parent/types";
 import type { Trip } from "@/src/features/trips/types";
@@ -40,11 +40,6 @@ async function fetchStatusesFromTable(studentIds: string[], today: string): Prom
 
 function isTripRelevantForToday(trip: TripSlice, today: string): boolean {
   return trip.trip_date === today || trip.status === "active";
-}
-
-function getLocalDayStartIso(today: string): string {
-  const offset = APP_TIME_ZONE === "America/Lima" ? "-05:00" : "Z";
-  return `${today}T00:00:00${offset}`;
 }
 
 async function fetchAttendanceSlices(studentIds: string[], today: string): Promise<AttendanceSlice[]> {

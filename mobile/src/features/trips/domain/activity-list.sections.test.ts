@@ -38,6 +38,12 @@ const sampleDay: ActivityDayGroup[] = [
 ];
 
 describe("buildActivityListSections", () => {
+  it("sin agrupar devuelve eventos sueltos", () => {
+    const sections = buildActivityListSections(sampleDay);
+
+    expect(sections[0]?.mode).toBe("event");
+  });
+
   it("agrupa por alumno en modo día normal", () => {
     const sections = buildActivityListSections(sampleDay, { groupByStudent: true });
 
@@ -51,18 +57,5 @@ describe("buildActivityListSections", () => {
     expect(sections[0].studentCount).toBe(2);
     expect(sections[0].eventCount).toBe(3);
     expect(sections[0].data[0]?.listKey).toBe("2026-06-14-trip-1:s1");
-  });
-
-  it("también agrupa por alumno en búsqueda", () => {
-    const sections = buildActivityListSections(sampleDay, { groupByStudent: true });
-
-    expect(sections[0]?.mode).toBe("student");
-
-    if (sections[0]?.mode !== "student") {
-      return;
-    }
-
-    expect(sections[0].studentCount).toBe(2);
-    expect(sections[0].data).toHaveLength(2);
   });
 });

@@ -2,7 +2,7 @@ import { supabase, supabasePublic } from "@/src/core/config/supabase";
 import { STUDENT_PADRON_SELECT } from "@/src/features/trips/domain/padron-query.constants";
 import { escapeIlikePattern, sanitizeIlikeSearchTerm } from "@/src/shared/utils/ilike";
 import { perfAsync } from "@/src/shared/utils/perfMark";
-import { filterValidUuids, isUuid } from "@/src/shared/utils/uuid";
+import { isUuid } from "@/src/shared/utils/uuid";
 import {
   findStudentInCache,
   findStudentInStudentList,
@@ -262,23 +262,4 @@ export async function getStudentById(id: string): Promise<Student | null> {
   }
 
   return data;
-}
-
-export async function getStudentsByIds(ids: string[]): Promise<Student[]> {
-  const normalizedIds = filterValidUuids(ids);
-
-  if (!normalizedIds.length) {
-    return [];
-  }
-
-  const { data, error } = await supabasePublic
-    .from("social_bus_escolar")
-    .select("*")
-    .in("id", normalizedIds);
-
-  if (error) {
-    throw new Error("No se pudo consultar la base de alumnos.");
-  }
-
-  return data ?? [];
 }

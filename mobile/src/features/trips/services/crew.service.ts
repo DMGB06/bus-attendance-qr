@@ -141,24 +141,6 @@ export async function getAssignedBusForToday(userId?: string): Promise<{
   return resolvePilotAssignment(profile?.app_role ?? null);
 }
 
-export async function getCrewForBus(
-  busId: string,
-  assignmentDate = getLocalTodayDateIso(),
-): Promise<CrewAssignment[]> {
-  const { data, error } = await supabase
-    .from("bus_crew_assignments")
-    .select("id, bus_id, user_id, crew_role, assignment_date, is_active")
-    .eq("bus_id", busId)
-    .eq("assignment_date", assignmentDate)
-    .eq("is_active", true);
-
-  if (error) {
-    throw new Error("No se pudo consultar el crew del bus.");
-  }
-
-  return (data ?? []) as CrewAssignment[];
-}
-
 export async function resolveOperationalBusContext(
   userId?: string,
 ): Promise<OperationalBusContext | null> {

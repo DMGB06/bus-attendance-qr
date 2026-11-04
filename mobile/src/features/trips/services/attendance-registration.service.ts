@@ -584,21 +584,6 @@ export async function syncBulkDropoffToServer(
   return { syncedCount, queuedCount, failedCount };
 }
 
-export async function bulkRegisterDropoff(
-  tripId: string,
-  items: TripRosterItem[],
-  studentIds?: string[],
-): Promise<{ eligible: string[]; syncedCount: number; queuedCount: number }> {
-  const { eligible } = collectBulkDropoffTargets(items, studentIds);
-
-  if (eligible.length === 0) {
-    throw new Error("No hay alumnos a bordo para registrar la bajada.");
-  }
-
-  const { syncedCount, queuedCount } = await syncBulkDropoffToServer(tripId, eligible);
-  return { eligible, syncedCount, queuedCount };
-}
-
 export async function undoPendingRegistration(
   tripId: string,
   studentId: string,
