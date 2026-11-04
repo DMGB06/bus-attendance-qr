@@ -50,6 +50,7 @@ async function fetchMorningAttendanceHints(tripDate: string): Promise<Set<string
   }
 
   const tripIds = trips.map((trip) => trip.id);
+  // ponytail: sin paginar, tope de 1000 filas por dia; paginar si hay varios buses grandes.
   const { data: records, error: recordsError } = await supabase
     .from("bus_attendance_records")
     .select("trip_id, student_id, event_type")

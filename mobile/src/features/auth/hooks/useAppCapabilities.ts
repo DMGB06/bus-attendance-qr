@@ -33,15 +33,6 @@ export function useAppCapabilities(): AppCapabilitiesState {
       return;
     }
 
-    const userEmail = user.email ?? "";
-    const memoryProfile = userEmail ? getMemoryCachedProfile(userEmail) : null;
-    if (memoryProfile) {
-      const memoryRole = getEffectiveRole(memoryProfile);
-      setAppRole(memoryRole);
-      setCapabilities(getCapabilitiesForRole(memoryRole));
-      return;
-    }
-
     const profile = await getProfileById(user.id, user);
     const role = getEffectiveRole(profile);
     setAppRole(role);

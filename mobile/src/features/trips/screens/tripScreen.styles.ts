@@ -32,11 +32,6 @@ export function createTripScreenStyles(
       alignItems: 'center',
       gap: compact ? tokens.spacing.xs : tokens.spacing.sm,
     },
-    tripMeta: {
-      ...tokens.typography.caption,
-      color: colors.textMuted,
-      textAlign: 'center',
-    },
     historyLink: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -100,9 +95,6 @@ export function createTripScreenStyles(
     selectorButtonActive: {
       backgroundColor: colors.primary,
     },
-    selectorButtonDisabled: {
-      opacity: 0.45,
-    },
     selectorText: {
       ...tokens.typography.bodyStrong,
     },
@@ -129,9 +121,6 @@ export function createTripScreenStyles(
     afternoonOptionActive: {
       borderColor: colors.primary,
       backgroundColor: colors.primarySoftBg,
-    },
-    afternoonOptionDisabled: {
-      opacity: 0.45,
     },
     afternoonOptionBody: {
       flex: 1,
@@ -168,10 +157,6 @@ export function createTripScreenStyles(
     errorText: {
       marginTop: -tokens.spacing.sm,
     },
-    activeActions: {
-      gap: compact ? tokens.spacing.sm : tokens.spacing.md,
-      paddingTop: tokens.spacing.xs,
-    },
     statsRow: {
       flexDirection: 'row',
       gap: tokens.spacing.sm,
@@ -193,10 +178,6 @@ export function createTripScreenStyles(
       ...tokens.typography.overline,
       color: 'rgba(255, 255, 255, 0.75)',
       letterSpacing: 0.3,
-    },
-    sectionDivider: {
-      height: 1,
-      backgroundColor: colors.borderMuted,
     },
     actionButton: {
       borderRadius: tokens.radius.md,
@@ -297,25 +278,6 @@ export function createTripScreenStyles(
       ...tokens.typography.body,
       color: colors.attendanceCompleted,
       flex: 1,
-    },
-    dayCompleteBanner: {
-      backgroundColor: 'rgba(47, 133, 90, 0.08)',
-      borderRadius: tokens.radius.lg,
-      padding: tokens.spacing.md,
-      borderWidth: 1,
-      borderColor: colors.attendanceCompleted,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: tokens.spacing.sm,
-      marginBottom: tokens.spacing.sm,
-    },
-    dayCompleteText: {
-      ...tokens.typography.body,
-      color: colors.attendanceCompleted,
-      flex: 1,
-    },
-    refreshDayButton: {
-      borderRadius: tokens.radius.md,
     },
     startingShell: {
       flex: 1,

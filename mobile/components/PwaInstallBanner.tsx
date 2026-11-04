@@ -6,6 +6,16 @@ import {
   getDeferredInstallPrompt,
 } from '@/components/pwa-install-prompt';
 
+const DISMISSED_KEY = 'pwa-banner-dismissed';
+
+function wasDismissed(): boolean {
+  try {
+    return localStorage.getItem(DISMISSED_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
 function isAppleMobile(): boolean {
   const { userAgent, platform, maxTouchPoints } = window.navigator;
   // iPadOS se anuncia como Mac: solo se distingue por la pantalla tactil.
@@ -25,7 +35,7 @@ export default function PwaInstallBanner() {
 
     if (isStandalone) return;
 
-    if (sessionStorage.getItem('pwa-banner-dismissed') === 'true') return;
+    if (wasDismissed()) return;
 
     const isIOS = isAppleMobile();
     if (isIOS) {
@@ -70,7 +80,11 @@ export default function PwaInstallBanner() {
 
   const handleDismiss = () => {
     setShowBanner(false);
-    sessionStorage.setItem('pwa-banner-dismissed', 'true');
+    try {
+      localStorage.setItem(DISMISSED_KEY, 'true');
+    } catch {
+      /* almacenamiento bloqueado: el aviso volvera a salir en la proxima visita */
+    }
   };
 
   if (!showBanner || !platformType) return null;

@@ -149,10 +149,10 @@ export default function TripScreen() {
     if (!closeSuccessMessage) {
       return;
     }
-    void Promise.all([hydrateActiveTrip(), refreshCompletedTurns()]);
+    void refreshCompletedTurns();
     const timer = setTimeout(() => acknowledgeCloseSuccess(), 6000);
     return () => clearTimeout(timer);
-  }, [acknowledgeCloseSuccess, closeSuccessMessage, hydrateActiveTrip, refreshCompletedTurns]);
+  }, [acknowledgeCloseSuccess, closeSuccessMessage, refreshCompletedTurns]);
 
   useEffect(() => {
     if (visibleTrip || isHydrating || capabilitiesLoading || hasHydratedOnce) {
@@ -481,6 +481,7 @@ export default function TripScreen() {
                             isActive && styles.afternoonOptionActive,
                           ]}
                           onPress={() => setAfternoonTurn(option.id)}
+                          accessibilityRole="button"
                         >
                           <MaterialCommunityIcons
                             name={isActive ? 'radiobox-marked' : 'radiobox-blank'}

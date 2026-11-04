@@ -47,12 +47,9 @@ export async function getParentChildrenWithStatus(userId: string): Promise<Paren
   const pairs = resolveLinkedStudentPairs(links, students);
 
   if (!pairs.length) {
-    if (links.length > 0) {
-      throw new Error(
-        "Hay hijos vinculados, pero no aparecen en el padrón escolar. La municipalidad debe revisar bus_student_guardians y social_bus_escolar.",
-      );
-    }
-    return [];
+    throw new Error(
+      "Hay hijos vinculados, pero no aparecen en el padrón escolar. Contacta a la municipalidad para revisarlo.",
+    );
   }
 
   const displayStudentIds = [...new Set(pairs.map((pair) => pair.student.id))];

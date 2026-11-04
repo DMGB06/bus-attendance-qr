@@ -64,10 +64,8 @@ export default function RootLayout() {
   const splashActive = !guestSplashDoneRef.current || Boolean(session);
 
   const handleSplashHidden = useCallback(() => {
-    if (!session) {
-      guestSplashDoneRef.current = true;
-    }
-  }, [session]);
+    guestSplashDoneRef.current = true;
+  }, []);
 
   const { visible: splashVisible, opacity: splashOpacity } = useBootSplash({
     cycleKey: splashCycleKey,

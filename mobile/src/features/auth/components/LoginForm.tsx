@@ -149,7 +149,7 @@ export function LoginForm({
             <View style={styles.accentLine} />
 
             <View style={styles.formHeader}>
-              <Text style={styles.formTitle}>Ingreso de operador</Text>
+              <Text style={styles.formTitle}>Iniciar sesión</Text>
               <Text style={styles.formHint}>Control de asistencia en ruta escolar</Text>
             </View>
 

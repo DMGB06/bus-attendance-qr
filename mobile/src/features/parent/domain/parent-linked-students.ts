@@ -121,10 +121,10 @@ export function pickPreferredStudentTripStatusForParent(
     return active;
   }
 
-  const leftTime = left.last_event_at ?? left.updated_at;
-  const rightTime = right.last_event_at ?? right.updated_at;
+  const leftTime = Date.parse(left.last_event_at ?? left.updated_at ?? "");
+  const rightTime = Date.parse(right.last_event_at ?? right.updated_at ?? "");
 
-  if (leftTime && rightTime && leftTime !== rightTime) {
+  if (!Number.isNaN(leftTime) && !Number.isNaN(rightTime) && leftTime !== rightTime) {
     return leftTime > rightTime ? left : right;
   }
 

@@ -11,8 +11,8 @@ import {
 import {
   formatActivityEventTime,
   getActivityEventColors,
-  getStudentInitials,
 } from "@/src/features/trips/domain/activity-row.utils";
+import { getInitials } from "@/src/shared/utils/initials";
 import type { OperatorActivityRow } from "@/src/features/trips/types/activity.types";
 
 export const ACTIVITY_ROW_HEIGHT = 60;
@@ -99,7 +99,7 @@ export function ActivityEventRow({ event }: ActivityEventRowProps) {
     [colors, eventColors, isVoided, tokens],
   );
 
-  const initials = getStudentInitials(event.studentName);
+  const initials = getInitials(event.studentName);
   const actionLabel = mapActivityEventLabelShort(event.eventType, event.tripDirection);
   const tagLabel = isVoided ? "Anulado" : mapActivityEventTagLabel(event.eventType, event.tripDirection);
 

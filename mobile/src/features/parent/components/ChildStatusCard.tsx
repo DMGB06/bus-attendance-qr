@@ -10,6 +10,7 @@ import { ChildTimelinePreview } from "@/src/features/parent/components/ChildTime
 import type { ParentChildSummary, ParentStatusTone } from "@/src/features/parent/types";
 import type { NivelEducativo } from "@/src/features/trips/types";
 import { formatTurnTypeLabel } from "@/src/features/trips/domain/trip-labels";
+import { getInitials } from "@/src/shared/utils/initials";
 
 type ChildStatusCardProps = {
   item: ParentChildSummary;
@@ -25,17 +26,6 @@ function formatNivelLabel(nivel: NivelEducativo | null | undefined): string | nu
     return "Secundaria";
   }
   return null;
-}
-
-function studentInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) {
-    return "?";
-  }
-  if (parts.length === 1) {
-    return parts[0].slice(0, 2).toUpperCase();
-  }
-  return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
 }
 
 function statusStripTheme(
@@ -97,7 +87,7 @@ export const ChildStatusCard = memo(function ChildStatusCard({
   );
   const nivelLabel = formatNivelLabel(item.student.nivel_educativo);
   const stripTheme = statusStripTheme(presentation.tone, colors);
-  const initials = studentInitials(item.student.nombre_alumno);
+  const initials = getInitials(item.student.nombre_alumno) || "?";
 
   const segmentLabel = latestTimelineEvent?.turn_type
     ? formatTurnTypeLabel(latestTimelineEvent.turn_type)

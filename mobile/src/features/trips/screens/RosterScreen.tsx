@@ -9,7 +9,6 @@ import { NoActiveTripView } from "@/src/features/trips/components/NoActiveTripVi
 import { MorningRiderReminderBanner } from "@/src/features/trips/components/MorningRiderReminderBanner";
 import { RosterTurnHintBanner } from "@/src/features/trips/components/roster/RosterTurnHintBanner";
 import { RosterStudentRow } from "@/src/features/trips/components/roster/RosterStudentRow";
-import { ROSTER_ROW_HEIGHT } from "@/src/features/trips/components/roster/rosterRowTheme";
 import { RosterSyncBanner } from "@/src/features/trips/components/roster/RosterSyncBanner";
 import { useAppCapabilities } from "@/src/features/auth/hooks/useAppCapabilities";
 import { useTripRoster, type RosterViewMode } from "@/src/features/trips/hooks/useTripRoster";
@@ -312,15 +311,6 @@ export default function RosterScreen() {
   const showMorningHintInList =
     isAfternoonReturn && (viewMode === "prioritarios" || viewMode === "pending");
 
-  const getItemLayout = useCallback(
-    (_: unknown, index: number) => ({
-      length: ROSTER_ROW_HEIGHT,
-      offset: ROSTER_ROW_HEIGHT * index,
-      index,
-    }),
-    [],
-  );
-
   const keyExtractor = useCallback((item: TripRosterItem) => item.student.id, []);
 
   const renderRosterItem = useCallback(
@@ -558,7 +548,6 @@ export default function RosterScreen() {
               data={roster.filteredItems}
               keyExtractor={keyExtractor}
               renderItem={renderRosterItem}
-              getItemLayout={getItemLayout}
               initialNumToRender={12}
               maxToRenderPerBatch={8}
               windowSize={7}

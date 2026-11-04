@@ -10,6 +10,7 @@ import {
 } from "@/src/features/profile/services/profile.service";
 import { getMemoryCachedProfile } from "@/src/features/profile/storage/profile-cache.storage";
 import type { AppProfile, UpdateAppProfile } from "@/src/features/profile/types";
+import { getInitials } from "@/src/shared/utils/initials";
 
 function applyProfileToState(
   loadedProfile: AppProfile | null,
@@ -159,14 +160,7 @@ export function useProfile() {
   const initials = useMemo(() => {
     const fromName = profile?.full_name?.trim();
     if (fromName) {
-      const parts = fromName.split(/\s+/).filter(Boolean);
-      const letters = parts
-        .map((part) => part[0])
-        .slice(0, 2)
-        .join("");
-      if (letters) {
-        return letters.toUpperCase();
-      }
+      return getInitials(fromName);
     }
 
     const source = profile?.email ?? email;

@@ -1,4 +1,7 @@
-import { buildActivityListSections } from "@/src/features/trips/domain/activity-list.sections";
+import {
+  buildActivityListSections,
+  getActivityListSummary,
+} from "@/src/features/trips/domain/activity-list.sections";
 import type { ActivityDayGroup, OperatorActivityRow } from "@/src/features/trips/types/activity.types";
 
 function makeEvent(recordId: string, studentId: string, studentName: string): OperatorActivityRow {
@@ -37,6 +40,23 @@ const sampleDay: ActivityDayGroup[] = [
   },
 ];
 
+const dayWithVoided: ActivityDayGroup[] = [
+  {
+    date: "2026-06-14",
+    dateLabel: "Hoy",
+    trips: [
+      {
+        tripId: "trip-1",
+        title: "Recojo mañana",
+        events: [
+          makeEvent("r1", "s1", "Ana Alva"),
+          { ...makeEvent("r2", "s2", "Bruno Baca"), voidedAt: "2026-06-14T07:05:00.000Z" },
+        ],
+      },
+    ],
+  },
+];
+
 describe("buildActivityListSections", () => {
   it("sin agrupar devuelve eventos sueltos", () => {
     const sections = buildActivityListSections(sampleDay);
@@ -57,5 +77,22 @@ describe("buildActivityListSections", () => {
     expect(sections[0].studentCount).toBe(2);
     expect(sections[0].eventCount).toBe(3);
     expect(sections[0].data[0]?.listKey).toBe("2026-06-14-trip-1:s1");
+  });
+
+  it("no cuenta los registros anulados en los totales de la seccion", () => {
+    const sections = buildActivityListSections(dayWithVoided, { groupByStudent: true });
+
+    expect(sections[0]?.eventCount).toBe(1);
+    expect(sections[0]?.mode === "student" && sections[0].studentCount).toBe(1);
+  });
+});
+
+describe("getActivityListSummary", () => {
+  it("no cuenta registros anulados ni alumnos que solo tienen anulados", () => {
+    expect(getActivityListSummary(dayWithVoided)).toEqual({
+      eventCount: 1,
+      tripCount: 1,
+      studentCount: 1,
+    });
   });
 });

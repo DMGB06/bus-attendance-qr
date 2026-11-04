@@ -124,7 +124,7 @@ export function ParentBusLocationSummary({
 
       <Text style={styles.hint}>
         {needsDevRebuild
-          ? "Para ver el mapa aquí dentro: npx expo run:android (una vez). Mientras tanto, usa el botón."
+          ? "El mapa integrado no está disponible en esta versión. Usa el botón para verlo."
           : "OpenStreetMap · sin costo ni API key"}
       </Text>
     </View>

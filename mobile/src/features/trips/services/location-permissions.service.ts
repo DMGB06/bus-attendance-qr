@@ -7,6 +7,10 @@ export async function ensureForegroundLocationPermission(): Promise<boolean> {
     return true;
   }
 
+  if (!current.canAskAgain) {
+    return false;
+  }
+
   const requested = await Location.requestForegroundPermissionsAsync();
   return requested.granted;
 }

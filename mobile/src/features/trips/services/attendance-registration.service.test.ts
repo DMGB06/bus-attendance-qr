@@ -19,7 +19,9 @@ import {
   loadAttendanceQueue,
 } from "@/src/features/trips/storage/attendance-queue.storage";
 import {
+  loadCachedRosterSnapshot,
   loadCachedTripAttendance,
+  saveCachedRosterSnapshot,
   saveCachedStudents,
 } from "@/src/features/trips/storage/roster-cache.storage";
 import type { AttendanceRecord, Student } from "@/src/features/trips/types";
@@ -182,6 +184,7 @@ describe("attendance-registration.service", () => {
 
       await expect(syncAttendanceToServer("trip-1", "stu-1", "subio")).resolves.toEqual({
         status: "queued",
+        scannedBy: "user-1",
       });
 
       expect(scanContext).not.toHaveBeenCalled();
@@ -229,6 +232,7 @@ describe("attendance-registration.service", () => {
 
       await expect(syncAttendanceToServer("trip-1", "stu-1", "subio")).resolves.toEqual({
         status: "queued",
+        scannedBy: "user-1",
       });
       expect(await queuedStudents()).toEqual(["stu-1"]);
     });
@@ -238,6 +242,7 @@ describe("attendance-registration.service", () => {
 
       await expect(syncAttendanceToServer("trip-1", "stu-1", "subio")).resolves.toEqual({
         status: "queued",
+        scannedBy: "user-1",
       });
     });
 
@@ -273,7 +278,9 @@ describe("attendance-registration.service", () => {
     it("no sobrescribe el padron en cache con una lista vacia", async () => {
       rosterRaw.mockResolvedValue({ students: [], attendanceRecords: [] });
 
-      await refreshRosterFromNetwork("trip-1", { skipQueueFlush: true });
+      await expect(
+        refreshRosterFromNetwork("trip-1", { skipQueueFlush: true }),
+      ).rejects.toThrow("No se pudo cargar");
 
       expect(saveStudents).not.toHaveBeenCalled();
     });
@@ -289,6 +296,18 @@ describe("attendance-registration.service", () => {
 
       await assertion;
       jest.useRealTimers();
+    });
+
+    it("una respuesta sin alumnos conserva la lista guardada", async () => {
+      const saved = [{ student: { id: "stu-1" } }];
+      (loadCachedRosterSnapshot as jest.Mock).mockResolvedValueOnce({ items: saved, savedAt: "x" });
+      rosterRaw.mockResolvedValue({ students: [], attendanceRecords: [] });
+
+      const result = await refreshRosterFromNetwork("trip-1", { skipQueueFlush: true });
+
+      expect(result.items).toEqual(saved);
+      expect(result.fromCache).toBe(true);
+      expect(saveCachedRosterSnapshot).not.toHaveBeenCalled();
     });
 
     it("guarda el padron cuando trae alumnos", async () => {

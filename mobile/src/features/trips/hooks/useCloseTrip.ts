@@ -20,6 +20,7 @@ import {
   getRosterSnapshot,
   rosterStoreActions,
   useRosterItems,
+  useRosterMeta,
 } from "@/src/features/trips/store/rosterStore";
 import { tripStoreActions, useTripStore } from "@/src/features/trips/store/tripStore";
 import {
@@ -40,6 +41,8 @@ export function useCloseTrip() {
   const router = useRouter();
   const { activeTrip, releaseActiveTripAfterClose, setActiveTrip } = useTripStore();
   const rosterItems = useRosterItems(activeTrip?.id);
+  const { isShowingCache } = useRosterMeta(activeTrip?.id);
+  const wasShowingCacheRef = useRef(isShowingCache);
   const hadRosterItemsRef = useRef(false);
   const closeInFlightRef = useRef(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -96,6 +99,14 @@ export function useCloseTrip() {
       void reloadValidation({ silent: true });
     }
   }, [activeTrip, rosterItems.length, reloadValidation]);
+
+  // Llegaron datos del servidor: el aviso de datos guardados ya no aplica.
+  useEffect(() => {
+    if (wasShowingCacheRef.current && !isShowingCache) {
+      void reloadValidation({ silent: true });
+    }
+    wasShowingCacheRef.current = isShowingCache;
+  }, [isShowingCache, reloadValidation]);
 
   const finishCloseLocally = useCallback(
     async (tripId: string, direction: TripDirection) => {

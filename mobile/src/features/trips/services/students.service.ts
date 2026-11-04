@@ -1,6 +1,6 @@
 import { supabase, supabasePublic } from "@/src/core/config/supabase";
 import { STUDENT_PADRON_SELECT } from "@/src/features/trips/domain/padron-query.constants";
-import { escapeIlikePattern, sanitizeIlikeSearchTerm } from "@/src/shared/utils/ilike";
+import { sanitizeIlikeSearchTerm } from "@/src/shared/utils/ilike";
 import { perfAsync } from "@/src/shared/utils/perfMark";
 import { isUuid } from "@/src/shared/utils/uuid";
 import {
@@ -152,16 +152,21 @@ export async function refreshStudentGuardianFromPadron(student: Student): Promis
     return student;
   }
 
-  const fromCatalog = await getGuardianFromCatalog(student.id);
-  if (fromCatalog) {
-    return mergeGuardianFields(student, fromCatalog);
+  // Es un dato adicional: sin red el alumno ya encontrado sigue siendo valido.
+  try {
+    const fromCatalog = await getGuardianFromCatalog(student.id);
+    if (fromCatalog) {
+      return mergeGuardianFields(student, fromCatalog);
+    }
+
+    const fresh = student.codigo?.trim()
+      ? await findStudentByCode(student.codigo)
+      : await getStudentById(student.id);
+
+    return fresh ? mergeGuardianFields(student, fresh) : student;
+  } catch {
+    return student;
   }
-
-  const fresh = student.codigo?.trim()
-    ? await findStudentByCode(student.codigo)
-    : await getStudentById(student.id);
-
-  return fresh ? mergeGuardianFields(student, fresh) : student;
 }
 
 /** Busca por código BU00xx o por UUID (QR legacy). Prioriza lista local si el roster está hidratado. */
@@ -228,12 +233,11 @@ export async function searchStudentsByName(
     return cachedResults;
   }
 
-  const escapedName = escapeIlikePattern(normalizedName);
   const { data, error } = await supabasePublic
     .from("social_bus_escolar")
     .select(STUDENT_PADRON_SELECT)
     .eq("activo", true)
-    .ilike("nombre_alumno", `%${escapedName}%`)
+    .ilike("nombre_alumno", `%${normalizedName}%`)
     .order("nombre_alumno", { ascending: true })
     .limit(limit);
 

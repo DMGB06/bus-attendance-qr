@@ -1,6 +1,4 @@
 import { supabase } from "@/src/core/config/supabase";
-import { getStudentById } from "@/src/features/trips/services/students.service";
-import { guardianDniMatchesPadron } from "@/src/features/parent/domain/guardian-enrollment.rules";
 import type {
   BusStudentGuardianLink,
   ParentStudentLink,
@@ -91,25 +89,3 @@ export async function getGuardianLinksForUser(userId: string): Promise<ParentStu
   ];
 }
 
-/**
- * Valida DNI apoderado contra padrón antes de vincular (coordinador / SQL manual).
- */
-export async function validateGuardianEnrollment(
-  studentId: string,
-  guardianDni: string,
-): Promise<{ valid: boolean; reason?: string }> {
-  const student = await getStudentById(studentId);
-
-  if (!student) {
-    return { valid: false, reason: "Alumno no encontrado en el padrón." };
-  }
-
-  if (!guardianDniMatchesPadron(guardianDni, student.dni_apoderado)) {
-    return {
-      valid: false,
-      reason: "El DNI no coincide con el apoderado registrado en el padrón escolar.",
-    };
-  }
-
-  return { valid: true };
-}

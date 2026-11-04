@@ -56,7 +56,7 @@ const ROSTER_REFRESH_TIMEOUT_MS = 12_000;
 
 export type AttendanceRegistrationResult =
   | { status: "synced" }
-  | { status: "queued" }
+  | { status: "queued"; scannedBy: string }
   | { status: "duplicate" };
 
 function isDuplicateError(message: string): boolean {
@@ -235,14 +235,14 @@ export async function syncAttendanceToServer(
 
   const alreadyQueued = await hasQueuedWrite(tripId, studentId, eventType, user.id);
   if (alreadyQueued) {
-    return { status: "queued" };
+    return { status: "queued", scannedBy: user.id };
   }
 
   // Sin senal se guarda ya: esperar al servidor arriesga perderlo si se cierra la app.
   const { isConnected } = await NetInfo.fetch();
   if (isConnected === false) {
     await enqueueAttendanceWrite({ tripId, studentId, eventType, scannedBy: user.id });
-    return { status: "queued" };
+    return { status: "queued", scannedBy: user.id };
   }
 
   const scan = await resolveScanContext(user.id);
@@ -282,7 +282,7 @@ export async function syncAttendanceToServer(
             eventType,
             scannedBy: scan.scannedBy,
           });
-          return { status: "queued" };
+          return { status: "queued", scannedBy: scan.scannedBy };
         }
       }
     }
@@ -297,7 +297,7 @@ export async function syncAttendanceToServer(
       eventType,
       scannedBy: scan.scannedBy,
     });
-    return { status: "queued" };
+    return { status: "queued", scannedBy: scan.scannedBy };
   }
 }
 
@@ -385,9 +385,11 @@ async function refreshRosterFull(tripId: string): Promise<{
   cacheSavedAt: string | null;
 }> {
   const { students, attendanceRecords } = await getTripRosterRaw(tripId);
-  if (students.length > 0) {
-    await saveCachedStudents(students);
+  // El padron nunca queda vacio de verdad: se trata como fallo para conservar lo guardado.
+  if (students.length === 0) {
+    throw new Error("El padron llego vacio.");
   }
+  await saveCachedStudents(students);
   await saveCachedTripAttendance(tripId, attendanceRecords);
 
   const items = await buildRosterItemsFromSources(tripId, students, attendanceRecords);

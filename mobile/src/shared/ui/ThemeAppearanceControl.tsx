@@ -78,6 +78,3 @@ export function ThemeAppearanceControl({ variant = 'navbar' }: ThemeAppearanceCo
 
   return control;
 }
-
-/** @deprecated Usa `ThemeAppearanceControl`; se mantiene por compatibilidad con imports antiguos. */
-export const ThemeModeIconButton = ThemeAppearanceControl;

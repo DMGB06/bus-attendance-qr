@@ -107,7 +107,7 @@ function buildActiveRetornoSteps(context: DailyChecklistContext): DailyChecklist
         label: "Registrar bajada en casa",
         hint: onboardCount > 0 ? `${onboardCount} a bordo` : undefined,
       },
-      !hasMorningPending && pendingCount === 0 && onboardCount > 0 ? "current" : onboardCount > 0 ? "current" : completedCount > 0 ? "done" : "pending",
+      onboardCount > 0 ? "current" : completedCount > 0 ? "done" : "pending",
     ),
     withStatus(
       { id: "close", label: "Cerrar viaje" },

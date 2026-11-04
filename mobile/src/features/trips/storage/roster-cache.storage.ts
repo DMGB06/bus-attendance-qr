@@ -69,15 +69,6 @@ export function isStudentsCacheFresh(savedAt: string | null | undefined): boolea
   return Date.now() - savedMs < STUDENTS_CACHE_TTL_MS;
 }
 
-/** Fuerza re-descarga del padrón en el próximo refresh completo. */
-export async function invalidateCachedStudents(): Promise<void> {
-  try {
-    await AsyncStorage.removeItem(STUDENTS_KEY);
-  } catch {
-    /* non-fatal */
-  }
-}
-
 export async function loadCachedTripAttendance(
   tripId: string,
 ): Promise<CachedTripAttendance | null> {

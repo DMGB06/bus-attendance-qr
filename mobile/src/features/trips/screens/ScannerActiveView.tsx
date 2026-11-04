@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { Pressable, View } from "react-native";
+import { Linking, Pressable, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useCameraPermissions } from "expo-camera";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -64,13 +64,13 @@ export function ScannerActiveView({ activeTrip }: ScannerActiveViewProps) {
 
   const attendance = useStudentAttendance(activeTrip.id, activeTrip.direction);
   const isScannerMode = attendance.viewMode === "scanner";
-  const shouldMountCamera =
-    isFocused &&
-    isScannerMode &&
-    !attendance.isSearching &&
-    !attendance.isRegistering;
+  // Se pausa la lectura, no la camara: reabrirla en cada escaneo es lento y parpadea.
+  const shouldMountCamera = isFocused && isScannerMode;
   const cameraScanningEnabled =
-    shouldMountCamera && !attendance.isConfirmModalVisible;
+    shouldMountCamera &&
+    !attendance.isSearching &&
+    !attendance.isRegistering &&
+    !attendance.isConfirmModalVisible;
 
   const styles = useMemo(
     () => createScannerScreenStyles(colors, tokens, isCompact),
@@ -100,9 +100,13 @@ export function ScannerActiveView({ activeTrip }: ScannerActiveViewProps) {
             style={styles.statusCard}
             icon="camera-off-outline"
             title="Permiso de cámara requerido"
-            body="Necesitas permitir el acceso a la cámara para usar el escáner."
-            actionLabel="Permitir cámara"
-            onAction={requestPermission}
+            body={
+              permission.canAskAgain
+                ? "Necesitas permitir el acceso a la cámara para usar el escáner."
+                : "El acceso a la cámara está bloqueado. Actívalo en los ajustes del teléfono."
+            }
+            actionLabel={permission.canAskAgain ? "Permitir cámara" : "Abrir ajustes"}
+            onAction={permission.canAskAgain ? requestPermission : () => void Linking.openSettings()}
           />
         </View>
       </SafeAreaView>
@@ -165,14 +169,12 @@ export function ScannerActiveView({ activeTrip }: ScannerActiveViewProps) {
               ) : (
                 <View style={styles.cameraPlaceholder}>
                   <MaterialCommunityIcons
-                    name={isFocused ? "camera-outline" : "camera-off-outline"}
+                    name="camera-off-outline"
                     size={tokens.fontSize.xl}
                     color={colors.textMuted}
                   />
                   <Text style={styles.cameraPlaceholderText}>
-                    {!isFocused
-                      ? "Cámara pausada — vuelve a la pestaña Escáner para continuar."
-                      : "Preparando escaneo…"}
+                    Cámara pausada: vuelve a la pestaña Escáner para continuar.
                   </Text>
                 </View>
               )}

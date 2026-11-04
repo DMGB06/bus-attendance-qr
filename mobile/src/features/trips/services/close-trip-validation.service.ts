@@ -53,27 +53,30 @@ function mapPrioritarios(
 async function resolveRosterItemsForClose(
   tripId: string,
   prefetchedItems?: TripRosterItem[],
-): Promise<{ items: TripRosterItem[]; networkTimedOut: boolean }> {
+): Promise<{ items: TripRosterItem[]; isStale: boolean }> {
+  const liveSnapshot = getRosterSnapshot();
+  const isLiveTrip = liveSnapshot.tripId === tripId;
+  const liveIsStale = isLiveTrip && liveSnapshot.isShowingCache;
+
   if (prefetchedItems?.length) {
-    return { items: prefetchedItems, networkTimedOut: false };
+    return { items: prefetchedItems, isStale: liveIsStale };
   }
 
-  const liveSnapshot = getRosterSnapshot();
-  if (liveSnapshot.tripId === tripId && liveSnapshot.items.length > 0) {
-    return { items: liveSnapshot.items, networkTimedOut: false };
+  if (isLiveTrip && liveSnapshot.items.length > 0) {
+    return { items: liveSnapshot.items, isStale: liveIsStale };
   }
 
   const cachedSnapshot = await loadCachedRosterSnapshot(tripId);
   if (cachedSnapshot?.items.length) {
-    return { items: cachedSnapshot.items, networkTimedOut: false };
+    return { items: cachedSnapshot.items, isStale: true };
   }
 
   const serverItems = await withTimeout(getTripRoster(tripId), ROSTER_LOAD_TIMEOUT_MS, null);
   if (serverItems) {
-    return { items: serverItems, networkTimedOut: false };
+    return { items: serverItems, isStale: false };
   }
 
-  return { items: cachedSnapshot?.items ?? [], networkTimedOut: true };
+  return { items: [], isStale: true };
 }
 
 export async function loadCloseTripValidation(
@@ -112,7 +115,7 @@ export async function loadCloseTripValidation(
       }
 
       const connectivityWarning =
-        pendingResolution.networkTimedOut || rosterResolution.networkTimedOut
+        pendingResolution.networkTimedOut || rosterResolution.isStale
           ? CLOSE_TRIP_CONNECTIVITY_WARNING
           : null;
 

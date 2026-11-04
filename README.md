@@ -70,8 +70,8 @@ Migraciones: ver [`supabase/README.md`](supabase/README.md).
 
 ### Requisitos
 
-- Node.js 18+
-- Expo Go o EAS Build para push/GPS en dispositivo real
+- Node.js 20.19.4+
+- EAS Build (dev client o APK) para push y GPS en dispositivo real; Expo Go ya no recibe push
 
 ### Variables
 

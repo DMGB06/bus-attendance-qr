@@ -66,7 +66,9 @@ export async function getTripAttendanceOnly(tripId: string): Promise<AttendanceR
 
 export async function getTripRoster(tripId: string): Promise<TripRosterItem[]> {
   const { students, attendanceRecords } = await getTripRosterRaw(tripId);
-  await saveCachedStudents(students);
+  if (students.length > 0) {
+    await saveCachedStudents(students);
+  }
   await saveCachedTripAttendance(tripId, attendanceRecords);
   return buildRosterItemsFromSources(tripId, students, attendanceRecords);
 }

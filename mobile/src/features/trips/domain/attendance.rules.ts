@@ -12,6 +12,7 @@ export function hasBoardingInHistory(history: AttendanceRecord[]): boolean {
 }
 
 export function canRegisterBoarding(item: TripRosterItem | undefined): boolean {
+  // Alumno fuera de la lista local (aun cargando o sin red): decide el servidor al registrar.
   if (!item) {
     return true;
   }

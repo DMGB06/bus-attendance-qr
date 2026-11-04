@@ -33,7 +33,8 @@ export async function getGuardianPadronStudents(
   const byIdsResult = await supabasePublic
     .from("social_bus_escolar")
     .select("*")
-    .in("id", validIds);
+    .in("id", validIds)
+    .not("activo", "is", false);
 
   if (byIdsResult.error) {
     throw new Error("No se pudo consultar la base de alumnos.");

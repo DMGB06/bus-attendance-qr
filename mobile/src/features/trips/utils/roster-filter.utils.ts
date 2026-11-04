@@ -1,3 +1,4 @@
+import { normalizeActivitySearchText } from "@/src/features/trips/domain/activity-search.rules";
 import { isPrioritaryStudent } from "@/src/features/trips/domain/trip-priority.rules";
 import { matchesSuggestedLevelFilter } from "@/src/features/trips/domain/student-level.rules";
 import type { TripRosterItem } from "@/src/features/trips/services/trip-roster.service";
@@ -129,15 +130,14 @@ export function filterRosterItemsByQuery(
   items: TripRosterItem[],
   searchQuery: string,
 ): TripRosterItem[] {
-  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const normalizedQuery = normalizeActivitySearchText(searchQuery);
   if (!normalizedQuery) {
     return items;
   }
 
   return items.filter(
     (item) =>
-      item.student.nombre_alumno.toLowerCase().includes(normalizedQuery) ||
-      item.student.id.toLowerCase().includes(normalizedQuery) ||
-      (item.student.codigo ?? "").toLowerCase().includes(normalizedQuery),
+      normalizeActivitySearchText(item.student.nombre_alumno).includes(normalizedQuery) ||
+      normalizeActivitySearchText(item.student.codigo ?? "").includes(normalizedQuery),
   );
 }

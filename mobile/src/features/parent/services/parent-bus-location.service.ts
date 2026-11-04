@@ -1,5 +1,4 @@
 import { hasValidCoordinates } from "@/src/features/trips/domain/location-labels";
-import { getParentChildrenWithStatus } from "@/src/features/parent/services/parent-children.service";
 import type { ParentChildSummary } from "@/src/features/parent/types";
 import type { ParentBusLocation } from "@/src/features/parent/types/bus-location";
 
@@ -66,9 +65,3 @@ export function buildBusLocationSnapshotFromChildren(
   };
 }
 
-export async function getParentBusLocationSnapshot(
-  userId: string,
-): Promise<ParentBusLocationSnapshot> {
-  const children = await getParentChildrenWithStatus(userId);
-  return buildBusLocationSnapshotFromChildren(children);
-}

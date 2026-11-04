@@ -163,12 +163,3 @@ export async function hasQueuedWrite(
   );
 }
 
-export function clearAttendanceQueue(): Promise<void> {
-  return withQueueLock(async () => {
-    try {
-      await AsyncStorage.removeItem(QUEUE_KEY);
-    } catch {
-      /* non-fatal */
-    }
-  });
-}

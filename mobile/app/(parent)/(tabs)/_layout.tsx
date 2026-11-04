@@ -10,11 +10,13 @@ import { AUTH_ROUTES } from "@/src/core/routes";
 import { logout } from "@/src/features/auth/services/auth.service";
 import { ParentChildrenSync } from "@/src/features/parent/components/ParentChildrenSync";
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
+import { useTabBarHeight } from "@/src/core/theme/useScrollBottomPadding";
 import { AppParentHeaderBar } from "@/src/shared/ui/AppParentHeaderBar";
 
 export default function ParentTabsLayout() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useTabBarHeight();
   const { colors, tokens } = useAppTheme();
 
   const handleLogout = useCallback(async () => {
@@ -56,9 +58,7 @@ export default function ParentTabsLayout() {
         backgroundColor: colors.tabBarBg,
         borderTopWidth: 1,
         borderTopColor: colors.tabBarBorder,
-        height: Platform.OS === 'web' 
-          ? tokens.layout.tabBarBaseHeight + 20 // 20px extra de altura en Web
-          : tokens.layout.tabBarBaseHeight + insets.bottom,
+        height: tabBarHeight,
         paddingTop: tokens.spacing.xs,
         paddingBottom: insets.bottom,
         elevation: 0,
@@ -72,7 +72,7 @@ export default function ParentTabsLayout() {
         marginBottom: Platform.OS === 'web' ? 12 : 0, // Esto eleva los iconos y nombres en la Web
       },
     }),
-    [colors, insets.bottom, renderHeader, tabLabelStyle, tokens],
+    [colors, insets.bottom, renderHeader, tabBarHeight, tabLabelStyle, tokens],
   );
 
   return (
@@ -109,7 +109,7 @@ export default function ParentTabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="profile"
+        name="perfil"
         options={{
           title: "Perfil",
           tabBarLabel: "Perfil",

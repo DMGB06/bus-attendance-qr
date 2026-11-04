@@ -423,6 +423,14 @@ async function registerStudentAttendance(
     const result = await syncAttendanceToServer(tripId, studentId, eventType);
 
     if (result.status === "queued") {
+      setState({
+        items: getSnapshot().items.map((item) =>
+          item.student.id === studentId ? { ...item, pendingScannedBy: result.scannedBy } : item,
+        ),
+      });
+      optimisticCacheWrites = optimisticCacheWrites
+        .then(() => saveCachedRosterSnapshot(tripId, getSnapshot().items))
+        .catch(() => undefined);
       await updatePendingSyncCount(tripId);
       void syncPendingWrites(tripId);
       return { synced: false, queued: true, duplicate: false };
@@ -437,14 +445,6 @@ async function registerStudentAttendance(
     void refreshTripRoster(tripId, { silent: true });
 
     if (result.status === "duplicate") {
-      await updatePendingSyncCount(tripId);
-      setState({
-        items: getSnapshot().items.map((item) =>
-          item.student.id === studentId ? { ...item, isPendingSync: false } : item,
-        ),
-      });
-      void refreshTripRoster(tripId, { silent: true });
-
       const afterItem = getSnapshot().items.find((item) => item.student.id === studentId);
       if (eventType === "bajo" && afterItem?.status === "onboard") {
         throw new Error(

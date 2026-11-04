@@ -89,7 +89,7 @@ export function NotificationPreferencesPanel() {
           <Switch
             value={item.isEnabled}
             accessibilityLabel={item.label}
-            disabled={savingKey === item.eventKey}
+            disabled={savingKey !== null}
             onValueChange={(value) => {
               void togglePreference(item.eventKey, value);
             }}

@@ -84,6 +84,14 @@ describe("rosterStore", () => {
     expect(getRosterSnapshot().items[0].status).toBe("pending");
   });
 
+  it("un registro en cola queda a nombre de quien lo hizo", async () => {
+    syncToServer.mockResolvedValue({ status: "queued", scannedBy: "user-1" });
+
+    await rosterStoreActions.registerStudentAttendance("t1", "stu-1", "subio");
+
+    expect(getRosterSnapshot().items[0].pendingScannedBy).toBe("user-1");
+  });
+
   it("al revertir un alumno no deshace el registro de otro", async () => {
     network.mockResolvedValue(networkResult([item("stu-1"), item("stu-2")]));
     await rosterStoreActions.refreshTripRoster("t1", { silent: false });

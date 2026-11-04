@@ -300,7 +300,7 @@ export const RosterStudentRow = memo(function RosterStudentRow({
             A bordo{scannedAt ? ` · ${scannedAt}` : ""}
           </Text>
         ) : scannedAt ? (
-          <Text style={styles.meta}>Escaneado {scannedAt}</Text>
+          <Text style={styles.meta}>Registrado {scannedAt}</Text>
         ) : null}
       </View>
 
