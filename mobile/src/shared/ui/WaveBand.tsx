@@ -1,6 +1,9 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Animated, Easing, Image, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
+
+/** 4 ondas de ~195 px: igual que se veia en un celular de 390 px. */
+const CHUNK = 780;
 
 const WAVES = [
   { source: require('../../../assets/images/wave-back.png'), duration: 26000 },
@@ -49,20 +52,26 @@ function Wave({
     return () => loop.stop();
   }, [animated, duration, progress]);
 
-  // La imagen mide dos pantallas y repite su forma: al llegar a -width el salto no se nota.
-  const translateX = progress.interpolate({ inputRange: [0, 1], outputRange: [0, -width] });
+  // Cada imagen mide CHUNK y trae 4 ondas: el largo de onda no depende de la ventana.
+  // Al desplazar un CHUNK la forma coincide y el salto no se nota.
+  const translateX = progress.interpolate({ inputRange: [0, 1], outputRange: [0, -CHUNK] });
+  const copies = Math.ceil((width + CHUNK) / CHUNK);
 
   return (
-    <Animated.Image
-      source={source}
-      resizeMode="stretch"
+    <Animated.View
       accessibilityElementsHidden
       importantForAccessibility="no"
-      style={[
-        styles.wave,
-        { width: width * 2, height, tintColor: color, transform: [{ translateX }] },
-      ]}
-    />
+      style={[styles.wave, { width: copies * CHUNK, height, transform: [{ translateX }] }]}
+    >
+      {Array.from({ length: copies }, (_, i) => (
+        <Image
+          key={i}
+          source={source}
+          resizeMode="stretch"
+          style={{ width: CHUNK, height, tintColor: color }}
+        />
+      ))}
+    </Animated.View>
   );
 }
 
@@ -96,5 +105,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     bottom: 0,
+    flexDirection: 'row',
   },
 });
