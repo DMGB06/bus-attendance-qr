@@ -1,8 +1,7 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { HelperText, Searchbar, Text } from "react-native-paper";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { useNetworkStatus } from "@/src/core/connectivity/useNetworkStatus";
 import { NoActiveTripView } from "@/src/features/trips/components/NoActiveTripView";
@@ -74,7 +73,6 @@ export default function RosterScreen() {
   const { isOffline } = useNetworkStatus();
   const roster = useTripRoster(activeTrip?.id);
   const { capabilities } = useAppCapabilities();
-  const [searchOpen, setSearchOpen] = useState(false);
 
   const styles = useMemo(
     () =>
@@ -97,16 +95,6 @@ export default function RosterScreen() {
           paddingHorizontal: tokens.spacing.lg,
           paddingBottom: tokens.spacing.sm,
           gap: tokens.spacing.sm,
-        },
-        searchToggle: {
-          width: 44,
-          height: 44,
-          borderRadius: tokens.radius.full,
-          alignItems: "center",
-          justifyContent: "center",
-        },
-        searchToggleActive: {
-          backgroundColor: colors.headerStatBg,
         },
         filterBar: {
           flexDirection: "row",
@@ -295,24 +283,6 @@ export default function RosterScreen() {
         title={roster.viewMode === "prioritarios" ? "Vino en la mañana" : "Lista"}
         subtitle={roster.viewMode === "prioritarios" ? null : rosterSubtitle}
         onBack={roster.viewMode === "prioritarios" ? () => roster.setViewMode("pending") : undefined}
-        right={
-          <Pressable
-            style={[
-              styles.searchToggle,
-              (searchOpen || roster.searchQuery.length > 0) && styles.searchToggleActive,
-            ]}
-            onPress={() => setSearchOpen((open) => {
-                if (open) {
-                  roster.setSearchQuery("");
-                }
-                return !open;
-              })}
-            accessibilityRole="button"
-            accessibilityLabel="Buscar alumno"
-          >
-            <MaterialCommunityIcons name="magnify" size={24} color={colors.onHeader} />
-          </Pressable>
-        }
       >
         {roster.viewMode !== "prioritarios" ? (
           <HeaderStats
@@ -372,19 +342,16 @@ export default function RosterScreen() {
           />
         ) : null}
 
-        {searchOpen ? (
-          <Searchbar
-            placeholder="Nombre o código..."
-            value={roster.searchQuery}
-            onChangeText={roster.setSearchQuery}
-            style={styles.search}
-            inputStyle={styles.searchInput}
-            elevation={0}
-            iconColor={colors.textBody}
-            placeholderTextColor={colors.textMuted}
-            autoFocus
-          />
-        ) : null}
+        <Searchbar
+          placeholder="Buscar por nombre o código"
+          value={roster.searchQuery}
+          onChangeText={roster.setSearchQuery}
+          style={styles.search}
+          inputStyle={styles.searchInput}
+          elevation={0}
+          iconColor={colors.textBody}
+          placeholderTextColor={colors.textMuted}
+        />
 
         {capabilities.canBulkDropoff && roster.totalOnboardCount > 0 ? (
           <AppButton
