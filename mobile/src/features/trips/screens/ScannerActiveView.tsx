@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { Linking, Platform, Pressable, View } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useCameraPermissions } from "expo-camera";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
@@ -23,7 +23,10 @@ import { useRosterItems, rosterStoreActions } from "@/src/features/trips/store/r
 import { requestRosterView } from "@/src/features/trips/utils/roster-navigation";
 import { useAppTheme } from "@/src/core/theme/ThemeProvider";
 import { AppScrollView } from "@/src/shared/ui/AppScrollView";
+import { HeaderStats } from "@/src/shared/ui/HeaderStats";
 import { WaveHeader } from "@/src/shared/ui/WaveHeader";
+import { useTripDashboard } from "@/src/features/trips/hooks/useTripDashboard";
+import { getTripDashboardStatLabels } from "@/src/features/trips/domain/trip-labels";
 import { useCompactScreen } from "@/src/shared/hooks/useCompactScreen";
 import { useScreenPerfMark } from "@/src/shared/hooks/useScreenPerfMark";
 
@@ -48,7 +51,6 @@ export function ScannerActiveView({ activeTrip }: ScannerActiveViewProps) {
   const isFocused = useIsFocused();
   const { colors, tokens } = useAppTheme();
   const { isCompact } = useCompactScreen();
-  const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const rosterItems = useRosterItems(activeTrip.id);
   const morningRiders = useMorningRiderSummary(
@@ -65,6 +67,8 @@ export function ScannerActiveView({ activeTrip }: ScannerActiveViewProps) {
     void rosterStoreActions.hydrateTripRoster(activeTrip.id);
   }, [activeTrip.id, isFocused, rosterItems.length]);
 
+  const dashboard = useTripDashboard(activeTrip);
+  const statLabels = getTripDashboardStatLabels(activeTrip.direction);
   const attendance = useStudentAttendance(activeTrip.id, activeTrip.direction);
   const isScannerMode = attendance.viewMode === "scanner";
   // Se pausa la lectura, no la camara: reabrirla en cada escaneo es lento y parpadea.
@@ -118,8 +122,16 @@ export function ScannerActiveView({ activeTrip }: ScannerActiveViewProps) {
 
   return (
     <SafeAreaView edges={["bottom", "left", "right"]} style={styles.safeArea}>
-      {!isScannerMode ? <WaveHeader title="Registro manual" /> : null}
-      <View style={[styles.screenContainer, isScannerMode ? { paddingTop: insets.top + tokens.spacing.md } : null]}>
+      <WaveHeader title={isScannerMode ? "Escanear" : "Registro manual"}>
+        <HeaderStats
+          items={[
+            { key: "pending", value: dashboard.stats.pendingCount, label: statLabels.pending },
+            { key: "onboard", value: dashboard.stats.onboardCount, label: statLabels.onboard },
+            { key: "third", value: dashboard.stats.completedCount, label: statLabels.third },
+          ]}
+        />
+      </WaveHeader>
+      <View style={styles.screenContainer}>
         <View style={styles.topChrome}>
           <View style={styles.modeBar}>
             {MODE_OPTIONS.map((option) => {
