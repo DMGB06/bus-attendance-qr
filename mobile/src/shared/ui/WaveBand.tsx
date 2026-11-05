@@ -2,13 +2,15 @@ import { useEffect, useRef } from 'react';
 import { Animated, Easing, Image, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
+import { waveBack, waveFront, waveMid } from '@/src/shared/ui/waveImages';
+
 /** 4 ondas de ~195 px: igual que se veia en un celular de 390 px. */
 const CHUNK = 780;
 
 const WAVES = [
-  { source: require('../../../assets/images/wave-back.png'), duration: 26000 },
-  { source: require('../../../assets/images/wave-mid.png'), duration: 19000 },
-  { source: require('../../../assets/images/wave-front.png'), duration: 14000 },
+  { source: waveBack, duration: 26000 },
+  { source: waveMid, duration: 19000 },
+  { source: waveFront, duration: 14000 },
 ] as const;
 
 type WaveBandProps = {
@@ -26,7 +28,7 @@ function Wave({
   duration,
   animated,
 }: {
-  source: number;
+  source: { uri: string };
   color: string;
   width: number;
   height: number;

@@ -84,6 +84,6 @@ Respeta `RosterScreen.tsx`, `RosterStudentRow.tsx` y `roster-filter.utils.ts`:
 
 ## Implementacion
 
-- Olas: siluetas PNG de `scripts/generate-wave-assets.mjs`, pintadas con `tintColor` en `WaveBand`. Evitan agregar `react-native-svg`, que obliga a recompilar el dev client.
+- Olas: siluetas incrustadas como data URI (`src/shared/ui/waveImages.ts`, generadas por `scripts/generate-wave-assets.mjs`), pintadas con `tintColor` en `WaveBand`. Evitan agregar `react-native-svg`, que obliga a recompilar el dev client.
 - Cabecera unica: `WaveHeader`. Cada pantalla la pinta; las pestanas usan `headerShown: false`.
 - Historial del apoderado: pestana propia con los ultimos 7 dias.
