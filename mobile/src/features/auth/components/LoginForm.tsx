@@ -54,6 +54,9 @@ export function LoginForm({
           flex: 1,
           backgroundColor: colors.authSea,
         },
+        waves: {
+          backgroundColor: colors.authSky,
+        },
         scrollInner: {
           flexGrow: 1,
         },
@@ -82,9 +85,6 @@ export function LoginForm({
           ...tokens.typography.body,
           color: colors.authSkyText,
           textAlign: 'center',
-        },
-        waves: {
-          backgroundColor: colors.authSky,
         },
         sea: {
           backgroundColor: colors.authSea,

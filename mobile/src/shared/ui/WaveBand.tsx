@@ -4,6 +4,13 @@ import { useReducedMotion } from 'react-native-reanimated';
 
 import { waveBack, waveFront, waveMid } from '@/src/shared/ui/waveImages';
 
+/**
+ * La banda sobrepasa este alto lo que sigue, con una franja del color del fondo. Con zoom
+ * fraccionario el borde de la banda y el de las imagenes caen entre dos pixeles y dejan ver
+ * las olas de atras como una raya azul: el borde queda dentro del fondo, donde no se nota.
+ */
+const EDGE = 3;
+
 /** 4 ondas de ~195 px: igual que se veia en un celular de 390 px. */
 const CHUNK = 780;
 
@@ -82,7 +89,10 @@ export function WaveBand({ colors, height = 38, animated = false }: WaveBandProp
   const reducedMotion = useReducedMotion();
 
   return (
-    <View style={[styles.band, { height }]} pointerEvents="none">
+    <View
+      style={[styles.band, { height: height + EDGE, marginBottom: -EDGE }]}
+      pointerEvents="none"
+    >
       {WAVES.map((wave, index) => (
         <Wave
           key={index}
@@ -94,6 +104,7 @@ export function WaveBand({ colors, height = 38, animated = false }: WaveBandProp
           animated={animated && !reducedMotion}
         />
       ))}
+      <View style={[styles.edge, { backgroundColor: colors[2] }]} />
     </View>
   );
 }
@@ -106,7 +117,14 @@ const styles = StyleSheet.create({
   wave: {
     position: 'absolute',
     left: 0,
-    bottom: 0,
+    bottom: EDGE,
     flexDirection: 'row',
+  },
+  edge: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: EDGE + 1,
   },
 });
