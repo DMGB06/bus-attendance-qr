@@ -20,7 +20,3 @@ scripts/output/
 __pycache__/
 *.pyc
 .venv/
-# Volcados del esquema base con una llave secreta de Supabase y una URL de webhook adentro: NO publicar.
-# (Rotar esa llave si algun dia llego a un repo.) Se quedan solo en local.
-supabase/migrations/0000_base_public.sql
-supabase/migrations/0001_base_buscontrol.sql
