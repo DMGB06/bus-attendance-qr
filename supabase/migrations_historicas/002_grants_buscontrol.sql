@@ -1,0 +1,11 @@
+GRANT USAGE ON SCHEMA buscontrol TO postgres, anon, authenticated, service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA buscontrol TO postgres, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA buscontrol TO authenticated;
+GRANT SELECT ON ALL TABLES IN SCHEMA buscontrol TO anon;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA buscontrol
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA buscontrol
+  GRANT ALL ON TABLES TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA buscontrol
+  GRANT USAGE ON SEQUENCES TO authenticated;
