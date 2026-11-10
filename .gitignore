@@ -1,9 +1,11 @@
 # Solo publicar mobile — lo demás queda local (/shared = solo carpeta en raíz del repo)
-docs/
+# NO ignorar supabase/ ni docs/web/: las migraciones y la documentación del web
+# deben viajar en el repo junto al código.
+!supabase/
+!docs/web/
 scripts/
 /shared/
 index.html
-supabase/
 
 # Datos sensibles / generados (por si acaso)
 *.csv
@@ -18,3 +20,7 @@ scripts/output/
 __pycache__/
 *.pyc
 .venv/
+# Volcados del esquema base con una llave secreta de Supabase y una URL de webhook adentro: NO publicar.
+# (Rotar esa llave si algun dia llego a un repo.) Se quedan solo en local.
+supabase/migrations/0000_base_public.sql
+supabase/migrations/0001_base_buscontrol.sql
