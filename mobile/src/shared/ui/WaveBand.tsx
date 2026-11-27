@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { Animated, Easing, Image, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
+import { Animated, Dimensions, Easing, Image, StyleSheet, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
 import { waveBack, waveFront, waveMid } from '@/src/shared/ui/waveImages';
@@ -13,6 +13,15 @@ const EDGE = 3;
 
 /** 4 ondas de ~195 px: igual que se veia en un celular de 390 px. */
 const CHUNK = 780;
+
+function subscribeToWindowWidth(onChange: () => void) {
+  const subscription = Dimensions.addEventListener('change', onChange);
+  return () => subscription.remove();
+}
+
+const getWindowWidth = () => Dimensions.get('window').width;
+// El HTML estático y la hidratación inicial usan el mismo ancho antes de medir la ventana.
+const getStaticWidth = () => 0;
 
 const WAVES = [
   { source: waveBack, duration: 26000 },
@@ -85,7 +94,7 @@ function Wave({
 }
 
 export function WaveBand({ colors, height = 38, animated = false }: WaveBandProps) {
-  const { width } = useWindowDimensions();
+  const width = useSyncExternalStore(subscribeToWindowWidth, getWindowWidth, getStaticWidth);
   const reducedMotion = useReducedMotion();
 
   return (
