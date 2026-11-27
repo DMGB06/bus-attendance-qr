@@ -30,19 +30,26 @@ export const requireAdmin = cache(async () => {
   return { supabase };
 });
 
-// ACCIONES que escriben: ademas de lo anterior, getUser() confirma con Auth que la sesion sigue viva (no revocada ni bloqueada).
-export async function requireAdminAction() {
+// getUser() confirma con Auth que la sesión sigue activa para las acciones y descargas.
+export async function verificarAdminAction() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user) return { motivo: "sesion" } as const;
 
   const { data: isAdmin } = await supabase.rpc("is_web_admin");
-  if (isAdmin !== true) redirect("/login");
+  if (isAdmin !== true) return { motivo: "rol" } as const;
 
   const { data } = await supabase.auth.getClaims();
-  if (data?.claims.aal !== "aal2") redirect("/login/mfa");
+  if (data?.claims.aal !== "aal2") return { motivo: "mfa" } as const;
 
-  return { supabase, user };
+  return { motivo: null, supabase, user };
+}
+
+export async function requireAdminAction() {
+  const admin = await verificarAdminAction();
+  if (admin.motivo === "mfa") redirect("/login/mfa");
+  if (admin.motivo !== null) redirect("/login");
+  return { supabase: admin.supabase, user: admin.user };
 }
 
 // La IP es solo informativa. Se prefiere la cabecera que pone la plataforma (no la puede falsear el cliente) y

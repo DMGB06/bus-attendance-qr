@@ -48,6 +48,11 @@ export function describir(f: FilaAuditoria): Descripcion {
   const apoderado = f.guardian_id ? { texto: f.guardian_name ?? "Apoderado eliminado", href: f.guardian_name ? `/apoderados/${f.guardian_id}` : undefined } : null;
 
   switch (f.action) {
+    case "csv_export": {
+      const origen = d.origen === "viajes" ? "Listado de viajes" : d.origen === "viaje" ? "Detalle de viaje" : "Asistencia por alumno";
+      const n = numero(d.count) ?? 0;
+      return { titulo: "Preparó una exportación CSV", etiqueta: "Exportación", sobre: { texto: origen }, detalle: `${n} ${n === 1 ? "fila" : "filas"}` };
+    }
     case "beneficiary_backfill":
       return { titulo, etiqueta, sobre: null, detalle: `${numero(d.inserted) ?? 0} alumnos` };
     case "beneficiary_deactivate":

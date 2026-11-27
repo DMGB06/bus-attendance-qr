@@ -1,0 +1,303 @@
+BEGIN
+CREATE INDEX
+Inicial
+Aggregate  (cost=2005.66..2005.67 rows=1 width=32) (actual time=15.714..15.721 rows=1 loops=1)
+  Buffers: shared hit=240 read=246
+  CTE filtradas
+    ->  Hash Join  (cost=201.06..1602.43 rows=3110 width=28) (actual time=0.520..10.515 rows=7243 loops=1)
+          Hash Cond: (a_1.trip_id = t_1.id)
+          Buffers: shared hit=28 read=246
+          ->  Index Only Scan using idx_bus_attendance_incidents_trial on bus_attendance_records a_1  (cost=0.41..1336.01 rows=25040 width=48) (actual time=0.044..6.659 rows=26012 loops=1)
+                Heap Fetches: 11
+                Buffers: shared hit=2 read=246
+          ->  Hash  (cost=185.12..185.12 rows=1242 width=20) (actual time=0.459..0.460 rows=1242 loops=1)
+                Buckets: 2048  Batches: 1  Memory Usage: 80kB
+                Buffers: shared hit=26
+                ->  Index Only Scan using idx_bus_trips_admin_date on bus_trips t_1  (cost=0.29..185.12 rows=1242 width=20) (actual time=0.029..0.236 rows=1242 loops=1)
+                      Index Cond: ((trip_date >= '2026-11-21'::date) AND (trip_date <= '2026-11-27'::date))
+                      Heap Fetches: 53
+                      Buffers: shared hit=26
+  InitPlan 2
+    ->  Aggregate  (cost=69.98..69.99 rows=1 width=8) (actual time=0.868..0.868 rows=1 loops=1)
+          ->  CTE Scan on filtradas filtradas_1  (cost=0.00..62.20 rows=3110 width=0) (actual time=0.001..0.487 rows=7243 loops=1)
+  ->  Nested Loop Left Join  (cost=146.08..332.85 rows=20 width=257) (actual time=13.913..14.344 rows=20 loops=1)
+        Join Filter: (an.id = a.voided_by)
+        Rows Removed by Join Filter: 120
+        Buffers: shared hit=240 read=246
+        ->  Nested Loop Left Join  (cost=146.08..329.97 rows=20 width=258) (actual time=13.899..14.307 rows=20 loops=1)
+              Join Filter: (op.id = COALESCE(a.scanned_by, a.operator_id))
+              Rows Removed by Join Filter: 100
+              Buffers: shared hit=239 read=246
+              ->  Nested Loop Left Join  (cost=146.08..327.10 rows=20 width=275) (actual time=13.876..14.260 rows=20 loops=1)
+                    Buffers: shared hit=238 read=246
+                    ->  Nested Loop Left Join  (cost=145.79..320.88 rows=20 width=252) (actual time=13.863..14.162 rows=20 loops=1)
+                          Buffers: shared hit=178 read=246
+                          ->  Nested Loop  (cost=145.66..319.96 rows=20 width=204) (actual time=13.836..14.113 rows=20 loops=1)
+                                Buffers: shared hit=174 read=246
+                                ->  Nested Loop  (cost=145.37..313.71 rows=20 width=171) (actual time=13.813..13.981 rows=20 loops=1)
+                                      Buffers: shared hit=114 read=246
+                                      ->  Limit  (cost=144.96..145.01 rows=20 width=28) (actual time=13.789..13.796 rows=20 loops=1)
+                                            Buffers: shared hit=34 read=246
+                                            ->  Sort  (cost=144.96..152.73 rows=3110 width=28) (actual time=13.788..13.792 rows=20 loops=1)
+                                                  Sort Key: filtradas.trip_date DESC, filtradas.incident_at DESC NULLS LAST, filtradas.id
+                                                  Sort Method: top-N heapsort  Memory: 27kB
+                                                  Buffers: shared hit=34 read=246
+                                                  ->  CTE Scan on filtradas  (cost=0.00..62.20 rows=3110 width=28) (actual time=0.522..12.810 rows=7243 loops=1)
+                                                        Buffers: shared hit=28 read=246
+                                      ->  Index Scan using bus_attendance_records_pkey on bus_attendance_records a  (cost=0.42..8.44 rows=1 width=159) (actual time=0.008..0.008 rows=1 loops=20)
+                                            Index Cond: (id = filtradas.id)
+                                            Buffers: shared hit=80
+                                ->  Index Scan using bus_trips_pkey on bus_trips t  (cost=0.29..0.31 rows=1 width=49) (actual time=0.006..0.006 rows=1 loops=20)
+                                      Index Cond: (id = a.trip_id)
+                                      Buffers: shared hit=60
+                          ->  Memoize  (cost=0.14..0.15 rows=1 width=80) (actual time=0.002..0.002 rows=1 loops=20)
+                                Cache Key: t.bus_id
+                                Cache Mode: logical
+                                Hits: 18  Misses: 2  Evictions: 0  Overflows: 0  Memory Usage: 1kB
+                                Buffers: shared hit=4
+                                ->  Index Scan using bus_units_pkey on bus_units b  (cost=0.12..0.14 rows=1 width=80) (actual time=0.012..0.012 rows=1 loops=2)
+                                      Index Cond: (id = t.bus_id)
+                                      Buffers: shared hit=4
+                    ->  Index Scan using social_bus_escolar_pkey on social_bus_escolar s  (cost=0.29..0.31 rows=1 width=39) (actual time=0.004..0.004 rows=1 loops=20)
+                          Index Cond: (id = a.student_id)
+                          Buffers: shared hit=60
+              ->  Materialize  (cost=0.00..1.09 rows=6 width=31) (actual time=0.001..0.001 rows=6 loops=20)
+                    Buffers: shared hit=1
+                    ->  Seq Scan on app_profiles op  (cost=0.00..1.06 rows=6 width=31) (actual time=0.016..0.016 rows=6 loops=1)
+                          Buffers: shared hit=1
+        ->  Materialize  (cost=0.00..1.09 rows=6 width=31) (actual time=0.000..0.001 rows=6 loops=20)
+              Buffers: shared hit=1
+              ->  Seq Scan on app_profiles an  (cost=0.00..1.06 rows=6 width=31) (actual time=0.003..0.004 rows=6 loops=1)
+                    Buffers: shared hit=1
+Planning:
+  Buffers: shared hit=536 read=1
+Planning Time: 4.438 ms
+Execution Time: 16.050 ms
+EXPLAIN
+Anulaciones
+Aggregate  (cost=1749.44..1749.45 rows=1 width=32) (actual time=9.557..9.566 rows=1 loops=1)
+  Buffers: shared hit=477
+  CTE filtradas
+    ->  Hash Join  (cost=201.06..1542.30 rows=267 width=28) (actual time=0.437..5.077 rows=5467 loops=1)
+          Hash Cond: (a_1.trip_id = t_1.id)
+          Buffers: shared hit=274
+          ->  Index Only Scan using idx_bus_attendance_incidents_trial on bus_attendance_records a_1  (cost=0.41..1336.01 rows=2146 width=48) (actual time=0.017..3.264 rows=8886 loops=1)
+                Filter: (voided_at IS NOT NULL)
+                Rows Removed by Filter: 17126
+                Heap Fetches: 11
+                Buffers: shared hit=248
+          ->  Hash  (cost=185.12..185.12 rows=1242 width=20) (actual time=0.413..0.414 rows=1242 loops=1)
+                Buckets: 2048  Batches: 1  Memory Usage: 80kB
+                Buffers: shared hit=26
+                ->  Index Only Scan using idx_bus_trips_admin_date on bus_trips t_1  (cost=0.29..185.12 rows=1242 width=20) (actual time=0.014..0.220 rows=1242 loops=1)
+                      Index Cond: ((trip_date >= '2026-11-21'::date) AND (trip_date <= '2026-11-27'::date))
+                      Heap Fetches: 53
+                      Buffers: shared hit=26
+  InitPlan 2
+    ->  Aggregate  (cost=6.01..6.02 rows=1 width=8) (actual time=0.851..0.851 rows=1 loops=1)
+          ->  CTE Scan on filtradas filtradas_1  (cost=0.00..5.34 rows=267 width=0) (actual time=0.001..0.432 rows=5467 loops=1)
+  ->  Nested Loop Left Join  (cost=13.43..200.73 rows=20 width=257) (actual time=7.762..8.054 rows=20 loops=1)
+        Join Filter: (an.id = a.voided_by)
+        Rows Removed by Join Filter: 120
+        Buffers: shared hit=477
+        ->  Nested Loop Left Join  (cost=13.43..197.85 rows=20 width=258) (actual time=7.753..8.005 rows=20 loops=1)
+              Join Filter: (op.id = COALESCE(a.scanned_by, a.operator_id))
+              Rows Removed by Join Filter: 100
+              Buffers: shared hit=476
+              ->  Nested Loop Left Join  (cost=13.43..194.98 rows=20 width=275) (actual time=7.740..7.967 rows=20 loops=1)
+                    Buffers: shared hit=475
+                    ->  Nested Loop Left Join  (cost=13.15..188.76 rows=20 width=252) (actual time=7.706..7.880 rows=20 loops=1)
+                          Join Filter: (b.id = t.bus_id)
+                          Rows Removed by Join Filter: 5
+                          Buffers: shared hit=415
+                          ->  Nested Loop  (cost=13.15..187.45 rows=20 width=204) (actual time=7.645..7.803 rows=20 loops=1)
+                                Buffers: shared hit=414
+                                ->  Nested Loop  (cost=12.86..181.19 rows=20 width=171) (actual time=7.607..7.713 rows=20 loops=1)
+                                      Buffers: shared hit=354
+                                      ->  Limit  (cost=12.44..12.49 rows=20 width=28) (actual time=7.575..7.583 rows=20 loops=1)
+                                            Buffers: shared hit=274
+                                            ->  Sort  (cost=12.44..13.11 rows=267 width=28) (actual time=7.573..7.578 rows=20 loops=1)
+                                                  Sort Key: filtradas.trip_date DESC, filtradas.incident_at DESC NULLS LAST, filtradas.id
+                                                  Sort Method: top-N heapsort  Memory: 27kB
+                                                  Buffers: shared hit=274
+                                                  ->  CTE Scan on filtradas  (cost=0.00..5.34 rows=267 width=28) (actual time=0.439..6.937 rows=5467 loops=1)
+                                                        Buffers: shared hit=274
+                                      ->  Index Scan using bus_attendance_records_pkey on bus_attendance_records a  (cost=0.42..8.44 rows=1 width=159) (actual time=0.005..0.005 rows=1 loops=20)
+                                            Index Cond: (id = filtradas.id)
+                                            Buffers: shared hit=80
+                                ->  Index Scan using bus_trips_pkey on bus_trips t  (cost=0.29..0.31 rows=1 width=49) (actual time=0.003..0.003 rows=1 loops=20)
+                                      Index Cond: (id = a.trip_id)
+                                      Buffers: shared hit=60
+                          ->  Materialize  (cost=0.00..1.00 rows=1 width=80) (actual time=0.003..0.003 rows=1 loops=20)
+                                Buffers: shared hit=1
+                                ->  Seq Scan on bus_units b  (cost=0.00..1.00 rows=1 width=80) (actual time=0.055..0.056 rows=2 loops=1)
+                                      Buffers: shared hit=1
+                    ->  Index Scan using social_bus_escolar_pkey on social_bus_escolar s  (cost=0.29..0.31 rows=1 width=39) (actual time=0.003..0.003 rows=1 loops=20)
+                          Index Cond: (id = a.student_id)
+                          Buffers: shared hit=60
+              ->  Materialize  (cost=0.00..1.09 rows=6 width=31) (actual time=0.000..0.001 rows=6 loops=20)
+                    Buffers: shared hit=1
+                    ->  Seq Scan on app_profiles op  (cost=0.00..1.06 rows=6 width=31) (actual time=0.006..0.007 rows=6 loops=1)
+                          Buffers: shared hit=1
+        ->  Materialize  (cost=0.00..1.09 rows=6 width=31) (actual time=0.000..0.001 rows=6 loops=20)
+              Buffers: shared hit=1
+              ->  Seq Scan on app_profiles an  (cost=0.00..1.06 rows=6 width=31) (actual time=0.003..0.004 rows=6 loops=1)
+                    Buffers: shared hit=1
+Planning:
+  Buffers: shared hit=58
+Planning Time: 2.372 ms
+Execution Time: 9.734 ms
+EXPLAIN
+Combinada
+Aggregate  (cost=1251.05..1251.07 rows=1 width=32) (actual time=1.889..1.894 rows=1 loops=1)
+  Buffers: shared hit=1216 read=1
+  CTE filtradas
+    ->  Nested Loop  (cost=169.17..1029.99 rows=474 width=28) (actual time=0.182..1.134 rows=135 loops=1)
+          Buffers: shared hit=1012 read=1
+          ->  Bitmap Heap Scan on bus_trips t_1  (cost=168.76..337.60 rows=207 width=20) (actual time=0.150..0.500 rows=295 loops=1)
+                Recheck Cond: ((trip_date >= '2026-11-21'::date) AND (trip_date <= '2026-11-27'::date))
+                Filter: ((bus_id = '46000000-0000-0000-0000-000000000001'::uuid) AND (turn_type = 'mañana'::text))
+                Rows Removed by Filter: 947
+                Heap Blocks: exact=114
+                Buffers: shared hit=125
+                ->  Bitmap Index Scan on idx_bus_trips_admin_date  (cost=0.00..168.70 rows=1242 width=0) (actual time=0.124..0.125 rows=1242 loops=1)
+                      Index Cond: ((trip_date >= '2026-11-21'::date) AND (trip_date <= '2026-11-27'::date))
+                      Buffers: shared hit=11
+          ->  Index Only Scan using idx_bus_attendance_incidents_trial on bus_attendance_records a_1  (cost=0.41..3.32 rows=2 width=48) (actual time=0.002..0.002 rows=0 loops=295)
+                Index Cond: (trip_id = t_1.id)
+                Filter: (voided_at IS NULL)
+                Rows Removed by Filter: 0
+                Heap Fetches: 0
+                Buffers: shared hit=887 read=1
+  InitPlan 2
+    ->  Aggregate  (cost=10.67..10.68 rows=1 width=8) (actual time=0.020..0.020 rows=1 loops=1)
+          ->  CTE Scan on filtradas filtradas_1  (cost=0.00..9.48 rows=474 width=0) (actual time=0.000..0.009 rows=135 loops=1)
+  ->  Nested Loop Left Join  (cost=23.22..209.98 rows=20 width=257) (actual time=1.253..1.571 rows=20 loops=1)
+        Join Filter: (an.id = a.voided_by)
+        Rows Removed by Join Filter: 120
+        Buffers: shared hit=1216 read=1
+        ->  Nested Loop Left Join  (cost=23.22..207.11 rows=20 width=258) (actual time=1.247..1.543 rows=20 loops=1)
+              Join Filter: (op.id = COALESCE(a.scanned_by, a.operator_id))
+              Rows Removed by Join Filter: 100
+              Buffers: shared hit=1215 read=1
+              ->  Nested Loop Left Join  (cost=23.22..204.23 rows=20 width=275) (actual time=1.232..1.504 rows=20 loops=1)
+                    Buffers: shared hit=1214 read=1
+                    ->  Nested Loop Left Join  (cost=22.93..198.01 rows=20 width=252) (actual time=1.226..1.447 rows=20 loops=1)
+                          Buffers: shared hit=1154 read=1
+                          ->  Nested Loop  (cost=22.80..197.10 rows=20 width=204) (actual time=1.216..1.422 rows=20 loops=1)
+                                Buffers: shared hit=1152 read=1
+                                ->  Nested Loop  (cost=22.51..190.84 rows=20 width=171) (actual time=1.209..1.362 rows=20 loops=1)
+                                      Buffers: shared hit=1092 read=1
+                                      ->  Limit  (cost=22.09..22.14 rows=20 width=28) (actual time=1.193..1.198 rows=20 loops=1)
+                                            Buffers: shared hit=1012 read=1
+                                            ->  Sort  (cost=22.09..23.28 rows=474 width=28) (actual time=1.192..1.194 rows=20 loops=1)
+                                                  Sort Key: filtradas.trip_date DESC, filtradas.incident_at DESC NULLS LAST, filtradas.id
+                                                  Sort Method: top-N heapsort  Memory: 27kB
+                                                  Buffers: shared hit=1012 read=1
+                                                  ->  CTE Scan on filtradas  (cost=0.00..9.48 rows=474 width=28) (actual time=0.184..1.167 rows=135 loops=1)
+                                                        Buffers: shared hit=1012 read=1
+                                      ->  Index Scan using bus_attendance_records_pkey on bus_attendance_records a  (cost=0.42..8.44 rows=1 width=159) (actual time=0.007..0.007 rows=1 loops=20)
+                                            Index Cond: (id = filtradas.id)
+                                            Buffers: shared hit=80
+                                ->  Index Scan using bus_trips_pkey on bus_trips t  (cost=0.29..0.31 rows=1 width=49) (actual time=0.002..0.002 rows=1 loops=20)
+                                      Index Cond: (id = a.trip_id)
+                                      Buffers: shared hit=60
+                          ->  Memoize  (cost=0.14..0.15 rows=1 width=80) (actual time=0.001..0.001 rows=1 loops=20)
+                                Cache Key: t.bus_id
+                                Cache Mode: logical
+                                Hits: 19  Misses: 1  Evictions: 0  Overflows: 0  Memory Usage: 1kB
+                                Buffers: shared hit=2
+                                ->  Index Scan using bus_units_pkey on bus_units b  (cost=0.12..0.14 rows=1 width=80) (actual time=0.005..0.005 rows=1 loops=1)
+                                      Index Cond: (id = t.bus_id)
+                                      Buffers: shared hit=2
+                    ->  Index Scan using social_bus_escolar_pkey on social_bus_escolar s  (cost=0.29..0.31 rows=1 width=39) (actual time=0.002..0.002 rows=1 loops=20)
+                          Index Cond: (id = a.student_id)
+                          Buffers: shared hit=60
+              ->  Materialize  (cost=0.00..1.09 rows=6 width=31) (actual time=0.001..0.001 rows=6 loops=20)
+                    Buffers: shared hit=1
+                    ->  Seq Scan on app_profiles op  (cost=0.00..1.06 rows=6 width=31) (actual time=0.009..0.010 rows=6 loops=1)
+                          Buffers: shared hit=1
+        ->  Materialize  (cost=0.00..1.09 rows=6 width=31) (actual time=0.000..0.001 rows=6 loops=20)
+              Buffers: shared hit=1
+              ->  Seq Scan on app_profiles an  (cost=0.00..1.06 rows=6 width=31) (actual time=0.002..0.003 rows=6 loops=1)
+                    Buffers: shared hit=1
+Planning:
+  Buffers: shared hit=58
+Planning Time: 2.751 ms
+Execution Time: 2.006 ms
+EXPLAIN
+Página profunda
+Aggregate  (cost=2108.28..2108.29 rows=1 width=32) (actual time=14.916..14.925 rows=1 loops=1)
+  Buffers: shared hit=478
+  CTE filtradas
+    ->  Hash Join  (cost=201.06..1602.43 rows=3110 width=28) (actual time=0.659..7.456 rows=7243 loops=1)
+          Hash Cond: (a_1.trip_id = t_1.id)
+          Buffers: shared hit=274
+          ->  Index Only Scan using idx_bus_attendance_incidents_trial on bus_attendance_records a_1  (cost=0.41..1336.01 rows=25040 width=48) (actual time=0.024..3.574 rows=26012 loops=1)
+                Heap Fetches: 11
+                Buffers: shared hit=248
+          ->  Hash  (cost=185.12..185.12 rows=1242 width=20) (actual time=0.624..0.625 rows=1242 loops=1)
+                Buckets: 2048  Batches: 1  Memory Usage: 80kB
+                Buffers: shared hit=26
+                ->  Index Only Scan using idx_bus_trips_admin_date on bus_trips t_1  (cost=0.29..185.12 rows=1242 width=20) (actual time=0.023..0.365 rows=1242 loops=1)
+                      Index Cond: ((trip_date >= '2026-11-21'::date) AND (trip_date <= '2026-11-27'::date))
+                      Heap Fetches: 53
+                      Buffers: shared hit=26
+  InitPlan 2
+    ->  Aggregate  (cost=69.98..69.99 rows=1 width=8) (actual time=0.901..0.901 rows=1 loops=1)
+          ->  CTE Scan on filtradas filtradas_1  (cost=0.00..62.20 rows=3110 width=0) (actual time=0.001..0.521 rows=7243 loops=1)
+  ->  Nested Loop Left Join  (cost=248.69..435.46 rows=20 width=257) (actual time=13.300..13.592 rows=20 loops=1)
+        Join Filter: (an.id = a.voided_by)
+        Rows Removed by Join Filter: 120
+        Buffers: shared hit=478
+        ->  Nested Loop Left Join  (cost=248.69..432.59 rows=20 width=258) (actual time=13.293..13.562 rows=20 loops=1)
+              Join Filter: (op.id = COALESCE(a.scanned_by, a.operator_id))
+              Rows Removed by Join Filter: 100
+              Buffers: shared hit=477
+              ->  Nested Loop Left Join  (cost=248.69..429.71 rows=20 width=275) (actual time=13.273..13.520 rows=20 loops=1)
+                    Buffers: shared hit=476
+                    ->  Nested Loop Left Join  (cost=248.41..423.49 rows=20 width=252) (actual time=13.262..13.390 rows=20 loops=1)
+                          Buffers: shared hit=416
+                          ->  Nested Loop  (cost=248.27..422.58 rows=20 width=204) (actual time=13.242..13.355 rows=20 loops=1)
+                                Buffers: shared hit=414
+                                ->  Nested Loop  (cost=247.99..416.32 rows=20 width=171) (actual time=13.233..13.311 rows=20 loops=1)
+                                      Buffers: shared hit=354
+                                      ->  Limit  (cost=247.57..247.62 rows=20 width=28) (actual time=13.201..13.208 rows=20 loops=1)
+                                            Buffers: shared hit=274
+                                            ->  Sort  (cost=242.62..250.40 rows=3110 width=28) (actual time=12.961..13.056 rows=2000 loops=1)
+                                                  Sort Key: filtradas.trip_date DESC, filtradas.incident_at DESC NULLS LAST, filtradas.id
+                                                  Sort Method: top-N heapsort  Memory: 335kB
+                                                  Buffers: shared hit=274
+                                                  ->  CTE Scan on filtradas  (cost=0.00..62.20 rows=3110 width=28) (actual time=0.662..9.418 rows=7243 loops=1)
+                                                        Buffers: shared hit=274
+                                      ->  Index Scan using bus_attendance_records_pkey on bus_attendance_records a  (cost=0.42..8.44 rows=1 width=159) (actual time=0.004..0.004 rows=1 loops=20)
+                                            Index Cond: (id = filtradas.id)
+                                            Buffers: shared hit=80
+                                ->  Index Scan using bus_trips_pkey on bus_trips t  (cost=0.29..0.31 rows=1 width=49) (actual time=0.001..0.001 rows=1 loops=20)
+                                      Index Cond: (id = a.trip_id)
+                                      Buffers: shared hit=60
+                          ->  Memoize  (cost=0.14..0.15 rows=1 width=80) (actual time=0.001..0.001 rows=1 loops=20)
+                                Cache Key: t.bus_id
+                                Cache Mode: logical
+                                Hits: 19  Misses: 1  Evictions: 0  Overflows: 0  Memory Usage: 1kB
+                                Buffers: shared hit=2
+                                ->  Index Scan using bus_units_pkey on bus_units b  (cost=0.12..0.14 rows=1 width=80) (actual time=0.013..0.014 rows=1 loops=1)
+                                      Index Cond: (id = t.bus_id)
+                                      Buffers: shared hit=2
+                    ->  Index Scan using social_bus_escolar_pkey on social_bus_escolar s  (cost=0.29..0.31 rows=1 width=39) (actual time=0.006..0.006 rows=1 loops=20)
+                          Index Cond: (id = a.student_id)
+                          Buffers: shared hit=60
+              ->  Materialize  (cost=0.00..1.09 rows=6 width=31) (actual time=0.001..0.001 rows=6 loops=20)
+                    Buffers: shared hit=1
+                    ->  Seq Scan on app_profiles op  (cost=0.00..1.06 rows=6 width=31) (actual time=0.013..0.013 rows=6 loops=1)
+                          Buffers: shared hit=1
+        ->  Materialize  (cost=0.00..1.09 rows=6 width=31) (actual time=0.000..0.001 rows=6 loops=20)
+              Buffers: shared hit=1
+              ->  Seq Scan on app_profiles an  (cost=0.00..1.06 rows=6 width=31) (actual time=0.002..0.003 rows=6 loops=1)
+                    Buffers: shared hit=1
+Planning:
+  Buffers: shared hit=58
+Planning Time: 2.727 ms
+Execution Time: 15.197 ms
+EXPLAIN
+ROLLBACK

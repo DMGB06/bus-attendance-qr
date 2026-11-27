@@ -30,6 +30,18 @@ const PATHS = {
       <path d="M14 14h2.5M20.5 14v2.5M14 17.5v3M17.5 17.5h3v3" />
     </>
   ),
+  viajes: (
+    <>
+      <rect x="4.5" y="3.5" width="15" height="15" rx="3" />
+      <path d="M4.5 11h15M7 18.5v2M17 18.5v2M8.5 15h.5M15 15h.5" />
+    </>
+  ),
+  incidencias: (
+    <>
+      <path d="M10.4 4.7a1.8 1.8 0 0 1 3.2 0l7.1 12.9A1.8 1.8 0 0 1 19.1 20H4.9a1.8 1.8 0 0 1-1.6-2.4l7.1-12.9Z" />
+      <path d="M12 9v4.2M12 16.5h.01" />
+    </>
+  ),
   auditoria: (
     <>
       <rect x="5" y="4.5" width="14" height="16" rx="2.4" />
