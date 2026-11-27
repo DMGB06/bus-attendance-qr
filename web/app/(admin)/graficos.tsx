@@ -1,4 +1,6 @@
-import type { Resumen } from "@/lib/schemas/dashboard";
+import Link from "next/link";
+import type { Resumen, ResumenOperativo } from "@/lib/schemas/dashboard";
+import { fechaViaje } from "@/lib/schemas/viajes";
 
 const MESES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 const nombreMes = (m: string) => MESES[Number(m.slice(5)) - 1];
@@ -13,6 +15,56 @@ const ESTADOS = [
 const R = 60;
 const C = 2 * Math.PI * R;
 const GAP = 2;
+
+export function BarrasViajes({ dias, href }: { dias: ResumenOperativo["dias"]; href: string }) {
+  const viajes = dias.map((dia) => ({ ...dia, total: dia.en_curso + dia.cerrados }));
+  const max = Math.max(...viajes.map((dia) => dia.total));
+  const base = 130;
+
+  return (
+    <section className="ad-card ad-graf" aria-labelledby="g-viajes">
+      <div>
+        <h3 id="g-viajes" className="ad-h3">Viajes por día</h3>
+        <p className="ad-note">{fechaViaje(viajes[0].fecha)} – {fechaViaje(viajes[6].fecha)}</p>
+      </div>
+      {max === 0 && <p className="ad-note">No hay viajes registrados en estos siete días.</p>}
+      <svg viewBox="0 0 420 160" width="100%" className="ad-barras" role="img" aria-labelledby="g-viajes" aria-describedby="g-viajes-desc">
+        <desc id="g-viajes-desc">Totales de viajes en curso y cerrados. {viajes.map(({ fecha, total }) => `${fechaViaje(fecha)}, ${total}`).join("; ")}.</desc>
+        <line x1="8" x2="412" y1={base} y2={base} stroke="#9db6cc" />
+        {viajes.map(({ fecha, total }, i) => {
+          const x = 30 + i * 60;
+          const altura = max ? total / max * 100 : 0;
+          const y = base - altura;
+          return (
+            <g key={fecha} textAnchor="middle" fontSize="14">
+              {total > 0 && <rect x={x - 17} y={y} width="34" height={altura} rx="3" fill="#2478c9"><title>{`${fechaViaje(fecha)}, ${total} viajes`}</title></rect>}
+              <text x={x} y={y - 6} fontWeight="700" fill="#0f2b47">{total.toLocaleString("es-PE", { notation: "compact" })}</text>
+              <text x={x} y="150" fill="#4d6a84">{fechaViaje(fecha).slice(0, 5)}</text>
+            </g>
+          );
+        })}
+      </svg>
+      <details className="ad-tabla-vista ad-tabla-viajes">
+        <summary>Ver viajes como tabla</summary>
+        <table className="ad-tbl">
+          <caption className="ad-sr">Viajes por día</caption>
+          <thead><tr><th scope="col">Fecha</th><th scope="col" className="ad-right">En curso</th><th scope="col" className="ad-right">Cerrados</th><th scope="col" className="ad-right">Total</th></tr></thead>
+          <tbody>
+            {viajes.map(({ fecha, en_curso, cerrados, total }) => (
+              <tr key={fecha}>
+                <th scope="row"><time dateTime={fecha}>{fechaViaje(fecha)}</time></th>
+                <td className="ad-right ad-num">{en_curso}</td>
+                <td className="ad-right ad-num">{cerrados}</td>
+                <td className="ad-right ad-num">{total}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </details>
+      <div><Link className="ad-btn outline" href={href}>Ver viajes de estos siete días</Link></div>
+    </section>
+  );
+}
 
 // Cada gráfico lleva su valor al pasar el cursor (<title>) y una tabla para quien no distingue colores.
 export function DonaCarnets({ carnets, total }: { carnets: Resumen["carnets"]; total: number }) {

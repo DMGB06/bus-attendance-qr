@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
-import { obtenerResumen } from "./dashboard-queries";
+import { obtenerOperacion, obtenerResumen } from "./dashboard-queries";
 import { BarraApoderados, BarrasMeses, DonaCarnets } from "./graficos";
+import { OperacionTransporte } from "./operacion-transporte";
 
 const mesActual = () => {
   const t = new Intl.DateTimeFormat("es-PE", { timeZone: "America/Lima", month: "long", year: "numeric" }).format(new Date());
@@ -34,7 +35,7 @@ function Pendiente({ n, ok, aviso, detalle, href }: { n: number; ok: string; avi
 
 export default async function Dashboard() {
   const { supabase } = await requireAdmin();
-  const r = await obtenerResumen(supabase);
+  const [r, operacion] = await Promise.all([obtenerResumen(supabase), obtenerOperacion(supabase)]);
   const activos = r.beneficiarios_activos;
   const c = r.carnets;
   const sinCarnetVigente = c.vencido + c.perdido + c.sin_carnet;
@@ -84,7 +85,8 @@ export default async function Dashboard() {
         </section>
       </div>
 
-      <p className="ad-note">Los números se calculan al abrir la página. Los alumnos de baja no se cuentan.</p>
+      <p className="ad-note">El resumen de gestión se calcula al abrir la página. El estado de los carnets y los pendientes corresponden a los alumnos activos.</p>
+      <OperacionTransporte resumen={operacion} />
     </div>
   );
 }

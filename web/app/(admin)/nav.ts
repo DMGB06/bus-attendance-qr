@@ -5,6 +5,8 @@ export const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: "/alumnos", label: "Alumnos", icon: "alumnos" },
   { href: "/apoderados", label: "Apoderados", icon: "apoderados" },
   { href: "/qr", label: "Carnets QR", icon: "qr" },
+  { href: "/viajes", label: "Viajes", icon: "viajes" },
+  { href: "/incidencias", label: "Incidencias", icon: "incidencias" },
   { href: "/auditoria", label: "Auditoría", icon: "auditoria" },
 ];
 

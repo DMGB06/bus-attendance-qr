@@ -51,6 +51,11 @@ Reemplaza el flujo de arriba para pruebas. Las migraciones 001-024 ya estan apli
 | `migrations/0000-0002_*` | Volcado del esquema real de produccion (`public`, `buscontrol`), sin datos. Dividido en 3 por la dependencia circular entre schemas |
 | `migrations/025_*` | Rol `administrador` |
 | `pending/` | 026 a 040 (más `033_backfill_beneficiaries.sql`, `039_indexes_padron.sql`) y sus rollbacks (`027_rollback.sql` a `040_rollback.sql`, `039_indexes_rollback.sql`, `039_indexes_padron_rollback.sql`): se aplican a mano (la 025 va sola) |
+| Viajes web | `041_admin_trips.sql` agrega las consultas de lectura. `042_admin_trips_indexes.sql` agrega sus índices concurrentes. Aplicar ambas antes de publicar el módulo web |
+| Asistencia por alumno | `043_admin_student_attendance.sql` agrega el historial de lectura para administradores con MFA. `044_admin_student_attendance_index.sql` indexa los eventos por alumno. Aplicar ambas antes de publicar la pestaña |
+| Exportación web | `045_admin_exports.sql` comparte los filtros SQL de las consultas del panel y agrega la preparación del CSV con auditoría. Aplicar después de las migraciones de Viajes y Asistencia |
+| Incidencias web | `046_admin_incidents.sql` agrega la consulta de ausencias vigentes y anulaciones. `047_admin_incidents_index.sql` agrega el índice parcial medido para esa consulta |
+| Dashboard operativo web | `048_admin_dashboard_operativo.sql` agrega los indicadores de hoy y la serie semanal de Lima. Requiere administrador activo con MFA y aprovecha los índices de la 042 |
 | `functions/guardian-account/` | Edge Function de cuentas de padre (README propio; se prueba con `node supabase/functions/guardian-account/test.mjs`) |
 | `tests/` | `etapa1_roles.sql`, `etapa1_extra.sql`, `etapa2_beneficiarios.sql`, `etapa2_apoderados.sql`, `etapa4_cuentas_padre.sql`, `etapa4_ocultar_bajas.sql`, `etapa4_lista_alumnos.sql`, `etapa4_lista_apoderados.sql`, `etapa4_carnets.sql`, `etapa4_dashboard.sql`, `etapa4_auditoria.sql`, `etapa4_roles.sql` (matriz de roles) y `check_duplicados_apoderados.sql` (solo lectura, para producción) |
 
@@ -73,6 +78,14 @@ Pasos: `supabase start` (aplica 0000-0002 y 025) y luego:
     docker exec -i supabase_db_BusControl psql -U postgres -v ON_ERROR_STOP=1 < supabase/pending/039_indexes.sql
     docker exec -i supabase_db_BusControl psql -U postgres -v ON_ERROR_STOP=1 < supabase/pending/039_indexes_padron.sql
     docker exec -i supabase_db_BusControl psql -U postgres -v ON_ERROR_STOP=1 < supabase/pending/040_restrict_guardian_writes.sql
+    docker exec -i supabase_db_BusControl psql -U postgres -v ON_ERROR_STOP=1 < supabase/pending/041_admin_trips.sql
+    docker exec -i supabase_db_BusControl psql -U postgres -v ON_ERROR_STOP=1 < supabase/pending/042_admin_trips_indexes.sql
+    docker exec -i supabase_db_BusControl psql -U postgres -v ON_ERROR_STOP=1 < supabase/pending/043_admin_student_attendance.sql
+    docker exec -i supabase_db_BusControl psql -U postgres -v ON_ERROR_STOP=1 < supabase/pending/044_admin_student_attendance_index.sql
+    docker exec -i supabase_db_BusControl psql -U postgres -v ON_ERROR_STOP=1 < supabase/pending/045_admin_exports.sql
+    docker exec -i supabase_db_BusControl psql -U postgres -v ON_ERROR_STOP=1 < supabase/pending/046_admin_incidents.sql
+    docker exec -i supabase_db_BusControl psql -U postgres -v ON_ERROR_STOP=1 < supabase/pending/047_admin_incidents_index.sql
+    docker exec -i supabase_db_BusControl psql -U postgres -v ON_ERROR_STOP=1 < supabase/pending/048_admin_dashboard_operativo.sql
     docker exec -i supabase_db_BusControl psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/etapa1_roles.sql
     docker exec -i supabase_db_BusControl psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/etapa1_extra.sql
     docker exec -i supabase_db_BusControl psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/etapa2_beneficiarios.sql
@@ -85,7 +98,19 @@ Pasos: `supabase start` (aplica 0000-0002 y 025) y luego:
     docker exec -i supabase_db_BusControl psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/etapa4_dashboard.sql
     docker exec -i supabase_db_BusControl psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/etapa4_auditoria.sql
     docker exec -i supabase_db_BusControl psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/etapa4_roles.sql
+    docker exec -i supabase_db_BusControl psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/etapa7_viajes.sql
+    docker exec -i supabase_db_BusControl psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/etapa11_dashboard_operativo.sql
 
-**NUNCA correr `supabase db push` contra produccion**: `migrations/` contiene el esquema base, que en produccion ya existe. En produccion se aplican a mano solo 025 a 040, en ese orden (la carga inicial `033_backfill_beneficiaries.sql` SIEMPRE antes de `033_hide_non_beneficiaries.sql`, y la 033 requiere aviso a TI SIGEM porque toca `public.social_bus_escolar`) y cada una en su ejecucion (previo respaldo y aviso a TI SIGEM por la 027). `039_indexes_padron.sql` toca la tabla compartida del padron (solo agrega indices, con CONCURRENTLY): tambien requiere aviso a TI SIGEM. La 040 requiere confirmar antes que ningun coordinador gestione apoderados desde la app movil.
+**NUNCA correr `supabase db push` contra produccion**: `migrations/` contiene el esquema base, que en produccion ya existe. Para la primera entrega web se aplican a mano 025 a 040, en ese orden (la carga inicial `033_backfill_beneficiaries.sql` SIEMPRE antes de `033_hide_non_beneficiaries.sql`, y la 033 requiere aviso a TI SIGEM porque toca `public.social_bus_escolar`) y cada una en su ejecucion (previo respaldo y aviso a TI SIGEM por la 027). `039_indexes_padron.sql` toca la tabla compartida del padron (solo agrega indices, con CONCURRENTLY): tambien requiere aviso a TI SIGEM. La 040 requiere confirmar antes que ningun coordinador gestione apoderados desde la app movil.
 
 Las migraciones 021-024 existen pero no estan en la lista de arriba.
+
+Para la entrega de Viajes, aplicar manualmente la 041 y luego la 042 después de validar el despliegue anterior. Ejecutar la 042 fuera de una transacción. El orden de publicación y reversión está en el [informe de Viajes](../docs/web/informes/etapa7-viajes.md).
+
+Para Asistencia por alumno, aplicar la 043 y después la 044 antes de publicar la web. Ejecutar la 044 y su rollback fuera de una transacción. El orden de publicación y reversión está en el [informe de Asistencia](../docs/web/informes/etapa8-asistencia.md).
+
+Para Exportación, aplicar la 045 antes de publicar la web. Al revertir, retirar primero la versión web que usa la RPC y ejecutar después `045_rollback.sql`. El rollback restaura las consultas de navegación y conserva las entradas de auditoría. [Plan de Exportación](../docs/web/14-plan-exportacion.md)
+
+Para Incidencias, aplicar la 046 y después la 047 antes de publicar la web. Ejecutar la 047 y su rollback fuera de una transacción. Para revertir, retirar la versión web y aplicar primero el rollback 047 y después el 046. [Plan de Incidencias](../docs/web/15-plan-incidencias.md)
+
+Para el Dashboard operativo, aplicar la 048 antes de publicar la web. Para revertir, retirar primero la versión web y ejecutar después `048_rollback.sql`. [Plan del Dashboard operativo](../docs/web/16-plan-dashboard-operativo.md)

@@ -1,0 +1,45 @@
+﻿Nested Loop  (cost=41.95..42.20 rows=1 width=32) (actual time=0.730..0.736 rows=1 loops=1)
+  Buffers: shared hit=737 dirtied=11
+  CTE dias
+    ->  Hash Right Join  (cost=0.46..8.60 rows=7 width=20) (actual time=0.386..0.392 rows=7 loops=1)
+          Hash Cond: (bus_trips.trip_date = (((transaction_timestamp() AT TIME ZONE 'America/Lima'::text))::date - g.i))
+          Buffers: shared hit=731 dirtied=11
+          ->  GroupAggregate  (cost=0.30..8.34 rows=1 width=20) (actual time=0.351..0.352 rows=0 loops=1)
+                Group Key: bus_trips.trip_date
+                Buffers: shared hit=731 dirtied=11
+                ->  Index Scan Backward using idx_bus_trips_admin_date on bus_trips  (cost=0.30..8.32 rows=1 width=13) (actual time=0.351..0.352 rows=0 loops=1)
+                      Index Cond: ((trip_date >= (((transaction_timestamp() AT TIME ZONE 'America/Lima'::text))::date - 6)) AND (trip_date <= ((transaction_timestamp() AT TIME ZONE 'America/Lima'::text))::date))
+                      Buffers: shared hit=731 dirtied=11
+          ->  Hash  (cost=0.07..0.07 rows=7 width=4) (actual time=0.017..0.018 rows=7 loops=1)
+                Buckets: 1024  Batches: 1  Memory Usage: 9kB
+                ->  Function Scan on generate_series g  (cost=0.00..0.07 rows=7 width=4) (actual time=0.007..0.007 rows=7 loops=1)
+  InitPlan 2
+    ->  Aggregate  (cost=0.33..0.34 rows=1 width=32) (actual time=0.141..0.141 rows=1 loops=1)
+          Buffers: shared hit=3
+          ->  Sort  (cost=0.24..0.26 rows=7 width=20) (actual time=0.034..0.035 rows=7 loops=1)
+                Sort Key: d.fecha
+                Sort Method: quicksort  Memory: 25kB
+                Buffers: shared hit=3
+                ->  CTE Scan on dias d  (cost=0.00..0.14 rows=7 width=20) (actual time=0.001..0.002 rows=7 loops=1)
+  ->  Aggregate  (cost=33.00..33.02 rows=1 width=24) (actual time=0.046..0.048 rows=1 loops=1)
+        Buffers: shared hit=3
+        ->  Nested Loop  (cost=24.95..32.99 rows=1 width=24) (actual time=0.043..0.043 rows=0 loops=1)
+              Buffers: shared hit=3
+              ->  Index Only Scan using idx_bus_trips_admin_date on bus_trips t  (cost=0.29..8.31 rows=1 width=16) (actual time=0.042..0.042 rows=0 loops=1)
+                    Index Cond: (trip_date = ((transaction_timestamp() AT TIME ZONE 'America/Lima'::text))::date)
+                    Heap Fetches: 0
+                    Buffers: shared hit=3
+              ->  Aggregate  (cost=24.66..24.67 rows=1 width=24) (never executed)
+                    ->  Sort  (cost=24.51..24.53 rows=10 width=30) (never executed)
+                          Sort Key: a.student_id
+                          ->  Index Scan using idx_bus_attendance_trip_scanned on bus_attendance_records a  (cost=0.42..24.34 rows=10 width=30) (never executed)
+                                Index Cond: (trip_id = t.id)
+  ->  CTE Scan on dias hoy  (cost=0.00..0.21 rows=1 width=16) (actual time=0.398..0.399 rows=1 loops=1)
+        Filter: (fecha = ((transaction_timestamp() AT TIME ZONE 'America/Lima'::text))::date)
+        Rows Removed by Filter: 6
+        Buffers: shared hit=731 dirtied=11
+Planning:
+  Buffers: shared hit=302
+Planning Time: 3.071 ms
+Execution Time: 0.979 ms
+EXPLAIN

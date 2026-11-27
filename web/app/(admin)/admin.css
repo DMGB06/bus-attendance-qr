@@ -160,7 +160,7 @@
 .ad-search input:focus { outline: none; border-color: var(--focus); background: var(--card); box-shadow: 0 0 0 4px color-mix(in srgb, var(--focus) 26%, transparent); }
 .ad-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .ad-chip { display: inline-flex; align-items: center; height: 44px; padding: 0 16px; border: 1px solid var(--line); border-radius: 22px; background: var(--card); color: var(--ink); font-size: 14px; font-weight: 600; text-decoration: none; }
-.ad-chip[aria-current="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.ad-chip:is([aria-current="true"], [aria-current="page"]) { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
 .ad-chip:focus-visible, .ad-btn:focus-visible, .ad-rowlink:focus-visible, .ad-x:focus-visible, .ad-link:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
 .ad-tablewrap { overflow-x: auto; }
@@ -315,6 +315,18 @@ select.ad-input { padding-right: 8px; }
 .c-vigente { background: #1f8a52; } .c-vencido { background: #d99a1b; } .c-perdido { background: #c4382e; } .c-sin { background: #6b8399; } .c-apo { background: #2478c9; }
 .ad-tabla-vista summary { cursor: pointer; font-size: 14px; font-weight: 700; color: var(--accent-hover); min-height: 44px; display: flex; align-items: center; }
 .ad-tabla-vista .ad-tbl { min-width: 0; max-width: 360px; }
+.ad-operacion { margin-top: 8px; }
+.ad-operacion .ad-stat-n, .ad-tabla-viajes :is(td, th) { overflow-wrap: anywhere; }
+.ad-tabla-viajes .ad-tbl { table-layout: fixed; }
+.ad-tabla-viajes :is(td, th) { padding-inline: 4px; }
+.ad-tabla-viajes th:first-child { width: 34%; }
+.ad-tabla-viajes th:nth-child(2) { width: 21%; }
+.ad-tabla-viajes th:nth-child(3) { width: 27%; }
+.ad-tabla-viajes th.ad-right { text-align: right; }
+.ad-tabla-viajes summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+@media (max-width: 420px) {
+  .ad-operacion .ad-barras text { font-size: 19px; }
+}
 .ad-alerta { display: flex; align-items: center; gap: 14px; margin: 0; padding: 14px 16px; border: 1px solid var(--rule); border-radius: 10px; background: var(--card); color: var(--ink); text-decoration: none; font-size: 15px; }
 a.ad-alerta:hover { background: #e8f3fc; }
 .ad-alerta-n { font-size: 30px; font-weight: 800; line-height: 1; color: var(--warn-ink); min-width: 44px; }
@@ -331,6 +343,22 @@ a.ad-alerta:hover { background: #e8f3fc; }
 .ad-movimiento { padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
 .ad-movimiento-top { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
 .ad-tbl td.ad-note { overflow-wrap: anywhere; }
+
+/* Viajes: los nombres del padrón y las opciones de bus pueden ser largos. */
+.ad-viajes-filtros .ad-field { max-width: 100%; }
+.ad-viajes-texto { overflow-wrap: anywhere; }
+
+.ad-ficha-alumno :is(.ad-title, .ad-crumbs, .ad-info) { overflow-wrap: anywhere; }
+.ad-asistencia-filtros .ad-field { max-width: 100%; }
+:is(.ad-asistencia-filtros, .ad-incidencias) input[type="date"][aria-invalid="true"] { border-color: var(--invalid); }
+.ad-asistencia-motivo { margin-top: 6px; overflow-wrap: anywhere; }
+.ad-incidencias-viaje { min-width: 9rem; }
+.ad-exportar { align-self: flex-start; display: grid; justify-items: start; gap: 8px; max-width: 100%; }
+@media (width < 1024px) {
+  html:has(.ad-asistencia-filtros, .ad-exportar, .ad-incidencias, .ad-operacion) {
+    scroll-padding-bottom: calc(76px + max(12px, env(safe-area-inset-bottom, 0px)));
+  }
+}
 
 /* ---------- Saltar al contenido y zona principal ---------- */
 .ad-skip { position: absolute; left: 12px; top: -64px; z-index: 100; padding: 12px 18px; border-radius: 8px; background: var(--card); color: var(--ink); font-weight: 700; text-decoration: none; box-shadow: 0 6px 18px rgba(8, 28, 56, 0.35); }
